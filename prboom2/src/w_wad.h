@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: w_wad.h,v 1.8 2001/07/13 23:05:32 proff_fs Exp $
+ * $Id: w_wad.h,v 1.5 2000/09/16 20:20:43 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -56,6 +56,16 @@ typedef struct
   char name[8];
 } filelump_t;
 
+#ifndef ALL_IN_ONE
+
+// NO_PREDEFINED_LUMPS causes none of the predefined lumps in info.c to be 
+// included, and removes all extra code which is only there for them
+// Saves a little memory normally, lots if any were overridden, and makes 
+// the executable smaller
+#define NO_PREDEFINED_LUMPS
+
+#endif
+
 //
 // WADFILE I/O related stuff.
 //
@@ -72,27 +82,15 @@ typedef enum {
   source_net        // CPhipps
 } wad_source_t;
 
-// CPhipps - changed wad init
-// We _must_ have the wadfiles[] the same as those actually loaded, so there 
-// is no point having these separate entities. This belongs here.
-typedef struct {
-  const char* name;
-  wad_source_t src;
-  int handle;
-} wadfile_info_t;
-
-extern wadfile_info_t *wadfiles;
-
-extern size_t numwadfiles; // CPhipps - size of the wadfiles array
-
-void W_Init(void); // CPhipps - uses the above array
-
 typedef struct
 {
   // WARNING: order of some fields important (see info.c).
 
   char  name[8];
   int   size;
+#ifndef NO_PREDEFINED_LUMPS
+  const void *data;     // killough 1/31/98: points to predefined lump data
+#endif
 
   // killough 1/31/98: hash table fields, used for ultra-fast hash table lookup
   int index, next;
@@ -102,17 +100,36 @@ typedef struct
     ns_global=0,
     ns_sprites,
     ns_flats,
-    ns_colormaps,
-    ns_prboom
+    ns_colormaps
   } namespace;
 
-  wadfile_info_t *wadfile;
+  int handle;
   int position;
+  unsigned int locks; // CPhipps - wad lump locking
   wad_source_t source;
 } lumpinfo_t;
 
+// killough 1/31/98: predefined lumps
+extern const size_t num_predefined_lumps;
+extern const lumpinfo_t predefined_lumps[];
+
+extern void       **lumpcache;
 extern lumpinfo_t *lumpinfo;
 extern int        numlumps;
+
+// CPhipps - changed wad init
+// We _must_ have the wadfiles[] the same as those actually loaded, so there 
+// is no point having these separate entities. This belongs here.
+struct wadfile_info {
+  const char* name;
+  wad_source_t src;
+};
+
+extern struct wadfile_info *wadfiles;
+
+extern size_t numwadfiles; // CPhipps - size of the wadfiles array
+
+void W_Init(void); // CPhipps - uses the above array
 
 // killough 4/17/98: if W_CheckNumForName() called with only
 // one argument, pass ns_global as the default namespace
@@ -123,22 +140,24 @@ int     W_GetNumForName (const char* name);
 int     W_LumpLength (int lump);
 void    W_ReadLump (int lump, void *dest);
 // CPhipps - modified for 'new' lump locking
-const void* W_CacheLumpNum (int lump);
-void    W_UnlockLumpNum(int lump);
+const void* W_CacheLumpNum (int lump, unsigned short locks);
+void    W_UnlockLumpNum(int lump, signed short unlocks);
 
 /* cph - special version to return lump with padding, for sound lumps */
 const void * W_CacheLumpNumPadded(int lump, size_t len, unsigned char pad);
 
 // CPhipps - convenience macros
-//#define W_CacheLumpNum(num) (W_CacheLumpNum)((num),1)
+#define W_CacheLumpNum(num) (W_CacheLumpNum)((num),1)
 #define W_CacheLumpName(name) W_CacheLumpNum (W_GetNumForName(name))
 
-//#define W_UnlockLumpNum(num) (W_UnlockLumpNum)((num),1)
+#define W_UnlockLumpNum(num) (W_UnlockLumpNum)((num),1)
 #define W_UnlockLumpName(name) W_UnlockLumpNum (W_GetNumForName(name))
 
 char *AddDefaultExtension(char *, const char *);  // killough 1/18/98
 void ExtractFileBase(const char *, char *);       // killough
 unsigned W_LumpNameHash(const char *s);           // killough 1/31/98
-void W_HashLumps(void);                           // cph 2001/07/07 - made public
+
+// Function to write all predefined lumps to a PWAD if requested
+extern void WritePredefinedLumpWad(const char *filename); // jff 5/6/98
 
 #endif

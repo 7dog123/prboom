@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: r_data.c,v 1.15 2001/07/11 22:30:27 cph Exp $
+ * $Id: r_data.c,v 1.13.2.1 2001/05/19 15:42:56 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: r_data.c,v 1.15 2001/07/11 22:30:27 cph Exp $";
+rcsid[] = "$Id: r_data.c,v 1.13.2.1 2001/05/19 15:42:56 cph Exp $";
 
 #include "doomstat.h"
 #include "w_wad.h"
@@ -64,7 +64,7 @@ typedef struct
   short patch;
   short stepdir;         // unused in Doom but might be used in Phase 2 Boom
   short colormap;        // unused in Doom but might be used in Phase 2 Boom
-} mappatch_t __attribute__((packed));
+} PACKEDATTR mappatch_t;
 
 
 typedef struct
@@ -76,7 +76,7 @@ typedef struct
   char       pad[4];       // unused in Doom but might be used in Boom Phase 2
   short      patchcount;
   mappatch_t patches[1];
-} maptexture_t __attribute__((packed));
+} PACKEDATTR maptexture_t;
 
 // A maptexturedef_t describes a rectangular texture, which is composed
 // of one or more mappatch_t structures that arrange graphic patches.
@@ -714,21 +714,18 @@ void R_InitTranMap(int progress)
         unsigned char pct;
         unsigned char playpal[256];
       } cache;
-#ifndef DREAMCAST
       FILE *cachefp = fopen(strcat(strcpy(fname, D_DoomExeDir()),
                                    "/tranmap.dat"),"r+b");
-#endif // DREAMCAST
+
       main_tranmap = my_tranmap = Z_Malloc(256*256, PU_STATIC, 0);  // killough 4/11/98
 
       // Use cached translucency filter if it's available
 
-#ifndef DREAMCAST
       if (!cachefp ? cachefp = fopen(fname,"wb") , 1 :
           fread(&cache, 1, sizeof cache, cachefp) != sizeof cache ||
           cache.pct != tran_filter_pct ||
           memcmp(cache.playpal, playpal, sizeof cache.playpal) ||
           fread(my_tranmap, 256, 256, cachefp) != 256 ) // killough 4/11/98
-#endif // DREAMCAST
         {
           long pal[3][256], tot[256], pal_w1[3][256];
           long w1 = ((unsigned long) tran_filter_pct<<TSC)/100;
@@ -787,7 +784,6 @@ void R_InitTranMap(int progress)
                   }
               }
           }
-#ifndef DREAMCAST
           if (cachefp)        // write out the cached translucency map
             {
               cache.pct = tran_filter_pct;
@@ -796,13 +792,11 @@ void R_InitTranMap(int progress)
               fwrite(&cache, 1, sizeof cache, cachefp);
               fwrite(main_tranmap, 256, 256, cachefp);
 	      // CPhipps - leave close for a few lines...
-        	}
-#endif // DREAMCAST
+            }
         }
-#ifndef DREAMCAST
+
       if (cachefp)              // killough 11/98: fix filehandle leak
         fclose(cachefp);
-#endif // DREAMCAST
  
       W_UnlockLumpName("PLAYPAL");
     }
@@ -889,11 +883,6 @@ int R_TextureNumForName(const char *name)  // const added -- killough
 // to avoid using alloca(), and to improve performance.
 // cph - new wad lump handling, calls cache functions but acquires no locks
 
-static inline void precache_lump(int l)
-{
-  W_CacheLumpNum(l); W_UnlockLumpNum(l);
-}
-
 void R_PrecacheLevel(void)
 {
   register int i;
@@ -916,7 +905,7 @@ void R_PrecacheLevel(void)
 
   for (i = numflats; --i >= 0; )
     if (hitlist[i])
-      precache_lump(firstflat + i);
+      (W_CacheLumpNum)(firstflat + i, 0);
 
   // Precache textures.
 
@@ -942,7 +931,7 @@ void R_PrecacheLevel(void)
         texture_t *texture = textures[i];
         int j = texture->patchcount;
         while (--j >= 0)
-          precache_lump(texture->patches[j].patch);
+          (W_CacheLumpNum)(texture->patches[j].patch, 0);
       }
 
   // Precache sprites.
@@ -964,7 +953,7 @@ void R_PrecacheLevel(void)
             short *sflump = sprites[i].spriteframes[j].lump;
             int k = 7;
             do
-              precache_lump(firstspritelump + sflump[k]);
+              (W_CacheLumpNum)(firstspritelump + sflump[k], 0);
             while (--k >= 0);
           }
       }

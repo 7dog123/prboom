@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: s_sound.h,v 1.4 2001/07/07 15:00:29 proff_fs Exp $
+ * $Id: s_sound.h,v 1.3.2.1 2001/10/04 07:26:14 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine

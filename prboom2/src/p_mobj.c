@@ -1,13 +1,13 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: p_mobj.c,v 1.17 2001/08/14 17:12:58 cph Exp $
+ * $Id: p_mobj.c,v 1.12.2.1 2001/05/26 17:02:10 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *  
  *  This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_mobj.c,v 1.17 2001/08/14 17:12:58 cph Exp $";
+rcsid[] = "$Id: p_mobj.c,v 1.12.2.1 2001/05/26 17:02:10 cph Exp $";
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -399,7 +399,7 @@ static void P_ZMovement (mobj_t* mo)
 	    FixedMul(mo->momz, (fixed_t)(FRACUNIT*.45)) ;
 		  
 	  /* Bring it to rest below a certain speed */
-	  if (D_abs(mo->momz) <= mo->info->mass*(GRAVITY*4/256))
+	  if (abs(mo->momz) <= mo->info->mass*(GRAVITY*4/256))
 	    mo->momz = 0;
 	}
 
@@ -478,7 +478,7 @@ floater:
       {
 	fixed_t delta;
 	if (P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) <
-	    D_abs(delta = mo->target->z + (mo->height>>1) - mo->z)*3)
+	    abs(delta = mo->target->z + (mo->height>>1) - mo->z)*3)
 	  mo->z += delta < 0 ? -FLOATSPEED : FLOATSPEED;
       }
 
@@ -491,24 +491,18 @@ floater:
     /* Note (id):
      *  somebody left this after the setting momz to 0,
      *  kinda useless there.
-     * cph - revised 2001/04/15 -
-     * This was a bug in the Doom/Doom 2 source; the following code
-     *  is meant to make charging lost souls bounce off of floors, but it 
-     *  was incorrectly placed after momz was set to 0.
-     *  However, this bug was fixed in Doom95, Final/Ultimate Doom, and 
-     *  the v1.10 source release (which is one reason why it failed to sync 
-     *  some Doom2 v1.9 demos)
-     * I've added a comp_soul compatibility option to make this behavior 
-     *  selectable for PrBoom v2.3+. For older demos, we do this here only 
-     *  if we're in a compatibility level above Doom 2 v1.9 (in which case we
-     *  mimic the bug and do it further down instead)
+     * cph - This was the a bug in the linuxdoom-1.10 source which
+     *  caused it not to sync Doom 2 v1.9 demos. Someone
+     *  added the above comment and moved up the following code. So 
+     *  demos would desync in close lost soul fights.
+     * Note that this only applies to original Doom 1 or Doom2 demos -
+     *  Final Doom and Ultimate Doom.  So we test demo_compatibility *and*
+     *  gamemission. (Note we assume that Doom1 is always Ult Doom, which
+     *  seems to hold for most published demos.)
      */
+    int correct_lost_soul_bounce = !demo_compatibility || (gamemission != doom2);
 
-    if (mo->flags & MF_SKULLFLY &&
-	(!comp[comp_soul] ||
-	 (compatibility_level > doom2_19_compatibility &&
-	  compatibility_level < prboom_4_compatibility)
-	))
+    if (correct_lost_soul_bounce && mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if (mo->momz < 0)
@@ -533,14 +527,12 @@ floater:
       }
     mo->z = mo->floorz;
 
-    /* cph 2001/04/15 - 
-     * This is the buggy lost-soul bouncing code referenced above.
-     * We've already set momz = 0 normally by this point, so it's useless.
-     * However we might still have upward momentum, in which case this will
-     * incorrectly reverse it, so we might still need this for demo sync
+    /* cph 2001/05/26 -
+     * See lost soul bouncing comment above. We need this here for bug
+     * compatibility with original Doom2 v1.9 - if a soul is charging and
+     * hit by a raising floor this incorrectly reverses its Y momentum.
      */
-    if (mo->flags & MF_SKULLFLY &&
-	compatibility_level <= doom2_19_compatibility)
+    if (!correct_lost_soul_bounce && mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if ( (mo->flags & MF_MISSILE) && !(mo->flags & MF_NOCLIP) )
@@ -559,12 +551,6 @@ floater:
 
   if (mo->z + mo->height > mo->ceilingz)
     {
-    /* cph 2001/04/15 - 
-     * Lost souls were meant to bounce off of ceilings;
-     *  new comp_soul compatibility option added
-     */
-    if (!comp[comp_soul] && mo->flags & MF_SKULLFLY)
-      mo->momz = -mo->momz; // the skull slammed into something
 
     // hit the ceiling
 
@@ -573,12 +559,7 @@ floater:
 
     mo->z = mo->ceilingz - mo->height;
 
-    /* cph 2001/04/15 - 
-     * We might have hit a ceiling but had downward momentum (e.g. ceiling is 
-     *  lowering on us), so for old demos we must still do the buggy 
-     *  momentum reversal here
-     */
-    if (comp[comp_soul] && mo->flags & MF_SKULLFLY)
+    if (mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if ( (mo->flags & MF_MISSILE) && !(mo->flags & MF_NOCLIP) )
@@ -993,7 +974,7 @@ void P_RespawnSpecials (void)
 
 extern byte playernumtotrans[MAXPLAYERS];
 
-void P_SpawnPlayer (int n, const mapthing_t* mthing)
+void P_SpawnPlayer (mapthing_t* mthing)
   {
   player_t* p;
   fixed_t   x;
@@ -1004,20 +985,14 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   // not playing?
 
-  if (!playeringame[n])
+  if (!playeringame[mthing->type-1])
     return;
 
-  p = &players[n];
+  p = &players[mthing->type-1];
 
   if (p->playerstate == PST_REBORN)
     G_PlayerReborn (mthing->type-1);
 
-  /* cph 2001/08/14 - use the options field of memorised player starts to
-   * indicate whether the start really exists in the level.
-   */
-  if (!mthing->options)
-    I_Error("P_SpawnPlayer: attempt to spawn player at unavailable start point");
-  
   x    = mthing->x << FRACBITS;
   y    = mthing->y << FRACBITS;
   z    = ONFLOORZ;
@@ -1025,7 +1000,8 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   // set color translations for player sprites
 
-  mobj->flags |= playernumtotrans[n]<<MF_TRANSSHIFT;
+  if (mthing->type > 0)
+    mobj->flags |= playernumtotrans[mthing->type-1]<<MF_TRANSSHIFT;
 
   mobj->angle      = ANG45 * (mthing->angle/45);
   mobj->player     = p;
@@ -1067,7 +1043,7 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 // already be in host byte order.
 //
 
-void P_SpawnMapThing (const mapthing_t* mthing)
+void P_SpawnMapThing (mapthing_t* mthing)
   {
   int     i;
   //int     bit;
@@ -1075,7 +1051,6 @@ void P_SpawnMapThing (const mapthing_t* mthing)
   fixed_t x;
   fixed_t y;
   fixed_t z;
-  int options = mthing->options; /* cph 2001/07/07 - make writable copy */
 
   // killough 2/26/98: Ignore type-0 things as NOPs
   // phares 5/14/98: Ignore Player 5-8 starts (for now)
@@ -1100,11 +1075,11 @@ void P_SpawnMapThing (const mapthing_t* mthing)
 
   if (demo_compatibility || 
       (compatibility_level >= lxdoom_1_compatibility  && 
-       options & MTF_RESERVED)) {
+       mthing->options & MTF_RESERVED)) {
     if (!demo_compatibility) // cph - Add warning about bad thing flags
       lprintf(LO_WARN, "P_SpawnMapThing: correcting bad flags (%u) (thing type %d)\n",
-	      options, mthing->type);
-    options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
+	      mthing->options, mthing->type);
+    mthing->options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
   }
 
   // count deathmatch start positions
@@ -1125,7 +1100,6 @@ void P_SpawnMapThing (const mapthing_t* mthing)
       deathmatch_p = deathmatchstarts + offset;
       }
     memcpy(deathmatch_p++, mthing, sizeof(*mthing));
-    (deathmatch_p-1)->options = 1;
     return;
     }
 
@@ -1141,42 +1115,42 @@ void P_SpawnMapThing (const mapthing_t* mthing)
 	  players[mthing->type-1].secretcount = 1;
 
 	  // killough 10/98: force it to be a friend
-	  options |= MTF_FRIEND;
+	  mthing->options |= MTF_FRIEND;
 	  i = MT_DOGS;
 	  goto spawnit;
 	}
 #endif
 
-    // save spots for respawning in coop games
-    playerstarts[mthing->type-1] = *mthing;
-    playerstarts[mthing->type-1].options = 1;
 
+    // save spots for respawning in network games
+
+    playerstarts[mthing->type-1] = *mthing;
     if (!deathmatch)
-      P_SpawnPlayer (mthing->type-1, mthing);
+      P_SpawnPlayer (mthing);
     return;
     }
 
   // check for apropriate skill level
 
   /* jff "not single" thing flag */
-  if (!netgame && options & MTF_NOTSINGLE) 
+  if (!netgame && mthing->options & MTF_NOTSINGLE) 
     return;
 
   //jff 3/30/98 implement "not deathmatch" thing flag
 
-  if (netgame && deathmatch && options & MTF_NOTDM)
+  if (netgame && deathmatch && mthing->options & MTF_NOTDM)
     return;
 
   //jff 3/30/98 implement "not cooperative" thing flag
 
-  if (netgame && !deathmatch && options & MTF_NOTCOOP)
+  if (netgame && !deathmatch && mthing->options & MTF_NOTCOOP)
     return;
 
   // killough 11/98: simplify
   if (gameskill == sk_baby || gameskill == sk_easy ? 
-      !(options & MTF_EASY) :
+      !(mthing->options & MTF_EASY) :
       gameskill == sk_hard || gameskill == sk_nightmare ?
-      !(options & MTF_HARD) : !(options & MTF_NORMAL))
+      !(mthing->options & MTF_HARD) : !(mthing->options & MTF_NORMAL))
     return;
 
   // find which type to spawn
@@ -1224,7 +1198,7 @@ spawnit:
     mobj->tics = 1 + (P_Random (pr_spawnthing) % mobj->tics);
 
   if (!(mobj->flags & MF_FRIEND) &&
-      options & MTF_FRIEND && 
+      mthing->options & MTF_FRIEND && 
       mbf_features)
     {
       mobj->flags |= MF_FRIEND;            // killough 10/98:
@@ -1239,7 +1213,7 @@ spawnit:
     totalitems++;
 
   mobj->angle = ANG45 * (mthing->angle/45);
-  if (options & MTF_AMBUSH)
+  if (mthing->options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
   }
 

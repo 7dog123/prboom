@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: i_video.h,v 1.6 2001/07/04 14:59:52 uid24111 Exp $
+ * $Id: i_video.h,v 1.4.2.1 2001/10/07 12:34:42 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine

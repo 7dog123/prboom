@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: i_main.c,v 1.14 2001/07/04 14:59:52 uid24111 Exp $
+ * $Id: i_main.c,v 1.10 2000/11/19 20:24:11 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -34,7 +34,7 @@
  */
 
 static const char
-rcsid[] = "$Id: i_main.c,v 1.14 2001/07/04 14:59:52 uid24111 Exp $";
+rcsid[] = "$Id: i_main.c,v 1.10 2000/11/19 20:24:11 proff_fs Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -61,9 +61,6 @@ rcsid[] = "$Id: i_main.c,v 1.14 2001/07/04 14:59:52 uid24111 Exp $";
 #endif
 
 #include <signal.h>
-#ifdef DREAMCAST
-#undef SIGPIPE
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -380,8 +377,6 @@ int main(int argc, char **argv)
   myargc = argc;
   myargv = argv;
 
-  /* cph - Z_Close must be done after I_Quit, so we register it first. */
-  atexit(Z_Close);
   /*
      killough 1/98:
 
@@ -398,18 +393,28 @@ int main(int argc, char **argv)
      left in an unstable state.
   */
 
+  Z_Init();                  /* 1/18/98 killough: start up memory stuff first */
+
   atexit(I_Quit);
+#ifndef _DEBUG
   signal(SIGSEGV, I_SignalHandler);
 #ifdef SIGPIPE
   signal(SIGPIPE, I_SignalHandler); /* CPhipps - add SIGPIPE, as this is fatal */
 #endif
   signal(SIGTERM, I_SignalHandler);
+  signal(SIGILL,  I_SignalHandler);
   signal(SIGFPE,  I_SignalHandler);
   signal(SIGILL,  I_SignalHandler);
   signal(SIGINT,  I_SignalHandler);  /* killough 3/6/98: allow CTRL-BRK during init */
   signal(SIGABRT, I_SignalHandler);
+#endif
+
   /* cphipps - call to video specific startup code */
   I_PreInitGraphics();
+
+  /* 2/2/98 Stan
+   * Must call this here.  It's required by both netgames and i_video.c.
+   */
 
   D_DoomMain ();
   return 0;

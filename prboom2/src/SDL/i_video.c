@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: i_video.c,v 1.33 2001/08/05 22:30:25 proff_fs Exp $
+ * $Id: i_video.c,v 1.18.2.4 2001/10/07 12:34:42 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,7 @@
  */
 
 static const char
-rcsid[] = "$Id: i_video.c,v 1.33 2001/08/05 22:30:25 proff_fs Exp $";
+rcsid[] = "$Id: i_video.c,v 1.18.2.4 2001/10/07 12:34:42 proff_fs Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -55,6 +55,7 @@ rcsid[] = "$Id: i_video.c,v 1.33 2001/08/05 22:30:25 proff_fs Exp $";
 #include "r_draw.h"
 #include "d_main.h"
 #include "d_event.h"
+#include "i_joy.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "s_sound.h"
@@ -84,9 +85,7 @@ int             leds_always_off = 0; // Expected by m_misc, not relevant
 
 // Mouse handling
 extern int     usemouse;        // config file var
-static int doubleclicktime[3]={0,0,0};
-static int doubleclicks[3]={0,0,0};
-static int eventtime;
+static boolean grabMouse;       // internal var
 
 /////////////////////////////////////////////////////////////////////////////////
 // Keyboard handling
@@ -175,6 +174,15 @@ int I_ScanCode2DoomCode(int c)
 /////////////////////////////////////////////////////////////////////////////////
 // Main input code
 
+/* cph - pulled out common button code logic */
+static int I_SDLtoDoomMouseState(Uint8 buttonstate)
+{
+  return 0
+      | (buttonstate & SDL_BUTTON(1) ? 1 : 0)
+      | (buttonstate & SDL_BUTTON(2) ? 2 : 0)
+      | (buttonstate & SDL_BUTTON(3) ? 4 : 0);
+}
+
 static void I_GetEvent(SDL_Event *Event)
 {
   event_t event;
@@ -195,109 +203,68 @@ static void I_GetEvent(SDL_Event *Event)
   break;
 
   case SDL_MOUSEBUTTONDOWN:
-  if (usemouse)
-  {
-    switch (Event->button.button)
-    {
-    case SDL_BUTTON_LEFT:
-      event.type = ev_keydown;
-      event.data1 = KEYD_MOUSE1;
-      D_PostEvent(&event);
-      if (doubleclicktime[0])
-      {
-        if ((eventtime-doubleclicktime[0])<20)
-          doubleclicks[0]++;
-        if (doubleclicks[0]==2)
-        {
-          event.type = ev_keydown;
-          event.data1 = KEYD_MOUSED1;
-          D_PostEvent(&event);
-        }
-      }
-      else
-      {
-        doubleclicks[0]=1;
-        doubleclicktime[0]=eventtime;
-      }
-      break;
-    case SDL_BUTTON_RIGHT:
-      event.type = ev_keydown;
-      event.data1 = KEYD_MOUSE2;
-      D_PostEvent(&event);
-      if (doubleclicktime[1])
-      {
-        if ((eventtime-doubleclicktime[1])<20)
-          doubleclicks[1]++;
-        if (doubleclicks[1]==2)
-        {
-          event.type = ev_keydown;
-          event.data1 = KEYD_MOUSED2;
-          D_PostEvent(&event);
-        }
-      }
-      else
-      {
-        doubleclicks[1]=1;
-        doubleclicktime[1]=eventtime;
-      }
-      break;
-    case SDL_BUTTON_MIDDLE:
-      event.type = ev_keydown;
-      event.data1 = KEYD_MOUSE3;
-      D_PostEvent(&event);
-      if (doubleclicktime[2])
-      {
-        if ((eventtime-doubleclicktime[2])<20)
-          doubleclicks[2]++;
-        if (doubleclicks[2]==2)
-        {
-          event.type = ev_keydown;
-          event.data1 = KEYD_MOUSED3;
-          D_PostEvent(&event);
-        }
-      }
-      else
-      {
-        doubleclicks[2]=1;
-        doubleclicktime[2]=eventtime;
-      }
-      break;
-    }
-  }
-  break;
-
   case SDL_MOUSEBUTTONUP:
   if (usemouse)
   {
-    switch (Event->button.button)
-    {
-    case SDL_BUTTON_LEFT:
-      event.type = ev_keyup;
-      event.data1 = KEYD_MOUSE1;
-      D_PostEvent(&event);
-      break;
-    case SDL_BUTTON_RIGHT:
-      event.type = ev_keyup;
-      event.data1 = KEYD_MOUSE2;
-      D_PostEvent(&event);
-      break;
-    case SDL_BUTTON_MIDDLE:
-      event.type = ev_keyup;
-      event.data1 = KEYD_MOUSE3;
-      D_PostEvent(&event);
-      break;
-    }
+    event.type = ev_mouse;
+    event.data1 = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
+    event.data2 = event.data3 = 0;
+    D_PostEvent(&event);
   }
   break;
 
   case SDL_MOUSEMOTION:
-  if (usemouse) {
+#ifndef POLL_MOUSE
+  /* Ignore mouse warp events */
+  if (usemouse &&
+      ((Event->motion.x != screen->w/2)||(Event->motion.y != screen->h/2)))
+  {
+    /* Warp the mouse back to the center */
+    if (grabMouse && !(paused || (gamestate != GS_LEVEL) || demoplayback)) {
+      if ( (Event->motion.x < ((screen->w/2)-(screen->w/4))) ||
+           (Event->motion.x > ((screen->w/2)+(screen->w/4))) ||
+           (Event->motion.y < ((screen->h/2)-(screen->h/4))) ||
+           (Event->motion.y > ((screen->h/2)+(screen->h/4))) )
+        SDL_WarpMouse((Uint16)(screen->w/2), (Uint16)(screen->h/2));
+    }
     event.type = ev_mouse;
-    event.data1 = 0;
+    event.data1 = I_SDLtoDoomMouseState(Event->motion.state);
     event.data2 = Event->motion.xrel << 5;
     event.data3 = -Event->motion.yrel << 5;
     D_PostEvent(&event);
   }
+#else
+  /* cph - under X11 fullscreen, SDL's MOUSEMOTION events are just too
+   *  unreliable. Deja vu, I had similar trouble in the early LxDoom days
+   *  with X11 mouse motion events. Except SDL makes it worse, because
+   *  it feeds SDL_WarpMouse events back to us. */
+  if (usemouse) {
+    static int px,py;
+    static int was_grabbed;
+    int x,y,dx,dy;
+    Uint8 buttonstate = SDL_GetMouseState(&x,&y);
+    if (was_grabbed) { /* Previous position saved */
+      dx = x - px; dy = y - py;
+      if (!(dx | dy)) break; /* No motion, not interesting */
+      event.type = ev_mouse;
+      event.data1 = I_SDLtoDoomMouseState(buttonstate);
+      event.data2 = dx << 5; event.data3 = -dy << 5;
+      D_PostEvent(&event);
+    }
+    /* Warp the mouse back to the center */
+    was_grabbed = 0;
+    if (grabMouse && !(paused || (gamestate != GS_LEVEL) || demoplayback)) {
+      if ( (x < (screen->w/4)) ||
+           (x > (3*screen->w/4)) ||
+           (y < (screen->h/4)) ||
+           (y > (3*screen->h/4)) ) {
+        SDL_WarpMouse((Uint16)(screen->w/2), (Uint16)(screen->h/2));
+      } else {
+        px = x; py = y; was_grabbed = 1;
+      }
+    }
+  }
+#endif
   break;
 
 
@@ -314,50 +281,14 @@ static void I_GetEvent(SDL_Event *Event)
 //
 // I_StartTic
 //
-static int mouse_currently_grabbed;
-
 void I_StartTic (void)
 {
   SDL_Event Event;
-  event_t event;
-
-  {
-    int should_be_grabbed = usemouse &&
-	    !(paused || (gamestate != GS_LEVEL) || demoplayback); 
-
-    if (mouse_currently_grabbed != should_be_grabbed)
-      SDL_WM_GrabInput((mouse_currently_grabbed = should_be_grabbed) 
-		      ? SDL_GRAB_ON : SDL_GRAB_OFF);
-  }
-
-  eventtime=I_GetTime_RealTime();
-  if (((eventtime-doubleclicktime[0])>=20) || (doubleclicks[0]>=2))
-  {
-    event.type = ev_keyup;
-    event.data1 = KEYD_MOUSED1;
-    D_PostEvent(&event);
-    doubleclicktime[0]=0;
-    doubleclicks[0]=0;
-  }
-  if (((eventtime-doubleclicktime[1])>=20) || (doubleclicks[1]>=2))
-  {
-    event.type = ev_keyup;
-    event.data1 = KEYD_MOUSED2;
-    D_PostEvent(&event);
-    doubleclicktime[1]=0;
-    doubleclicks[1]=0;
-  }
-  if (((eventtime-doubleclicktime[2])>=20) || (doubleclicks[2]>=2))
-  {
-    event.type = ev_keyup;
-    event.data1 = KEYD_MOUSED3;
-    D_PostEvent(&event);
-    doubleclicktime[2]=0;
-    doubleclicks[2]=0;
-  }
 
   while ( SDL_PollEvent(&Event) )
     I_GetEvent(&Event);
+  
+  I_PollJoystick();
 }
 
 //
@@ -373,6 +304,11 @@ void I_StartFrame (void)
 
 static void I_InitInputs(void)
 {
+  // check if the user wants to grab the mouse (quite unnice)
+  grabMouse = M_CheckParm("-nomouse") ? false : 
+    usemouse ? true : false;
+
+  I_InitJoystick();
 }
 /////////////////////////////////////////////////////////////////////////////
 
@@ -412,13 +348,12 @@ static void I_UploadNewPalette(int pal)
   return;
 #endif
   if ((colours == NULL) || (cachedgamma != usegamma)) {
-    int pplump = W_GetNumForName("PLAYPAL");
-    int gtlump = (W_CheckNumForName)("GAMMATBL",ns_prboom);
-    register const byte * palette = W_CacheLumpNum(pplump);
-    register const byte * const gtable = (const byte *)W_CacheLumpNum(gtlump) + 256*(cachedgamma = usegamma);
+    int            lump = W_GetNumForName("PLAYPAL");
+    const byte *palette = W_CacheLumpNum(lump);
+    register const byte *const gtable = gammatable[cachedgamma = usegamma];
     register int i;
 
-    num_pals = W_LumpLength(pplump) / (3*256);
+    num_pals = W_LumpLength(lump) / (3*256);
     num_pals *= 256;
 
     if (!colours) {
@@ -434,8 +369,7 @@ static void I_UploadNewPalette(int pal)
       palette += 3;
     }
   
-    W_UnlockLumpNum(pplump);
-    W_UnlockLumpNum(gtlump);
+    W_UnlockLumpNum(lump);
     num_pals/=256;
   }
 
@@ -567,13 +501,13 @@ void I_SetRes(unsigned int width, unsigned int height)
 
 void I_InitGraphics(void)
 {
-  char          titlebuffer[2048];
+  char titlebuffer[2048];
   static int		firsttime=1;
   
   if (firsttime)
   {  
     firsttime = 0;
-
+    
     atexit(I_ShutdownGraphics);
     lprintf(LO_INFO, "I_InitGraphics: %dx%d\n", SCREENWIDTH, SCREENHEIGHT);
 
@@ -636,11 +570,11 @@ void I_UpdateVideoMode(void)
   screen = SDL_SetVideoMode(w, h, 8, init_flags);
 #endif
 
-  if (screen == NULL) {
+  if(screen == NULL) {
     I_Error("Couldn't set %dx%d video mode [%s]", w, h, SDL_GetError());
   }
 
-  mouse_currently_grabbed = false;
+  //mouse_currently_grabbed = false;
 
   // Get the info needed to render to the display
   if (screen->pixels != NULL)
@@ -648,7 +582,7 @@ void I_UpdateVideoMode(void)
     if (out_buffer)
       free(out_buffer);
     out_buffer=NULL;
-    screens[0] = (unsigned char *) (screen->pixels);
+    screens[0] = (unsigned char *) (screen->pixels); 
   }
   else
   {
@@ -666,7 +600,7 @@ void I_UpdateVideoMode(void)
 #ifdef GL_DOOM
   {
   int temp;
-  lprintf(LO_INFO,"    SDL OpenGL PixelFormat:\n");
+    lprintf(LO_INFO,"SDL OpenGL PixelFormat:\n");
   SDL_GL_GetAttribute( SDL_GL_RED_SIZE, &temp );
   lprintf(LO_INFO,"    SDL_GL_RED_SIZE: %i\n",temp);
   SDL_GL_GetAttribute( SDL_GL_GREEN_SIZE, &temp );
@@ -689,7 +623,7 @@ void I_UpdateVideoMode(void)
   lprintf(LO_INFO,"    SDL_GL_BUFFER_SIZE: %i\n",temp);
   SDL_GL_GetAttribute( SDL_GL_DEPTH_SIZE, &temp );
   lprintf(LO_INFO,"    SDL_GL_DEPTH_SIZE: %i\n",temp);
-  gld_Init(SCREENWIDTH, SCREENHEIGHT);
+    gld_Init(SCREENWIDTH, SCREENHEIGHT);
   }
 #endif
 }

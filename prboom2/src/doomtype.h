@@ -1,13 +1,13 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: doomtype.h,v 1.7 2001/07/21 22:16:49 cph Exp $
+ * $Id: doomtype.h,v 1.4 2000/12/24 11:40:35 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *  
  *  This program is free software; you can redistribute it and/or
@@ -37,19 +37,13 @@
 #ifndef __BYTEBOOL__
 #define __BYTEBOOL__
 /* Fixed to use builtin bool type with C++. */
-# ifdef __cplusplus
+#ifdef __cplusplus
 typedef bool boolean;
-# else // __cplusplus
-#  ifndef DREAMCAST
+#else
 typedef enum {false, true} boolean;
-#  else // DREAMCAST
-#define false 0
-#define true (!false)
-typedef int boolean;
-#  endif // DREAMCAST
-# endif // __cplusplus
+#endif
 typedef unsigned char byte;
-#endif // __BYTEBOOL__
+#endif
 
 /* cph - Wrapper for the long long type, as Win32 used a different name.
  * Except I don't know what to test as it's compiler specific
@@ -57,11 +51,7 @@ typedef unsigned char byte;
 #ifndef _MSC_VER
 typedef signed long long int_64_t; 
 typedef unsigned long long uint_64_t; 
-# ifdef DREAMCAST
-#undef PATH_MAX
-#define PATH_MAX 1024
-# endif // DREAMCAST
-#else // _MSC_VER
+#else
 typedef __int64 int_64_t;
 typedef unsigned __int64 uint_64_t;
 #undef PATH_MAX
@@ -69,23 +59,17 @@ typedef unsigned __int64 uint_64_t;
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define S_ISDIR(x) (((sbuf.st_mode & S_IFDIR)==S_IFDIR)?1:0)
-#endif // _MSC_VER
+#endif
 
 /* CPhipps - use limits.h instead of depreciated values.h */
 #include <limits.h>
 
 /* cph - move compatibility levels here so we can use them in d_server.c */
 typedef enum {
-  /* Emulate various doom versions, for demos and old levels */ 
-  doom_12_compatibility,	/* Doom v1.2 */
-  doom_1666_compatibility,	/* Doom & Doom2, v1.666 */
-  doom2_19_compatibility,	/* Doom 2 doom2.exe v1.9 */
-  ultdoom_compatibility,	/* Ultimate Doom v1.9 */
-  finaldoom_compatibility,	/* Final Doom doom2.exe (and Doom95?) */
-  /* Compatibility with various early Doom ports */
-  dosdoom_compatibility,
-  tasdoom_compatibility,
-  /* Compatibility with various Boom derivatives */
+  doom_12_compatibility, /* Behave like early doom versions */ 
+  doom_demo_compatibility, /* As compatible as possible for 
+			    * playing original Doom demos */
+  doom_compatibility,      /* Compatible with original Doom levels */
   boom_compatibility_compatibility,      /* Boom's compatibility mode */
   boom_201_compatibility,                /* Compatible with Boom v2.01 */
   boom_202_compatibility,                /* Compatible with Boom v2.01 */
@@ -93,12 +77,11 @@ typedef enum {
   mbf_compatibility,                     /* MBF */
   prboom_1_compatibility,                /* PrBoom 2.03beta? */
   prboom_2_compatibility,                /* PrBoom 2.1.0-2.1.1 */
-  prboom_3_compatibility,                /* PrBoom 2.1.2-2.2.0 */
-  prboom_4_compatibility,                /* Latest PrBoom */
+  prboom_3_compatibility,                /* Latest PrBoom */
   MAX_COMPATIBILITY_LEVEL,               /* Must be last entry */
   /* Aliases follow */
   boom_compatibility = boom_201_compatibility, /* Alias used by G_Compatibility */
-  best_compatibility = prboom_4_compatibility,
+  best_compatibility = prboom_3_compatibility,
 } complevel_t;
 
 #endif

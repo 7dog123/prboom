@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: gl_main.c,v 1.42 2001/07/16 15:05:16 proff_fs Exp $
+ * $Id: gl_main.c,v 1.35.2.2 2001/06/17 17:57:39 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,6 @@
 
 #include "gl_intern.h"
 #include "gl_struct.h"
-#include "gl_dll.h"
 
 extern int tran_filter_pct;
 
@@ -59,16 +58,6 @@ GLfloat gl_whitecolor[4]={1.0f,1.0f,1.0f,1.0f};
 
 #define MAP_COEFF 128.0f
 #define MAP_SCALE	(MAP_COEFF*(float)FRACUNIT)
-
-#ifndef APIENTRY
-#define APIENTRY
-#endif
-
-#define PROTOTYPE(ret, func, param) ret (APIENTRY *p_##func) param;
-#include "gl_funcs.h"
-
-#define PROTOTYPE(ret, func, param) ret (APIENTRY *p_##func) param;
-#include "glu_funcs.h"
 
 /*
  * lookuptable for lightvalues
@@ -230,62 +219,60 @@ static void gld_StaticLightAlpha(float light, float alpha)
 
 	if (player->fixedcolormap == 32)
   {
-    p_glColor4f(0.5f, 1.0f, 0.0f, alpha);
+    glColor4f(0.5f, 1.0f, 0.0f, alpha);
     return;
   }
 	else
   	if (player->fixedcolormap)
     {
-      p_glColor4f(1.0f, 1.0f, 1.0f, alpha);
+      glColor4f(1.0f, 1.0f, 1.0f, alpha);
       return;
     }
-  p_glColor4f(light, light, light, alpha);
+  glColor4f(light, light, light, alpha);
 }
 
 #define gld_StaticLight(light) gld_StaticLightAlpha(light, 1.0f)
-
-void gld_SetVertexArrays(void);
 
 void gld_Init(int width, int height)
 { 
   GLfloat params[4]={0.0f,0.0f,1.0f,0.0f};
 	GLfloat BlackFogColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-  lprintf(LO_INFO,"GL_VENDOR: %s\n",p_glGetString(GL_VENDOR));
-  lprintf(LO_INFO,"GL_RENDERER: %s\n",p_glGetString(GL_RENDERER));
-  lprintf(LO_INFO,"GL_VERSION: %s\n",p_glGetString(GL_VERSION));
-  lprintf(LO_INFO,"GL_EXTENSIONS: %s\n",p_glGetString(GL_EXTENSIONS));
-	p_glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT); 
+  lprintf(LO_INFO,"GL_VENDOR: %s\n",glGetString(GL_VENDOR));
+  lprintf(LO_INFO,"GL_RENDERER: %s\n",glGetString(GL_RENDERER));
+  lprintf(LO_INFO,"GL_VERSION: %s\n",glGetString(GL_VERSION));
+  lprintf(LO_INFO,"GL_EXTENSIONS: %s\n",glGetString(GL_EXTENSIONS));
+	glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT); 
 
-  p_glClearColor(0.0f, 0.5f, 0.5f, 1.0f); 
-  p_glClearDepth(1.0f);
+  glClearColor(0.0f, 0.5f, 0.5f, 1.0f); 
+  glClearDepth(1.0f);
 
-  p_glGetIntegerv(GL_MAX_TEXTURE_SIZE,&gld_max_texturesize);
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE,&gld_max_texturesize);
   //gld_max_texturesize=16;
   lprintf(LO_INFO,"GL_MAX_TEXTURE_SIZE=%i\n",gld_max_texturesize);
 
-  p_glEnable(GL_BLEND);
-  p_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	p_glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  p_glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // proff_dis
-  p_glShadeModel(GL_FLAT);
-	p_glEnable(GL_TEXTURE_2D);
-	p_glDepthFunc(GL_LEQUAL);
- 	p_glEnable(GL_ALPHA_TEST);
-  p_glAlphaFunc(GL_GEQUAL,0.5f);
-	p_glDisable(GL_CULL_FACE);
-  p_glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // proff_dis
+  glShadeModel(GL_FLAT);
+	glEnable(GL_TEXTURE_2D);
+	glDepthFunc(GL_LEQUAL);
+ 	glEnable(GL_ALPHA_TEST);
+  glAlphaFunc(GL_GEQUAL,0.5f);
+	glDisable(GL_CULL_FACE);
+  glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
-  p_glTexGenfv(GL_Q,GL_EYE_PLANE,params);
-  p_glTexGenf(GL_S,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-  p_glTexGenf(GL_T,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-  p_glTexGenf(GL_Q,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-	p_glFogi (GL_FOG_MODE, GL_EXP);
-	p_glFogfv(GL_FOG_COLOR, BlackFogColor);
-	p_glFogf (GL_FOG_DENSITY, (float)fog_density/1000.0f);
-	p_glHint (GL_FOG_HINT, GL_NICEST);
-	p_glFogf (GL_FOG_START, 0.0f);
-	p_glFogf (GL_FOG_END, 1.0f);
+  glTexGenfv(GL_Q,GL_EYE_PLANE,params);
+  glTexGenf(GL_S,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+  glTexGenf(GL_T,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+  glTexGenf(GL_Q,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+	glFogi (GL_FOG_MODE, GL_EXP);
+	glFogfv(GL_FOG_COLOR, BlackFogColor);
+	glFogf (GL_FOG_DENSITY, (float)fog_density/1000.0f);
+	glHint (GL_FOG_HINT, GL_NICEST);
+	glFogf (GL_FOG_START, 0.0f);
+	glFogf (GL_FOG_END, 1.0f);
   if (!strcasecmp(gl_tex_filter_string,"GL_NEAREST_MIPMAP_NEAREST"))
   {
 #ifdef USE_GLU_MIPMAP
@@ -377,41 +364,10 @@ void gld_Init(int width, int height)
     gl_tex_format=GL_RGBA;
     lprintf(LO_INFO,"Using texture format GL_RGBA.\n");
   }
-  gld_CleanMemory();
-  gld_SetVertexArrays();
 }
 
 void gld_InitCommandLine()
 {
-#ifdef DYNAMIC_GL
-  DLL_HANDLE gl_handle;
-  DLL_HANDLE glu_handle;
-
-  gl_handle=DLL_LoadLibrary(LIBGL_NAME);
-  if (!gl_handle) {
-    I_Error("%s: disabling opengl\n", DLL_ErrorMessage());
-  }
-
-#define PROTOTYPE(ret, func, param) p_##func = DLL_GetProcAddress(gl_handle,#func);
-#include "gl_funcs.h"
-
-  glu_handle=DLL_LoadLibrary(LIBGLU_NAME);
-  if (!glu_handle) {
-    I_Error("%s: disabling opengl\n", DLL_ErrorMessage());
-  }
-
-#define PROTOTYPE(ret, func, param) p_##func = DLL_GetProcAddress(glu_handle,#func);
-#include "glu_funcs.h"
-
-#else /* DYNAMIC_GL */
-
-#define PROTOTYPE(ret, func, param) p_##func = &(func);
-#include "gl_funcs.h"
-
-#define PROTOTYPE(ret, func, param) p_##func = &(func);
-#include "glu_funcs.h"
-
-#endif /* DYNAMIC_GL */
 }
 
 #define SCALE_X(x)		((flags & VPT_STRETCH)?((float)x)*(float)SCREENWIDTH/320.0f:(float)x)
@@ -452,12 +408,12 @@ void gld_DrawNumPatch(int x, int y, int lump, int cm, enum patch_translation_e f
   ypos=SCALE_Y(y-gltexture->topoffset);
   width=SCALE_X(gltexture->realtexwidth);
   height=SCALE_Y(gltexture->realtexheight);
-	p_glBegin(GL_TRIANGLE_STRIP);
-		p_glTexCoord2f(fU1, fV1); p_glVertex2f((xpos),(ypos));
-		p_glTexCoord2f(fU1, fV2); p_glVertex2f((xpos),(ypos+height));
-		p_glTexCoord2f(fU2, fV1); p_glVertex2f((xpos+width),(ypos));
-		p_glTexCoord2f(fU2, fV2); p_glVertex2f((xpos+width),(ypos+height));
-	p_glEnd();
+	glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(fU1, fV1); glVertex2f((xpos),(ypos));
+		glTexCoord2f(fU1, fV2); glVertex2f((xpos),(ypos+height));
+		glTexCoord2f(fU2, fV1); glVertex2f((xpos+width),(ypos));
+		glTexCoord2f(fU2, fV2); glVertex2f((xpos+width),(ypos+height));
+	glEnd();
 }
 
 void gld_DrawPatchFromMem(int x, int y, const patch_t *patch, int cm, enum patch_translation_e flags)
@@ -498,8 +454,8 @@ void gld_DrawPatchFromMem(int x, int y, const patch_t *patch, int cm, enum patch
   buffer=(unsigned char*)Z_Malloc(gltexture->buffer_size,PU_STATIC,0);
   memset(buffer,0,gltexture->buffer_size);
   gld_AddPatchToTexture(gltexture, buffer, patch, 0, 0, cm);
-	p_glGenTextures(1,&gltexture->glTexID[cm]);
-	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+	glGenTextures(1,&gltexture->glTexID[cm]);
+	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
 #ifdef USE_GLU_IMAGESCALE
   if ((gltexture->buffer_width>gltexture->tex_width) ||
       (gltexture->buffer_height>gltexture->tex_height)
@@ -510,14 +466,14 @@ void gld_DrawPatchFromMem(int x, int y, const patch_t *patch, int cm, enum patch
     scaledbuffer=(unsigned char*)Z_Malloc(gltexture->tex_width*gltexture->tex_height*4,PU_STATIC,0);
     if (scaledbuffer)
     {
-      p_gluScaleImage(GL_RGBA,
+      gluScaleImage(GL_RGBA,
                     gltexture->buffer_width, gltexture->buffer_height,
                     GL_UNSIGNED_BYTE,buffer,
                     gltexture->tex_width, gltexture->tex_height,
                     GL_UNSIGNED_BYTE,scaledbuffer);
       Z_Free(buffer);
       buffer=scaledbuffer;
-      p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
+      glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
                     gltexture->tex_width, gltexture->tex_height,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     }
@@ -525,14 +481,14 @@ void gld_DrawPatchFromMem(int x, int y, const patch_t *patch, int cm, enum patch
   else
 #endif /* USE_GLU_IMAGESCALE */
   {
-    p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
+    glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
                   gltexture->buffer_width, gltexture->buffer_height,
                   0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
   }
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
   Z_Free(buffer);
 
   fV1=0.0f;
@@ -551,15 +507,15 @@ void gld_DrawPatchFromMem(int x, int y, const patch_t *patch, int cm, enum patch
   ypos=SCALE_Y(y-gltexture->topoffset);
   width=SCALE_X(gltexture->realtexwidth);
   height=SCALE_Y(gltexture->realtexheight);
-	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
-	p_glBegin(GL_TRIANGLE_STRIP);
-		p_glTexCoord2f(fU1, fV1); p_glVertex2f((xpos),(ypos));
-		p_glTexCoord2f(fU1, fV2); p_glVertex2f((xpos),(ypos+height));
-		p_glTexCoord2f(fU2, fV1); p_glVertex2f((xpos+width),(ypos));
-		p_glTexCoord2f(fU2, fV2); p_glVertex2f((xpos+width),(ypos+height));
-	p_glEnd();
+	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+	glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(fU1, fV1); glVertex2f((xpos),(ypos));
+		glTexCoord2f(fU1, fV2); glVertex2f((xpos),(ypos+height));
+		glTexCoord2f(fU2, fV1); glVertex2f((xpos+width),(ypos));
+		glTexCoord2f(fU2, fV2); glVertex2f((xpos+width),(ypos+height));
+	glEnd();
 
-	p_glDeleteTextures(1,&gltexture->glTexID[cm]);
+	glDeleteTextures(1,&gltexture->glTexID[cm]);
   Z_Free(gltexture);
 }
 
@@ -582,27 +538,27 @@ void gld_DrawBackground(const char* name)
   fV2=(float)SCREENHEIGHT/(float)gltexture->realtexheight;
   width=SCREENWIDTH;
   height=SCREENHEIGHT;
-	p_glBegin(GL_TRIANGLE_STRIP);
-		p_glTexCoord2f(fU1, fV1); p_glVertex2f((float)(0),(float)(0));
-		p_glTexCoord2f(fU1, fV2); p_glVertex2f((float)(0),(float)(0+height));
-		p_glTexCoord2f(fU2, fV1); p_glVertex2f((float)(0+width),(float)(0));
-		p_glTexCoord2f(fU2, fV2); p_glVertex2f((float)(0+width),(float)(0+height));
-	p_glEnd();
+	glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(fU1, fV1); glVertex2f((float)(0),(float)(0));
+		glTexCoord2f(fU1, fV2); glVertex2f((float)(0),(float)(0+height));
+		glTexCoord2f(fU2, fV1); glVertex2f((float)(0+width),(float)(0));
+		glTexCoord2f(fU2, fV2); glVertex2f((float)(0+width),(float)(0+height));
+	glEnd();
 }
 
 void gld_DrawLine(int x0, int y0, int x1, int y1, byte BaseColor)
 {
   const unsigned char *playpal=W_CacheLumpName("PLAYPAL");
 
-	p_glDisable(GL_TEXTURE_2D);
-	p_glColor3f((float)playpal[3*BaseColor]/255.0f,
+	glDisable(GL_TEXTURE_2D);
+	glColor3f((float)playpal[3*BaseColor]/255.0f,
 			      (float)playpal[3*BaseColor+1]/255.0f,
 			      (float)playpal[3*BaseColor+2]/255.0f);
-	p_glBegin(GL_LINES);
-		p_glVertex2i( x0, y0 );
-		p_glVertex2i( x1, y1 );
-	p_glEnd();
-	p_glEnable(GL_TEXTURE_2D);
+	glBegin(GL_LINES);
+		glVertex2i( x0, y0 );
+		glVertex2i( x1, y1 );
+	glEnd();
+	glEnable(GL_TEXTURE_2D);
   W_UnlockLumpName("PLAYPAL");
 }
 
@@ -631,10 +587,10 @@ void gld_DrawWeapon(int weaponlump, vissprite_t *vis, int lightlevel)
 
   if (viewplayer->mo->flags & MF_SHADOW)
   {
-    p_glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
-    p_glAlphaFunc(GL_GEQUAL,0.1f);
-    //p_glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
-    p_glColor4f(0.2f,0.2f,0.2f,0.33f);
+    glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+    glAlphaFunc(GL_GEQUAL,0.1f);
+    //glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
+    glColor4f(0.2f,0.2f,0.2f,0.33f);
   }
   else
   {
@@ -643,36 +599,36 @@ void gld_DrawWeapon(int weaponlump, vissprite_t *vis, int lightlevel)
     else
   		gld_StaticLight(light);
   }
-	p_glBegin(GL_TRIANGLE_STRIP);
-		p_glTexCoord2f(fU1, fV1); p_glVertex2f((float)(x1),(float)(y1));
-		p_glTexCoord2f(fU1, fV2); p_glVertex2f((float)(x1),(float)(y2));
-		p_glTexCoord2f(fU2, fV1); p_glVertex2f((float)(x2),(float)(y1));
-		p_glTexCoord2f(fU2, fV2); p_glVertex2f((float)(x2),(float)(y2));
-	p_glEnd();
+	glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(fU1, fV1); glVertex2f((float)(x1),(float)(y1));
+		glTexCoord2f(fU1, fV2); glVertex2f((float)(x1),(float)(y2));
+		glTexCoord2f(fU2, fV1); glVertex2f((float)(x2),(float)(y1));
+		glTexCoord2f(fU2, fV2); glVertex2f((float)(x2),(float)(y2));
+	glEnd();
   if(viewplayer->mo->flags & MF_SHADOW)
   {
-    p_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    p_glAlphaFunc(GL_GEQUAL,0.5f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glAlphaFunc(GL_GEQUAL,0.5f);
   }
-  p_glColor3f(1.0f,1.0f,1.0f);
+  glColor3f(1.0f,1.0f,1.0f);
 }
 
 void gld_FillBlock(int x, int y, int width, int height, int col)
 {
   const unsigned char *playpal=W_CacheLumpName("PLAYPAL");
 
-	p_glDisable(GL_TEXTURE_2D);
-	p_glColor3f((float)playpal[3*col]/255.0f,
+	glDisable(GL_TEXTURE_2D);
+	glColor3f((float)playpal[3*col]/255.0f,
 			      (float)playpal[3*col+1]/255.0f,
 			      (float)playpal[3*col+2]/255.0f);
-	p_glBegin(GL_TRIANGLE_STRIP);
-		p_glVertex2i( x, y );
-		p_glVertex2i( x, y+height );
-		p_glVertex2i( x+width, y );
-		p_glVertex2i( x+width, y+height );
-	p_glEnd();
-	p_glEnable(GL_TEXTURE_2D);
-	p_glColor3f(1.0f,1.0f,1.0f);
+	glBegin(GL_TRIANGLE_STRIP);
+		glVertex2i( x, y );
+		glVertex2i( x, y+height );
+		glVertex2i( x+width, y );
+		glVertex2i( x+width, y+height );
+	glEnd();
+	glEnable(GL_TEXTURE_2D);
+	glColor3f(1.0f,1.0f,1.0f);
   W_UnlockLumpName("PLAYPAL");
 }
 
@@ -721,16 +677,16 @@ void gld_SetPalette(int palette)
 
 void gld_ReadScreen (byte* scr)
 {
-  p_glReadPixels(0,0,SCREENWIDTH,SCREENHEIGHT,GL_RGB,GL_UNSIGNED_BYTE,scr);
+  glReadPixels(0,0,SCREENWIDTH,SCREENHEIGHT,GL_RGB,GL_UNSIGNED_BYTE,scr);
 }
 
 GLvoid gld_Set2DMode()
 {
-	p_glMatrixMode(GL_MODELVIEW);
-	p_glLoadIdentity();
-	p_glMatrixMode(GL_PROJECTION);
-	p_glLoadIdentity();
-	p_glOrtho(
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(
     (GLdouble) 0,
 		(GLdouble) SCREENWIDTH, 
 		(GLdouble) SCREENHEIGHT, 
@@ -738,7 +694,7 @@ GLvoid gld_Set2DMode()
 		(GLdouble) -1.0, 
 		(GLdouble) 1.0 
   );
-	p_glDisable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
 }
 
 void gld_InitDrawScene(void)
@@ -748,7 +704,7 @@ void gld_InitDrawScene(void)
 void gld_Finish()
 {
   gld_Set2DMode();
-  p_glFinish();
+  glFinish();
 	SDL_GL_SwapBuffers();
 }
 
@@ -787,7 +743,7 @@ static void gld_AddGlobalVertexes(int count)
 }
 
 /* GLLoopDef is the struct for one loop. A loop is a list of vertexes
- * for triangles, which is calculated by the p_gluTesselator in gld_PrecalculateSector
+ * for triangles, which is calculated by the gluTesselator in gld_PrecalculateSector
  * and in gld_PreprocessCarvedFlat
  */
 typedef struct
@@ -1186,7 +1142,7 @@ static void CALLBACK ntessError(GLenum error)
 {
 #ifdef _DEBUG
   const GLubyte *estring;
-  estring = p_gluErrorString(error);
+  estring = gluErrorString(error);
   fprintf(levelinfo, "\t\tTessellation Error: %s\n", estring);
 #endif
 }
@@ -1226,7 +1182,7 @@ static void CALLBACK ntessVertex( vertex_t *vert )
 
   // increase vertex count
   gld_AddGlobalVertexes(1);
-  // add the new vertex (vert is the second argument of p_gluTessVertex)
+  // add the new vertex (vert is the second argument of gluTessVertex)
   gld_texcoords[gld_num_vertexes].u=( (float)vert->x/(float)FRACUNIT)/64.0f;
   gld_texcoords[gld_num_vertexes].v=(-(float)vert->y/(float)FRACUNIT)/64.0f;
   gld_vertexes[gld_num_vertexes].x=-(float)vert->x/MAP_SCALE;
@@ -1292,7 +1248,7 @@ static void gld_PrecalculateSector(int num)
     return;
   }
   // init tesselator
-  tess=p_gluNewTess();
+  tess=gluNewTess();
   if (!tess)
   {
     if (levelinfo) fclose(levelinfo);
@@ -1300,11 +1256,11 @@ static void gld_PrecalculateSector(int num)
     return;
   }
   // set callbacks
-  p_gluTessCallback(tess, GLU_TESS_BEGIN, ntessBegin);
-  p_gluTessCallback(tess, GLU_TESS_VERTEX, ntessVertex);
-  p_gluTessCallback(tess, GLU_TESS_ERROR, ntessError);
-  p_gluTessCallback(tess, GLU_TESS_COMBINE, ntessCombine);
-  p_gluTessCallback(tess, GLU_TESS_END, ntessEnd);
+  gluTessCallback(tess, GLU_TESS_BEGIN, ntessBegin);
+  gluTessCallback(tess, GLU_TESS_VERTEX, ntessVertex);
+  gluTessCallback(tess, GLU_TESS_ERROR, ntessError);
+  gluTessCallback(tess, GLU_TESS_COMBINE, ntessCombine);
+  gluTessCallback(tess, GLU_TESS_END, ntessEnd);
   if (levelinfo) fprintf(levelinfo, "sector %i, %i lines in sector\n", num, sectors[num].linecount);
   // remove any line which has both sides in the same sector (i.e. Doom2 Map01 Sector 1)
   for (i=0; i<sectors[num].linecount; i++)
@@ -1329,10 +1285,10 @@ static void gld_PrecalculateSector(int num)
   vertexnum=0;
   maxvertexnum=0;
   // start tesselator
-  if (levelinfo) fprintf(levelinfo, "p_gluTessBeginPolygon\n");
-  p_gluTessBeginPolygon(tess, NULL);
-  if (levelinfo) fprintf(levelinfo, "\tp_gluTessBeginContour\n");
-  p_gluTessBeginContour(tess);
+  if (levelinfo) fprintf(levelinfo, "gluTessBeginPolygon\n");
+  gluTessBeginPolygon(tess, NULL);
+  if (levelinfo) fprintf(levelinfo, "\tgluTessBeginContour\n");
+  gluTessBeginContour(tess);
   while (linecount)
   {
     // if there is no connected line, then start new loop
@@ -1351,12 +1307,12 @@ static void gld_PrecalculateSector(int num)
           if (levelinfo) fprintf(levelinfo, "\tNew Loop %3i\n", currentloop);
           if (oldline!=0)
           {
-            if (levelinfo) fprintf(levelinfo, "\tp_gluTessEndContour\n");
-            p_gluTessEndContour(tess);
-//            if (levelinfo) fprintf(levelinfo, "\tp_gluNextContour\n");
-//            p_gluNextContour(tess, GLU_CW);
-            if (levelinfo) fprintf(levelinfo, "\tp_gluTessBeginContour\n");
-            p_gluTessBeginContour(tess);
+            if (levelinfo) fprintf(levelinfo, "\tgluTessEndContour\n");
+            gluTessEndContour(tess);
+//            if (levelinfo) fprintf(levelinfo, "\tgluNextContour\n");
+//            gluNextContour(tess, GLU_CW);
+            if (levelinfo) fprintf(levelinfo, "\tgluTessBeginContour\n");
+            gluTessBeginContour(tess);
           }
           break;
         }
@@ -1399,8 +1355,8 @@ static void gld_PrecalculateSector(int num)
     v[vertexnum*3+2]= (double)currentvertex->y/(double)MAP_SCALE;
     // add the vertex to the tesselator, currentvertex is the pointer to the vertexlist of doom
     // v[vertexnum] is the GLdouble array of the current vertex
-    if (levelinfo) fprintf(levelinfo, "\t\tp_gluTessVertex(%i, %i)\n",currentvertex->x>>FRACBITS,currentvertex->y>>FRACBITS);
-    p_gluTessVertex(tess, &v[vertexnum*3], currentvertex);
+    if (levelinfo) fprintf(levelinfo, "\t\tgluTessVertex(%i, %i)\n",currentvertex->x>>FRACBITS,currentvertex->y>>FRACBITS);
+    gluTessVertex(tess, &v[vertexnum*3], currentvertex);
     // increase vertexindex
     vertexnum++;
     // decrease linecount of current sector
@@ -1451,7 +1407,7 @@ static void gld_PrecalculateSector(int num)
           else
             // check if the angle between the current line and this best line candidate is smaller then
             // the angle of the last candidate
-            if (D_abs(lineangle-angle)<D_abs(bestangle))
+            if (abs(lineangle-angle)<abs(bestangle))
             {
               bestline=i;
               bestangle=lineangle-angle;
@@ -1466,12 +1422,12 @@ static void gld_PrecalculateSector(int num)
     }
   }
   // let the tesselator calculate the loops
-  if (levelinfo) fprintf(levelinfo, "\tp_gluTessEndContour\n");
-  p_gluTessEndContour(tess);
-  if (levelinfo) fprintf(levelinfo, "p_gluTessEndPolygon\n");
-  p_gluTessEndPolygon(tess);
+  if (levelinfo) fprintf(levelinfo, "\tgluTessEndContour\n");
+  gluTessEndContour(tess);
+  if (levelinfo) fprintf(levelinfo, "gluTessEndPolygon\n");
+  gluTessEndPolygon(tess);
   // clean memory
-  p_gluDeleteTess(tess);
+  gluDeleteTess(tess);
   Z_Free(v);
   Z_Free(lineadded);
 }
@@ -1725,9 +1681,9 @@ void gld_StartDrawScene(void)
   else
     height = (screenblocks*SCREENHEIGHT/10) & ~7;
   
- 	p_glViewport(viewwindowx, SCREENHEIGHT-(height+viewwindowy-((height-viewheight)/2)), viewwidth, height);
-	p_glScissor(viewwindowx, SCREENHEIGHT-(viewheight+viewwindowy), viewwidth, viewheight);
-  p_glEnable(GL_SCISSOR_TEST);
+ 	glViewport(viewwindowx, SCREENHEIGHT-(height+viewwindowy-((height-viewheight)/2)), viewwidth, height);
+	glScissor(viewwindowx, SCREENHEIGHT-(viewheight+viewwindowy), viewwidth, viewheight);
+  glEnable(GL_SCISSOR_TEST);
 	// Player coordinates
 	xCamera=-(float)viewx/MAP_SCALE;
 	yCamera=(float)viewy/MAP_SCALE;
@@ -1737,29 +1693,29 @@ void gld_StartDrawScene(void)
 	inv_yaw=-90.0f+(float)(viewangle>>ANGLETOFINESHIFT)*360.0f/FINEANGLES;
 
 #ifdef _DEBUG
-	p_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #else
-	p_glClear(GL_DEPTH_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
 #endif
 
-  p_glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);
 
-  p_glMatrixMode(GL_PROJECTION);
-	p_glLoadIdentity();
+  glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 
-	p_gluPerspective(64.0f, 320.0f/200.0f, (float)gl_nearclip/100.0f, (float)gl_farclip/100.0f);
+	gluPerspective(64.0f, 320.0f/200.0f, (float)gl_nearclip/100.0f, (float)gl_farclip/100.0f);
 
-	p_glMatrixMode(GL_MODELVIEW);
-	p_glLoadIdentity();
-  p_glRotatef(roll,  0.0f, 0.0f, 1.0f);
-	p_glRotatef(pitch, 1.0f, 0.0f, 0.0f);
-	p_glRotatef(yaw,   0.0f, 1.0f, 0.0f);
-	p_glTranslatef(-xCamera, -trY, -yCamera);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+  glRotatef(roll,  0.0f, 0.0f, 1.0f);
+	glRotatef(pitch, 1.0f, 0.0f, 0.0f);
+	glRotatef(yaw,   0.0f, 1.0f, 0.0f);
+	glTranslatef(-xCamera, -trY, -yCamera);
 
   if (use_fog)
-	  p_glEnable(GL_FOG);
+	  glEnable(GL_FOG);
   else
-    p_glDisable(GL_FOG);
+    glDisable(GL_FOG);
   rendermarker++;
   gld_drawinfo.num_walls=0;
   gld_drawinfo.num_flats=0;
@@ -1771,10 +1727,10 @@ void gld_EndDrawScene(void)
 {
   extern void R_DrawPlayerSprites (void);
 
-	p_glDisable(GL_POLYGON_SMOOTH);
+	glDisable(GL_POLYGON_SMOOTH);
 
-	p_glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT); 
-	p_glDisable(GL_FOG); 
+	glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT); 
+	glDisable(GL_FOG); 
 	gld_Set2DMode();
 
 	if (viewangleoffset <= 1024<<ANGLETOFINESHIFT || 
@@ -1784,21 +1740,21 @@ void gld_EndDrawScene(void)
 	}
   if (extra_alpha>0.0f)
   {
-    p_glDisable(GL_ALPHA_TEST);
-	  p_glColor4f(extra_red, extra_green, extra_blue, extra_alpha);
-    p_glDisable(GL_TEXTURE_2D);
-    p_glBegin(GL_TRIANGLE_STRIP);
-  		p_glVertex2f( 0.0f, 0.0f);
-	  	p_glVertex2f( 0.0f, (float)SCREENHEIGHT);
-		  p_glVertex2f( (float)SCREENWIDTH, 0.0f);
-		  p_glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
-    p_glEnd();
-    p_glEnable(GL_TEXTURE_2D);
-    p_glEnable(GL_ALPHA_TEST);
+    glDisable(GL_ALPHA_TEST);
+	  glColor4f(extra_red, extra_green, extra_blue, extra_alpha);
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLE_STRIP);
+  		glVertex2f( 0.0f, 0.0f);
+	  	glVertex2f( 0.0f, (float)SCREENHEIGHT);
+		  glVertex2f( (float)SCREENWIDTH, 0.0f);
+		  glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
+    glEnd();
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_ALPHA_TEST);
   }
 
-	p_glColor3f(1.0f,1.0f,1.0f);
-  p_glDisable(GL_SCISSOR_TEST);
+	glColor3f(1.0f,1.0f,1.0f);
+  glDisable(GL_SCISSOR_TEST);
 }
 
 static void gld_AddDrawItem(GLDrawItemType itemtype, int itemindex)
@@ -1852,47 +1808,47 @@ static void gld_DrawWall(GLWall *wall)
   }
   else
   {
-    p_glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_2D);
 #ifdef _DEBUG
-    p_glColor4f(1.0f,0.0f,0.0f,1.0f);
+    glColor4f(1.0f,0.0f,0.0f,1.0f);
 #endif
   }
   if (wall->flag>=GLDWF_SKY)
   {
     if ( wall->gltexture )
     {
-      p_glMatrixMode(GL_TEXTURE);
-      p_glPushMatrix();
+      glMatrixMode(GL_TEXTURE);
+      glPushMatrix();
       if ((wall->flag&GLDWF_SKYFLIP)==GLDWF_SKYFLIP)
-        p_glScalef(-128.0f/(float)wall->gltexture->buffer_width,200.0f/320.0f*2.0f,1.0f);
+        glScalef(-128.0f/(float)wall->gltexture->buffer_width,200.0f/320.0f*2.0f,1.0f);
       else
-        p_glScalef(128.0f/(float)wall->gltexture->buffer_width,200.0f/320.0f*2.0f,1.0f);
-      p_glTranslatef(wall->skyyaw,wall->skyymid,0.0f);
+        glScalef(128.0f/(float)wall->gltexture->buffer_width,200.0f/320.0f*2.0f,1.0f);
+      glTranslatef(wall->skyyaw,wall->skyymid,0.0f);
     }
-    p_glBegin(GL_TRIANGLE_STRIP);
-      p_glVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
-      p_glVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
-      p_glVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
-      p_glVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
-    p_glEnd();
+    glBegin(GL_TRIANGLE_STRIP);
+      glVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
+      glVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
+      glVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
+      glVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
+    glEnd();
     if ( wall->gltexture )
     {
-      p_glPopMatrix();
-      p_glMatrixMode(GL_MODELVIEW);
+      glPopMatrix();
+      glMatrixMode(GL_MODELVIEW);
     }
   }
   else
   {
     gld_StaticLightAlpha(wall->light, wall->alpha);
-    p_glBegin(GL_TRIANGLE_STRIP);
-      p_glTexCoord2f(wall->ul,wall->vt); p_glVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
-      p_glTexCoord2f(wall->ul,wall->vb); p_glVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
-      p_glTexCoord2f(wall->ur,wall->vt); p_glVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
-      p_glTexCoord2f(wall->ur,wall->vb); p_glVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
-    p_glEnd();
+    glBegin(GL_TRIANGLE_STRIP);
+      glTexCoord2f(wall->ul,wall->vt); glVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
+      glTexCoord2f(wall->ul,wall->vb); glVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
+      glTexCoord2f(wall->ur,wall->vt); glVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
+      glTexCoord2f(wall->ur,wall->vb); glVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
+    glEnd();
   }
   if (!wall->gltexture)
-    p_glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
 }
 
 #define LINE seg->linedef
@@ -2231,12 +2187,12 @@ static void gld_DrawFlat(GLFlat *flat)
 
   gld_BindFlat(flat->gltexture);
   gld_StaticLight(flat->light);
-  p_glMatrixMode(GL_MODELVIEW);
-  p_glPushMatrix();
-  p_glTranslatef(0.0f,flat->z,0.0f);
-  p_glMatrixMode(GL_TEXTURE);
-  p_glPushMatrix();
-  p_glTranslatef(flat->uoffs/64.0f,flat->voffs/64.0f,0.0f);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glTranslatef(0.0f,flat->z,0.0f);
+  glMatrixMode(GL_TEXTURE);
+  glPushMatrix();
+  glTranslatef(flat->uoffs/64.0f,flat->voffs/64.0f,0.0f);
   if (flat->sectornum>=0)
   {
     // go through all loops of this sector
@@ -2248,30 +2204,30 @@ static void gld_DrawFlat(GLFlat *flat)
       if (!currentloop)
         continue;
       // set the mode (GL_TRIANGLES, GL_TRIANGLE_STRIP or GL_TRIANGLE_FAN)
-      p_glBegin(currentloop->mode);
+      glBegin(currentloop->mode);
       // go through all vertexes of this loop
       for (vertexnum=currentloop->vertexindex; vertexnum<(currentloop->vertexindex+currentloop->vertexcount); vertexnum++)
       {
         // set texture coordinate of this vertex
-        p_glTexCoord2fv(&gld_texcoords[vertexnum*2]);
+        glTexCoord2fv(&gld_texcoords[vertexnum*2]);
         // set vertex coordinate
-        p_glVertex3fv(&gld_vertexes[vertexnum*3]);
+        glVertex3fv(&gld_vertexes[vertexnum*3]);
       }
       // end of loop
-      p_glEnd();
+      glEnd();
     }
 #else
     for (loopnum=0; loopnum<sectorloops[flat->sectornum].loopcount; loopnum++)
     {
       // set the current loop
       currentloop=&sectorloops[flat->sectornum].loops[loopnum];
-      p_glDrawArrays(currentloop->mode,currentloop->vertexindex,currentloop->vertexcount);
+      glDrawArrays(currentloop->mode,currentloop->vertexindex,currentloop->vertexcount);
     }
 #endif
   }
-  p_glPopMatrix();
-  p_glMatrixMode(GL_MODELVIEW);
-  p_glPopMatrix();
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
 }
 
 // gld_AddFlat
@@ -2369,16 +2325,16 @@ void gld_AddPlane(int subsectornum, visplane_t *floorplane, visplane_t *ceilingp
 static void gld_DrawSprite(GLSprite *sprite)
 {
   gld_BindPatch(sprite->gltexture,sprite->cm);
-  p_glMatrixMode(GL_MODELVIEW);
-	p_glPushMatrix();
-	p_glTranslatef(sprite->x,sprite->y,sprite->z);
-	p_glRotatef(inv_yaw,0.0f,1.0f,0.0f);
+  glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glTranslatef(sprite->x,sprite->y,sprite->z);
+	glRotatef(inv_yaw,0.0f,1.0f,0.0f);
 	if(sprite->shadow)
   {
-    p_glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
-    //p_glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
-    p_glAlphaFunc(GL_GEQUAL,0.1f);
-    p_glColor4f(0.2f,0.2f,0.2f,0.33f);
+    glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+    //glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
+    glAlphaFunc(GL_GEQUAL,0.1f);
+    glColor4f(0.2f,0.2f,0.2f,0.33f);
   }
   else
   {
@@ -2387,19 +2343,19 @@ static void gld_DrawSprite(GLSprite *sprite)
 		else
       gld_StaticLight(sprite->light);
   }
-  p_glBegin(GL_TRIANGLE_STRIP);
-		p_glTexCoord2f(sprite->ul, sprite->vt); p_glVertex3f(sprite->x1, sprite->y1, 0.0f);
-		p_glTexCoord2f(sprite->ur, sprite->vt); p_glVertex3f(sprite->x2, sprite->y1, 0.0f);
-		p_glTexCoord2f(sprite->ul, sprite->vb); p_glVertex3f(sprite->x1, sprite->y2, 0.0f);
-		p_glTexCoord2f(sprite->ur, sprite->vb); p_glVertex3f(sprite->x2, sprite->y2, 0.0f);
-	p_glEnd();
+  glBegin(GL_TRIANGLE_STRIP);
+		glTexCoord2f(sprite->ul, sprite->vt); glVertex3f(sprite->x1, sprite->y1, 0.0f);
+		glTexCoord2f(sprite->ur, sprite->vt); glVertex3f(sprite->x2, sprite->y1, 0.0f);
+		glTexCoord2f(sprite->ul, sprite->vb); glVertex3f(sprite->x1, sprite->y2, 0.0f);
+		glTexCoord2f(sprite->ur, sprite->vb); glVertex3f(sprite->x2, sprite->y2, 0.0f);
+	glEnd();
 		
-  p_glPopMatrix();
+  glPopMatrix();
 
 	if(sprite->shadow)
   {
-    p_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    p_glAlphaFunc(GL_GEQUAL,0.5f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glAlphaFunc(GL_GEQUAL,0.5f);
   }
 }
 
@@ -2465,8 +2421,8 @@ void gld_DrawScene(player_t *player)
   int i,j,k,count;
   fixed_t max_scale;
 
-  p_glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-  p_glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  glEnableClientState(GL_VERTEX_ARRAY);
   rendered_visplanes = rendered_segs = rendered_vissprites = 0;
   for (i=gld_drawinfo.num_drawitems; i>=0; i--)
   {
@@ -2474,9 +2430,9 @@ void gld_DrawScene(player_t *player)
     {
     case GLDIT_FLAT:
       // enable backside removing
-      p_glEnable(GL_CULL_FACE);
+      glEnable(GL_CULL_FACE);
       // floors
-      p_glCullFace(GL_FRONT);
+      glCullFace(GL_FRONT);
       for (j=(gld_drawinfo.drawitems[i].itemcount-1); j>=0; j--)
         if (!gld_drawinfo.flats[j+gld_drawinfo.drawitems[i].firstitemindex].ceiling)
         {
@@ -2484,7 +2440,7 @@ void gld_DrawScene(player_t *player)
           gld_DrawFlat(&gld_drawinfo.flats[j+gld_drawinfo.drawitems[i].firstitemindex]);
         }
       // ceilings
-      p_glCullFace(GL_BACK);
+      glCullFace(GL_BACK);
       for (j=(gld_drawinfo.drawitems[i].itemcount-1); j>=0; j--)
         if (gld_drawinfo.flats[j+gld_drawinfo.drawitems[i].firstitemindex].ceiling)
         {
@@ -2492,7 +2448,7 @@ void gld_DrawScene(player_t *player)
           gld_DrawFlat(&gld_drawinfo.flats[j+gld_drawinfo.drawitems[i].firstitemindex]);
         }
       // disable backside removing
-      p_glDisable(GL_CULL_FACE);
+      glDisable(GL_CULL_FACE);
       break;
     }
   }
@@ -2508,10 +2464,10 @@ void gld_DrawScene(player_t *player)
           continue;
         if ( (gl_drawskys) && (k==GLDWF_SKY) )
         {
-          p_glEnable(GL_TEXTURE_GEN_S);
-          p_glEnable(GL_TEXTURE_GEN_T);
-          p_glEnable(GL_TEXTURE_GEN_Q);
-          p_glColor4fv(gl_whitecolor);
+          glEnable(GL_TEXTURE_GEN_S);
+          glEnable(GL_TEXTURE_GEN_T);
+          glEnable(GL_TEXTURE_GEN_Q);
+          glColor4fv(gl_whitecolor);
         }
         for (j=(gld_drawinfo.drawitems[i].itemcount-1); j>=0; j--)
           if (gld_drawinfo.walls[j+gld_drawinfo.drawitems[i].firstitemindex].flag==k)
@@ -2522,9 +2478,9 @@ void gld_DrawScene(player_t *player)
           }
         if (gl_drawskys)
         {
-          p_glDisable(GL_TEXTURE_GEN_Q);
-          p_glDisable(GL_TEXTURE_GEN_T);
-          p_glDisable(GL_TEXTURE_GEN_S);
+          glDisable(GL_TEXTURE_GEN_Q);
+          glDisable(GL_TEXTURE_GEN_T);
+          glDisable(GL_TEXTURE_GEN_S);
         }
       }
       break;
@@ -2557,8 +2513,8 @@ void gld_DrawScene(player_t *player)
       break;
     }
   }
-  p_glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-  p_glDisableClientState(GL_VERTEX_ARRAY);
+  glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+  glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void gld_PreprocessLevel(void)
@@ -2569,13 +2525,6 @@ void gld_PreprocessLevel(void)
   gld_PreprocessSectors();
   gld_PreprocessSegs();
   memset(&gld_drawinfo,0,sizeof(GLDrawInfo));
-  gld_SetVertexArrays();
-}
-
-void gld_SetVertexArrays(void)
-{
-  if (gld_texcoords)
-    p_glTexCoordPointer(2,GL_FLOAT,0,gld_texcoords);
-  if (gld_vertexes)
-    p_glVertexPointer(3,GL_FLOAT,0,gld_vertexes);
+  glTexCoordPointer(2,GL_FLOAT,0,gld_texcoords);
+  glVertexPointer(3,GL_FLOAT,0,gld_vertexes);
 }

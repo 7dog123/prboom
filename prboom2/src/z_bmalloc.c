@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: z_bmalloc.c,v 1.10 2001/07/02 23:04:03 proff_fs Exp $
+ * $Id: z_bmalloc.c,v 1.8 2000/11/19 20:24:11 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -33,6 +33,8 @@
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
+
+#include <memory.h>
 
 #include "doomtype.h"
 #include "z_zone.h"

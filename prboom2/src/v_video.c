@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*-
+/* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: v_video.c,v 1.21 2001/07/22 14:57:43 cph Exp $
+ * $Id: v_video.c,v 1.15 2000/11/22 21:46:48 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -35,7 +35,7 @@
  */
 
 static const char
-rcsid[] = "$Id: v_video.c,v 1.21 2001/07/22 14:57:43 cph Exp $";
+rcsid[] = "$Id: v_video.c,v 1.15 2000/11/22 21:46:48 proff_fs Exp $";
 
 #include "doomdef.h"
 #include "r_main.h"
@@ -44,14 +44,99 @@ rcsid[] = "$Id: v_video.c,v 1.21 2001/07/22 14:57:43 cph Exp $";
 #include "w_wad.h"   /* needed for color translation lump lookup */
 #include "v_video.h"
 #include "i_video.h"
-#include "hu_stuff.h"
 #include "lprintf.h"
 
 // Each screen is [SCREENWIDTH*SCREENHEIGHT];
 byte *screens[6];
+int  dirtybox[4];
 
 /* jff 4/24/98 initialize this at runtime */
 const byte *colrngs[CR_LIMIT];
+
+// Now where did these came from?
+const byte gammatable[5][256] = // CPhipps - const
+{
+  {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
+   17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,
+   33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,
+   49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,
+   65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,
+   81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,
+   97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,
+   113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,
+   128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,
+   144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
+   160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,
+   176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+   192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
+   208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
+   224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
+   240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255},
+
+  {2,4,5,7,8,10,11,12,14,15,16,18,19,20,21,23,24,25,26,27,29,30,31,
+   32,33,34,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,52,54,55,
+   56,57,58,59,60,61,62,63,64,65,66,67,69,70,71,72,73,74,75,76,77,
+   78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,
+   99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,
+   115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,129,
+   130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,
+   146,147,148,148,149,150,151,152,153,154,155,156,157,158,159,160,
+   161,162,163,163,164,165,166,167,168,169,170,171,172,173,174,175,
+   175,176,177,178,179,180,181,182,183,184,185,186,186,187,188,189,
+   190,191,192,193,194,195,196,196,197,198,199,200,201,202,203,204,
+   205,205,206,207,208,209,210,211,212,213,214,214,215,216,217,218,
+   219,220,221,222,222,223,224,225,226,227,228,229,230,230,231,232,
+   233,234,235,236,237,237,238,239,240,241,242,243,244,245,245,246,
+   247,248,249,250,251,252,252,253,254,255},
+
+  {4,7,9,11,13,15,17,19,21,22,24,26,27,29,30,32,33,35,36,38,39,40,42,
+   43,45,46,47,48,50,51,52,54,55,56,57,59,60,61,62,63,65,66,67,68,69,
+   70,72,73,74,75,76,77,78,79,80,82,83,84,85,86,87,88,89,90,91,92,93,
+   94,95,96,97,98,100,101,102,103,104,105,106,107,108,109,110,111,112,
+   113,114,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,
+   129,130,131,132,133,133,134,135,136,137,138,139,140,141,142,143,144,
+   144,145,146,147,148,149,150,151,152,153,153,154,155,156,157,158,159,
+   160,160,161,162,163,164,165,166,166,167,168,169,170,171,172,172,173,
+   174,175,176,177,178,178,179,180,181,182,183,183,184,185,186,187,188,
+   188,189,190,191,192,193,193,194,195,196,197,197,198,199,200,201,201,
+   202,203,204,205,206,206,207,208,209,210,210,211,212,213,213,214,215,
+   216,217,217,218,219,220,221,221,222,223,224,224,225,226,227,228,228,
+   229,230,231,231,232,233,234,235,235,236,237,238,238,239,240,241,241,
+   242,243,244,244,245,246,247,247,248,249,250,251,251,252,253,254,254,
+   255},
+
+  {8,12,16,19,22,24,27,29,31,34,36,38,40,41,43,45,47,49,50,52,53,55,
+   57,58,60,61,63,64,65,67,68,70,71,72,74,75,76,77,79,80,81,82,84,85,
+   86,87,88,90,91,92,93,94,95,96,98,99,100,101,102,103,104,105,106,107,
+   108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,
+   125,126,127,128,129,130,131,132,133,134,135,135,136,137,138,139,140,
+   141,142,143,143,144,145,146,147,148,149,150,150,151,152,153,154,155,
+   155,156,157,158,159,160,160,161,162,163,164,165,165,166,167,168,169,
+   169,170,171,172,173,173,174,175,176,176,177,178,179,180,180,181,182,
+   183,183,184,185,186,186,187,188,189,189,190,191,192,192,193,194,195,
+   195,196,197,197,198,199,200,200,201,202,202,203,204,205,205,206,207,
+   207,208,209,210,210,211,212,212,213,214,214,215,216,216,217,218,219,
+   219,220,221,221,222,223,223,224,225,225,226,227,227,228,229,229,230,
+   231,231,232,233,233,234,235,235,236,237,237,238,238,239,240,240,241,
+   242,242,243,244,244,245,246,246,247,247,248,249,249,250,251,251,252,
+   253,253,254,254,255},
+
+  {16,23,28,32,36,39,42,45,48,50,53,55,57,60,62,64,66,68,69,71,73,75,76,
+   78,80,81,83,84,86,87,89,90,92,93,94,96,97,98,100,101,102,103,105,106,
+   107,108,109,110,112,113,114,115,116,117,118,119,120,121,122,123,124,
+   125,126,128,128,129,130,131,132,133,134,135,136,137,138,139,140,141,
+   142,143,143,144,145,146,147,148,149,150,150,151,152,153,154,155,155,
+   156,157,158,159,159,160,161,162,163,163,164,165,166,166,167,168,169,
+   169,170,171,172,172,173,174,175,175,176,177,177,178,179,180,180,181,
+   182,182,183,184,184,185,186,187,187,188,189,189,190,191,191,192,193,
+   193,194,195,195,196,196,197,198,198,199,200,200,201,202,202,203,203,
+   204,205,205,206,207,207,208,208,209,210,210,211,211,212,213,213,214,
+   214,215,216,216,217,217,218,219,219,220,220,221,221,222,223,223,224,
+   224,225,225,226,227,227,228,228,229,229,230,230,231,232,232,233,233,
+   234,234,235,235,236,236,237,237,238,239,239,240,240,241,241,242,242,
+   243,243,244,244,245,245,246,246,247,247,248,248,249,249,250,250,251,
+   251,252,252,253,254,254,255,255}
+};
 
 int usegamma;
 
@@ -100,6 +185,21 @@ void V_InitColorTranslation(void)
 }
 
 //
+// V_MarkRect
+//
+// Marks a rectangular portion of the screen specified by
+// upper left origin and height and width dirty to minimize
+// the amount of screen update necessary. No return.
+//
+#ifndef GL_DOOM
+void V_MarkRect(int x, int y, int width, int height)
+{
+  M_AddToBox(dirtybox, x, y);
+  M_AddToBox(dirtybox, x+width-1, y+height-1);
+}
+#endif /* GL_DOOM */
+
+//
 // V_CopyRect
 //
 // Copies a source rectangle in a screen buffer to a destination
@@ -140,6 +240,8 @@ void V_CopyRect(int srcx, int srcy, int srcscrn, int width,
     I_Error ("V_CopyRect: Bad arguments");
 #endif
 
+  V_MarkRect (destx, desty, width, height);
+
   src = screens[srcscrn]+SCREENWIDTH*srcy+srcx;
   dest = screens[destscrn]+SCREENWIDTH*desty+destx;
 
@@ -149,6 +251,74 @@ void V_CopyRect(int srcx, int srcy, int srcscrn, int width,
       src += SCREENWIDTH;
       dest += SCREENWIDTH;
     }
+}
+#endif /* GL_DOOM */
+
+//
+// V_DrawBlock
+//
+// Draw a linear block of pixels into the view buffer. 
+//
+// The bytes at src are copied in linear order to the screen rectangle
+// at x,y in screenbuffer scrn, with size width by height.
+//
+// The destination rectangle is marked dirty.
+//
+// No return.
+// 
+// CPhipps - modified  to take the patch translation flags. For now, only stretching is 
+//  implemented, to support highres in the menus
+//
+#ifndef GL_DOOM
+void V_DrawBlock(int x, int y, int scrn, int width, int height, 
+		 const byte *src, enum patch_translation_e flags)
+{
+  byte *dest;
+
+#ifdef RANGECHECK
+  if (x<0
+      ||x+width >((flags & VPT_STRETCH) ? 320 : SCREENWIDTH)
+      || y<0
+      || y+height>((flags & VPT_STRETCH) ? 200 : SCREENHEIGHT))
+    I_Error ("V_DrawBlock: Bad V_DrawBlock");
+
+  if (flags & (VPT_TRANS | VPT_FLIP))
+    I_Error("V_DrawBlock: Unsupported flags (%u)", flags);
+#endif
+
+  if (flags & VPT_STRETCH) {
+    byte   *dest;
+    int     s_width;
+    fixed_t dx = (320 << FRACBITS) / SCREENWIDTH;
+    
+    x = (x * SCREENWIDTH) / 320; y = (y * SCREENHEIGHT) / 200;
+    s_width = (width * SCREENWIDTH) / 320; height = (height * SCREENHEIGHT) / 200;
+    
+    if (!scrn)
+      V_MarkRect (x, y, width, height);
+
+    dest = screens[scrn] + y*SCREENWIDTH+x;
+    // x & y no longer needed
+    
+    while (height--) {
+      const byte *const src_row = src + width * ((height * 200) / SCREENHEIGHT);
+      byte       *const dst_row = dest + SCREENWIDTH * height;
+      fixed_t           tx;
+      
+      for (x=0, tx=0; x<s_width; x++, tx+=dx)
+	dst_row[x] = src_row[tx >> FRACBITS];
+    }
+  } else {
+    V_MarkRect (x, y, width, height);
+    
+    dest = screens[scrn] + y*SCREENWIDTH+x;
+
+    while (height--) {
+      memcpy (dest, src, width);
+      src += width;
+      dest += SCREENWIDTH;
+    }
+  }
 }
 #endif /* GL_DOOM */
 
@@ -163,25 +333,14 @@ void V_DrawBackground(const char* flatname, int scrn)
 {
   /* erase the entire screen to a tiled background */
   const byte *src;
-  byte       *dest;
   int         x,y;
-  int         width,height;
   int         lump;
   
   // killough 4/17/98: 
   src = W_CacheLumpNum(lump = firstflat + R_FlatNumForName(flatname));
   
-  /* V_DrawBlock(0, 0, scrn, 64, 64, src, 0); */
-  width = height = 64;
-  dest = screens[scrn];
-
-  while (height--) {
-    memcpy (dest, src, width);
-    src += width;
-    dest += SCREENWIDTH;
-  }
-  /* end V_DrawBlock */
-
+  V_DrawBlock(0, 0, scrn, 64, 64, src, 0);
+  
   for (y=0 ; y<SCREENHEIGHT ; y+=64)
     for (x=y ? 0 : 64; x<SCREENWIDTH ; x+=64)
       V_CopyRect(0, 0, scrn, ((SCREENWIDTH-x) < 64) ? (SCREENWIDTH-x) : 64, 
@@ -189,6 +348,40 @@ void V_DrawBackground(const char* flatname, int scrn)
   W_UnlockLumpNum(lump);
 }
 #endif
+
+//
+// V_GetBlock
+//
+// Gets a linear block of pixels from the view buffer.
+//
+// The pixels in the rectangle at x,y in screenbuffer scrn with size
+// width by height are linearly packed into the buffer dest.
+// No return
+//
+
+#ifndef GL_DOOM
+void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest)
+{
+  byte *src;
+
+#ifdef RANGECHECK
+  if (x<0
+      ||x+width >SCREENWIDTH
+      || y<0
+      || y+height>SCREENHEIGHT)
+    I_Error ("V_GetBlock: Bad arguments");
+#endif
+
+  src = screens[scrn] + y*SCREENWIDTH+x;
+
+  while (height--)
+    {
+      memcpy (dest, src, width);
+      src += SCREENWIDTH;
+      dest += width;
+    }
+}
+#endif /* GL_DOOM */
 
 //
 // V_Init
@@ -208,7 +401,7 @@ void V_Init (void)
   //  if e.g. it wants a MitSHM buffer instead
 
   for (i=0 ; i<PREALLOCED_SCREENS ; i++)
-    screens[i] = calloc(SCREENWIDTH*SCREENHEIGHT, 1);
+    screens[i] = Z_Calloc(SCREENWIDTH*SCREENHEIGHT, 1, PU_STATIC, NULL);
   for (; i<4; i++) // Clear the rest (paranoia)
     screens[i] = NULL;
 }
@@ -262,6 +455,9 @@ void V_DrawMemPatch(int x, int y, int scrn, const patch_t *patch,
     const column_t *column;
     byte           *desttop = screens[scrn]+y*SCREENWIDTH+x;
     unsigned int    w = SHORT(patch->width);
+    
+    if (!scrn)
+      V_MarkRect (x, y, w, SHORT(patch->height));
     
     w--; // CPhipps - note: w = width-1 now, speeds up flipping
     
@@ -349,6 +545,10 @@ void V_DrawMemPatch(int x, int y, int scrn, const patch_t *patch,
     DY2  = DY / 2;
     DYI2 = DYI* 2;
     
+    if (!scrn)
+      V_MarkRect ( stretchx, stretchy, (SHORT( patch->width ) * DX ) >> 16,
+		   (SHORT( patch->height) * DY ) >> 16 );
+    
     desttop = screens[scrn] + stretchy * SCREENWIDTH +  stretchx;
     
     for ( col = 0; col <= w; x++, col+=DXI, desttop++ ) {
@@ -434,6 +634,45 @@ int V_NamePatchHeight(const char* name)
   return w;
 }
 
+// CPhipps -
+// V_PatchToBlock
+//
+// Returns a simple bitmap which contains the patch. See-through parts of the 
+// patch will be undefined (in fact black for now)
+
+#ifndef GL_DOOM
+byte *V_PatchToBlock(const char* name, int cm, 
+			      enum patch_translation_e flags, 
+			      unsigned short* width, unsigned short* height)
+{
+  byte          *oldscr = screens[1];
+  byte          *block;
+  const patch_t *patch;
+
+  screens[1] = calloc(SCREENWIDTH*SCREENHEIGHT, 1);
+
+  patch = W_CacheLumpName(name);
+  V_DrawMemPatch(SHORT(patch->leftoffset), SHORT(patch->topoffset), 
+		  1, patch, cm, flags);
+
+#ifdef RANGECHECK
+  if (flags & VPT_STRETCH) 
+    I_Error("V_PatchToBlock: Stretching not supported");
+#endif
+
+  *width = SHORT(patch->width); *height = SHORT(patch->height);
+
+  W_UnlockLumpName(name);
+
+  V_GetBlock(0, 0, 1, *width, *height, 
+	     block = malloc((long)(*width) * (*height)));
+
+  free(screens[1]);
+  screens[1] = oldscr;
+  return block;
+}
+#endif /* GL_DOOM */
+
 //
 // V_SetPalette
 //
@@ -464,124 +703,3 @@ void V_FillRect(int scrn, int x, int y, int width, int height, byte colour)
   }
 }
 #endif
-
-/* Font */
-
-extern patchnum_t hu_font[HU_FONTSIZE];
-
-void V_WriteText(unsigned char *s, int x, int y)
-{
-  int   w, h;
-  unsigned char* ch;
-  int colour = CR_DEFAULT;
-  unsigned int c;
-  int   cx;
-  int   cy;
-
-  ch = s;
-  cx = x;
-  cy = y;
-  
-  while(1)
-  {
-    c = *ch++;
-    if (!c)
-	    break;
-    if (c >= FC_BASEVALUE)     // new colour
-    {
-      colour = c - FC_BASEVALUE;
-      continue;
-    }
-    if (c == '\t')
-    {
-      cx = (cx/40)+1;
-      cx = cx*40;
-    }
-    if (c == '\n')
-	  {
-	    cx = x;
-      cy += 8;
-	    continue;
-	  }
-
-    c = toupper(c) - HU_FONTSTART;
-    if (c < 0 || c> HU_FONTSIZE)
-    {
-      cx += 4;
-      continue;
-    }
-
-    // haleyjd: was no cx<0 check
-
-    w = SHORT(hu_font[c].width);
-    if(cx < 0 || cx+w > 320)
-	    break;
-
-    // haleyjd: was no y checking at all!
-
-    h = SHORT(hu_font[c].height);
-    if(cy < 0 || cy+h > 200)
-	    break;
-
-    V_DrawNumPatch(cx, cy, 0, hu_font[c].lumpnum, colour, VPT_STRETCH);
-    //V_DrawPatchTranslated(cx, cy, 0, patch, colour, 0);
-
-    cx+=w;
-  }
-}
-
-// write text in a particular colour
-
-void V_WriteTextColoured(unsigned char *s, int colour, int x, int y)
-{
-  char *tempstr = malloc(strlen(s)+3);
-
-  sprintf(tempstr, "%c%s", FC_BASEVALUE+colour, s);
-
-  V_WriteText(tempstr, x, y);
-
-  free(tempstr);
-}
-
-// find height(in pixels) of a string
-
-int V_StringHeight(unsigned char *s)
-{
-  int height = 8;  // always at least 8
-
-  // add an extra 8 for each newline found
-
-  while(*s)
-  {
-    if(*s == '\n') height += 8;
-      s++;
-  }
-
-  return height;
-}
-
-int V_StringWidth(unsigned char *s)
-{
-  int length = 0; // current line width
-  int longest_width = 0; // line with longest width so far
-  unsigned char c;
-
-  for(; *s; s++)
-  {
-    c = *s;
-    if(c >= FC_BASEVALUE)         // colour
-	    continue;
-    if(c == '\n')        // newline
-  	{
-	    if(length > longest_width) longest_width = length;
-	    length = 0; // next line;
-	    continue;
-	  }
-    c = toupper(c) - HU_FONTSTART;
-    length += (c >= HU_FONTSIZE) ? 4 : SHORT(hu_font[c].width);
-  }
-
-  if(length > longest_width) longest_width = length; // check last line
-
-  return longest_width;
-}

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: config.h,v 1.6 2001/07/06 09:35:20 proff_fs Exp $
+ * $Id: config.h,v 1.14.2.3 2001/10/04 07:30:24 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -51,26 +51,24 @@
 /* This is in the project settings */
 /* #define I386_ASM 1 */
 
-#ifdef _DEBUG
-
 /* Define to enable internal range checking */
-#define RANGECHECK 1
+/* #undef RANGECHECK */
 
 /* Define this to see real-time memory allocation
  * statistics, and enable extra debugging features 
  */
-#define INSTRUMENTED 1
+/* #undef INSTRUMENTED */
 
 /* Uncomment this to exhaustively run memory checks
  * while the game is running (this is EXTREMELY slow).
  * Only useful if INSTRUMENTED is also defined.
  */
-#define CHECKHEAP 1
+/* #undef CHECKHEAP */
 
 /* Uncomment this to cause heap dumps to be generated.
  * Only useful if INSTRUMENTED is also defined.
  */
-#define HEAPDUMP 1
+/* #undef HEAPDUMP */
 
 /* Uncomment this to perform id checks on zone blocks,
  * to detect corrupted and illegally freed blocks
@@ -84,9 +82,7 @@
 
 /* Defining this causes time stamps to be created each time a lump is locked, and 
  *  lumps locked for long periods of time are reported */
-#define TIMEDIAG 1
-
-#endif // _DEBUG
+/* #undef TIMEDIAG */
 
 /* Define to be the path where Doom WADs are stored */
 #define DOOMWADDIR "/usr/local/share/games/doom"
@@ -124,6 +120,9 @@
 /* Define for support for MBF helper dogs */
 #define DOGS 1
 
+/* Define if you want to have boomlump.wad in the exe  */
+#define ALL_IN_ONE 1
+
 /* Define if you want to compile with SDL  */
 #define USE_SDL 1
 
@@ -138,12 +137,13 @@
 /* Define if you want to use gluBuild2DMipmaps  */
 #define USE_GLU_MIPMAP 1
 
+/* Set to the attribute to apply to struct definitions to make them packed.
+ * For MSVC++ we can't do it like this, there are pragma's in the source 
+ * instead. */
+#define PACKEDATTR
+
 /* Name of package */
 #define PACKAGE "prboom"
 
 /* Version number of package */
-#define VERSION "2.3.0 (win32 experimental)"
-
-#ifdef GL_DOOM
-#define DYNAMIC_GL
-#endif
+#define VERSION "2.2.2"

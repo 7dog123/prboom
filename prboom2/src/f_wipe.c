@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: f_wipe.c,v 1.8 2001/07/29 16:55:36 cph Exp $
+ * $Id: f_wipe.c,v 1.5 2000/09/16 20:20:35 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -31,7 +31,7 @@
  *-----------------------------------------------------------------------------
  */
 
-static const char rcsid[] = "$Id: f_wipe.c,v 1.8 2001/07/29 16:55:36 cph Exp $";
+static const char rcsid[] = "$Id: f_wipe.c,v 1.5 2000/09/16 20:20:35 proff_fs Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -58,14 +58,14 @@ static byte *wipe_scr;
 
 static void wipe_shittyColMajorXform(short *array, int width, int height)
 {
-  short *dest = malloc(width*height*sizeof(short));
+  short *dest = Z_Malloc(width*height*sizeof(short), PU_STATIC, 0);
   int x, y;
 
   for(y=0;y<height;y++)
     for(x=0;x<width;x++)
       dest[x*height+y] = array[y*width+x];
   memcpy(array, dest, width*height*sizeof(short));
-  free(dest);
+  Z_Free(dest);
 }
 
 static int *y;
@@ -83,7 +83,7 @@ static int wipe_initMelt(int width, int height, int ticks)
   wipe_shittyColMajorXform((short*)wipe_scr_end, width/2, height);
 
   // setup initial column positions (y<0 => not ready to scroll yet)
-  y = (int *) malloc(width*sizeof(int));
+  y = (int *) Z_Malloc(width*sizeof(int), PU_STATIC, 0);
   y[0] = -(M_Random()%16);
   for (i=1;i<width;i++)
     {
@@ -118,12 +118,7 @@ static int wipe_doMelt(int width, int height, int ticks)
             short *s, *d;
             int j, dy, idx;
 
-            /* cph 2001/07/29 -
-             *  The original melt rate was 8 pixels/sec, i.e. 25 frames to melt
-             *  the whole screen, so make the melt rate depend on SCREENHEIGHT
-             *  so it takes no longer in high res
-             */
-            dy = (y[i] < 16) ? y[i]+1 : SCREENHEIGHT/25;
+            dy = (y[i] < 16) ? y[i]+1 : 8;
             if (y[i]+dy >= height)
               dy = height - y[i];
             s = &((short *)wipe_scr_end)[i*height+y[i]];
@@ -152,9 +147,9 @@ static int wipe_doMelt(int width, int height, int ticks)
 
 static int wipe_exitMelt(int width, int height, int ticks)
 {
-  free(y);
-  free(wipe_scr_start);
-  free(wipe_scr_end);
+  Z_Free(y);
+  Z_Free(wipe_scr_start);
+  Z_Free(wipe_scr_end);
   // Paranoia
   y = NULL;
   wipe_scr_start = wipe_scr_end = screens[SRC_SCR] = screens[DEST_SCR] = NULL;
@@ -186,7 +181,7 @@ int wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
       wipe_scr = screens[0];
       wipe_initMelt(width, height, ticks);
     }
-  // do a piece of wipe-in
+  V_MarkRect(0, 0, width, height);                 // do a piece of wipe-in
   if (wipe_doMelt(width, height, ticks))     // final stuff
     {
       wipe_exitMelt(width, height, ticks);

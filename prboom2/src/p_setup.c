@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: p_setup.c,v 1.17 2001/08/14 17:12:58 cph Exp $
+ * $Id: p_setup.c,v 1.15 2000/10/08 18:42:20 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_setup.c,v 1.17 2001/08/14 17:12:58 cph Exp $";
+rcsid[] = "$Id: p_setup.c,v 1.15 2000/10/08 18:42:20 proff_fs Exp $";
 
 #include <math.h>
 
@@ -536,32 +536,23 @@ static void P_LoadNodes (int lump)
 }
 
 
-/*
- * P_LoadThings
- *
- * killough 5/3/98: reformatted, cleaned up
- * cph 2001/07/07 - don't write into the lump cache, especially non-idepotent
- * changes like byte order reversals. Take a copy to edit.
- */
+//
+// P_LoadThings
+//
+// killough 5/3/98: reformatted, cleaned up
 
 static void P_LoadThings (int lump)
 {
   int  i, numthings = W_LumpLength (lump) / sizeof(mapthing_t);
-  const mapthing_t *data = W_CacheLumpNum (lump);
+  const byte *data = W_CacheLumpNum (lump); // cph - wad lump handling updated, const*
 
   for (i=0; i<numthings; i++)
     {
-      mapthing_t mt = data[i];
-
-      mt.x = SHORT(mt.x);
-      mt.y = SHORT(mt.y);
-      mt.angle = SHORT(mt.angle);
-      mt.type = SHORT(mt.type);
-      mt.options = SHORT(mt.options);
+      mapthing_t *mt = (mapthing_t *) data + i;
 
       // Do not spawn cool, new monsters if !commercial
       if (gamemode != commercial)
-        switch(mt.type)
+        switch(mt->type)
           {
           case 68:  // Arachnotron
           case 64:  // Archvile
@@ -577,7 +568,13 @@ static void P_LoadThings (int lump)
           }
 
       // Do spawn all other stuff.
-      P_SpawnMapThing (&mt);
+      mt->x = SHORT(mt->x);
+      mt->y = SHORT(mt->y);
+      mt->angle = SHORT(mt->angle);
+      mt->type = SHORT(mt->type);
+      mt->options = SHORT(mt->options);
+
+      P_SpawnMapThing (mt);
     }
 
   W_UnlockLumpNum(lump); // cph - release the data
@@ -1456,10 +1453,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   if (bodyque)
     memset(bodyque, 0, bodyquesize * sizeof (*bodyque)); // CPhipps - use memset
 
-  /* cph - reset all multiplayer starts */
-  memset(playerstarts,0,sizeof(playerstarts));
   deathmatch_p = deathmatchstarts;
-
   P_LoadThings(lumpnum+ML_THINGS);
 
   // if deathmatch, randomly spawn the active players

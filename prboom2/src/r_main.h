@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: r_main.h,v 1.5 2001/09/02 10:27:11 proff_fs Exp $
+ * $Id: r_main.h,v 1.4 2000/09/16 20:20:43 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -35,7 +35,6 @@
 
 #include "d_player.h"
 #include "r_data.h"
-#include "p_chase.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -61,8 +60,6 @@ extern fixed_t  projectiony;
 extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
-extern int      viewheightsec;
-extern camera_t *viewcamera;
 
 //
 // Rendering stats
@@ -122,7 +119,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 // REFRESH - the actual rendering functions.
 //
 
-void R_RenderPlayerView(player_t *player, camera_t* viewcamera);
+void R_RenderPlayerView(player_t *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 void R_ExecuteSetViewSize(void);             // cph - called by D_Display to complete a view resize

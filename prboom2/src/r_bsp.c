@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: r_bsp.c,v 1.22 2001/09/02 10:27:11 proff_fs Exp $
+ * $Id: r_bsp.c,v 1.20 2000/10/08 18:42:20 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -31,10 +31,11 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: r_bsp.c,v 1.22 2001/09/02 10:27:11 proff_fs Exp $";
+rcsid[] = "$Id: r_bsp.c,v 1.20 2000/10/08 18:42:20 proff_fs Exp $";
 
 #include "doomstat.h"
 #include "m_bbox.h"
+#include "i_system.h"
 #include "r_main.h"
 #include "r_segs.h"
 #include "r_plane.h"
@@ -215,7 +216,8 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
   if (sec->heightsec != -1)
     {
       const sector_t *s = &sectors[sec->heightsec];
-      int underwater = viewheightsec!=-1 && viewz<=sectors[viewheightsec].floorheight;
+      int heightsec = viewplayer->mo->subsector->sector->heightsec;
+      int underwater = heightsec!=-1 && viewz<=sectors[heightsec].floorheight;
 
       // Replace sector being drawn, with a copy to be hacked
       *tempsec = *sec;
@@ -256,7 +258,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
             sectors[s->ceilinglightsec].lightlevel; // killough 4/11/98
         }
       else
-        if (viewheightsec != -1 && viewz >= sectors[viewheightsec].ceilingheight &&
+        if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight &&
             sec->ceilingheight > s->ceilingheight)
           {   // Above-ceiling hack
             tempsec->ceilingheight = s->ceilingheight;

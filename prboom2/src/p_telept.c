@@ -1,13 +1,13 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: p_telept.c,v 1.7 2001/07/21 22:16:49 cph Exp $
+ * $Id: p_telept.c,v 1.6.2.2 2001/08/27 19:22:33 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *  
  *  This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_telept.c,v 1.7 2001/07/21 22:16:49 cph Exp $";
+rcsid[] = "$Id: p_telept.c,v 1.6.2.2 2001/08/27 19:22:33 cph Exp $";
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -80,18 +80,7 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
           if (!P_TeleportMove(thing, m->x, m->y, false)) /* killough 8/9/98 */
             return 0;
 
-          /* cph 2001/07/21 - fixed final doom demo sync bug
-           * The original source release contained the comment
-           *       fixme: not needed?
-           * on this line. The original source release was of a branch that
-           * preceded the development of Final Doom. I was tipped off to
-           * teleports being a possible cause of the sync problems on Final
-           * Doom, and quickly spotted this comment. From my testing with
-           * pl27-051.lmp it seems certain that this line was removed from Final
-           * Doom, hence the major demo sync problems with Final Doom that we've
-           * been lumbered with ever since.
-           */
-          if (compatibility_level != finaldoom_compatibility)
+          if (!(demo_compatibility && gamemission >= pack_tnt))
             thing->z = thing->floorz;
 
           if (player)

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: d_client.c,v 1.17 2001/07/22 14:57:43 cph Exp $
+ * $Id: d_client.c,v 1.12 2000/12/28 11:28:00 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -40,7 +40,6 @@
 #include "d_net.h"
 #include "z_zone.h"
 
-#include "c_io.h"
 #include "d_main.h"
 #include "g_game.h"
 #include "m_menu.h"
@@ -56,6 +55,7 @@
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
+#include <sys/types.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -92,7 +92,7 @@ void D_InitNetGame (void)
     playeringame[consoleplayer = 0] = true;
   } else {
     // Get game info from server
-    packet_header_t *packet = malloc(1000);
+    packet_header_t *packet = Z_Malloc(1000, PU_STATIC, NULL);
     struct setup_packet_s *sinfo = (void*)(packet+1);
   struct { packet_header_t head; short pn; } initpacket;
 
@@ -134,7 +134,7 @@ void D_InitNetGame (void)
 	p += strlen(p) + 1;
       }
     }
-    free(packet);
+    Z_Free(packet);
   }
   localcmds = netcmds[displayplayer = consoleplayer];
   for (i=0; i<numplayers; i++)
@@ -164,7 +164,7 @@ void D_InitNetGame (void)
 #ifdef HAVE_NET
 void D_CheckNetGame(void)
 {
-  packet_header_t *packet = malloc(sizeof(packet_header_t)+1);
+  packet_header_t *packet = Z_Malloc(sizeof(packet_header_t)+1, PU_STATIC, NULL);
 
   if (server) {
     lprintf(LO_INFO, "D_CheckNetGame: waiting for server to signal game start\n");
@@ -177,7 +177,7 @@ void D_CheckNetGame(void)
       }
     } while (packet->type != PKT_GO);
   }
-  free(packet);
+  Z_Free(packet);
 }
 
 boolean D_NetGetWad(const char* name)
@@ -191,7 +191,7 @@ boolean D_NetGetWad(const char* name)
 
   do {
     // Send WAD request to remote
-    packet = malloc(psize);
+    packet = Z_Malloc(psize, PU_STATIC, NULL);
     packet->type = PKT_WAD; packet->tic = 0;
     *(byte*)(packet+1) = consoleplayer;
     strcpy(1+(byte*)(packet+1), name);
@@ -199,7 +199,7 @@ boolean D_NetGetWad(const char* name)
     
     I_uSleep(10000);
   } while (!I_GetPacket(packet, psize) || (packet->type != PKT_WAD));
-  free(packet);
+  Z_Free(packet);
 
   if (!strcasecmp((void*)(packet+1), name)) {
     pid_t pid;
@@ -307,6 +307,7 @@ void NetUpdate(void)
     lastmadetic += newtics;
     while (newtics--) {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
@@ -346,6 +347,7 @@ void D_BuildNewTiccmds()
     while (newtics--)
     {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
@@ -430,11 +432,8 @@ void TryRunTics (void)
 
   // Wait for tics to run
   while (1) {
-    if (I_GetTime() - entertime > 5)
-    {
-      C_Ticker();
-      M_Ticker();
-      return;
+    if (I_GetTime() - entertime > 5) {
+      M_Ticker(); return;
     }
 #ifdef HAVE_NET
     NetUpdate();
@@ -444,11 +443,8 @@ void TryRunTics (void)
     runtics = (server ? remotetic : maketic) - gametic;
     if (!runtics) {
       I_uSleep(1000);
-      if (I_GetTime() - entertime > 10)
-      {
-	      C_Ticker();
-	      M_Ticker();
-        return;
+      if (I_GetTime() - entertime > 10) {
+	M_Ticker(); return;
       }
     } else break;
   }
@@ -459,7 +455,6 @@ void TryRunTics (void)
 #endif
     if (advancedemo)
       D_DoAdvanceDemo ();
-    C_Ticker ();
     M_Ticker ();
     G_Ticker ();
     gametic++;

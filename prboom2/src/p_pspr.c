@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: p_pspr.c,v 1.6 2001/07/07 18:17:10 cph Exp $
+ * $Id: p_pspr.c,v 1.5 2000/09/16 20:20:42 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_pspr.c,v 1.6 2001/07/07 18:17:10 cph Exp $";
+rcsid[] = "$Id: p_pspr.c,v 1.5 2000/09/16 20:20:42 proff_fs Exp $";
 
 #include "doomstat.h"
 #include "r_main.h"
@@ -272,7 +272,7 @@ boolean P_CheckAmmo(player_t *player)
 // P_FireWeapon.
 //
 
-/* cph 2001/07/07 - removed lastshottic, unused */
+int lastshottic; // killough 3/22/98
 
 static void P_FireWeapon(player_t *player)
 {
@@ -285,6 +285,7 @@ static void P_FireWeapon(player_t *player)
   newstate = weaponinfo[player->readyweapon].atkstate;
   P_SetPsprite(player, ps_weapon, newstate);
   P_NoiseAlert(player->mo, player->mo);
+  lastshottic = gametic;                       // killough 3/22/98
 }
 
 //
