@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: m_misc.c,v 1.31 2001/06/17 13:14:09 cph Exp $
+ * $Id: m_misc.c,v 1.26.2.1 2001/05/19 15:42:56 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -33,14 +33,12 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: m_misc.c,v 1.31 2001/06/17 13:14:09 cph Exp $";
+rcsid[] = "$Id: m_misc.c,v 1.26.2.1 2001/05/19 15:42:56 cph Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
-#include <stdio.h>
-#include <errno.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -65,6 +63,7 @@ rcsid[] = "$Id: m_misc.c,v 1.31 2001/06/17 13:14:09 cph Exp $";
 #include "m_misc.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "i_joy.h"
 #include "lprintf.h"
 #include "d_main.h"
 
@@ -101,70 +100,56 @@ int M_DrawText(int x,int y,boolean direct,char* string)
   return x;
 }
 
-/* cph - disk icon not implemented */
-static inline void I_BeginRead(void) {}
-static inline void I_EndRead(void) {}
+//
+// M_WriteFile
+//
 
-/*
- * M_WriteFile
- *
- * killough 9/98: rewritten to use stdio and to flash disk icon
- */
-
-boolean M_WriteFile(char const *name, void *source, int length)
+boolean M_WriteFile(char const* name,void* source,int length)
 {
-  FILE *fp;
-
-  errno = 0;
+  int handle;
+  int count;
   
-  if (!(fp = fopen(name, "wb")))       // Try opening file
-    return 0;                          // Could not open file for writing
+  handle = open ( name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
 
-  I_BeginRead();                       // Disk icon on
-  length = fwrite(source, 1, length, fp) == length;   // Write data
-  fclose(fp);
-  I_EndRead();                         // Disk icon off
+  if (handle == -1)
+    return false;
 
-  if (!length)                         // Remove partially written file
-    remove(name);
-
-  return length;
+  count = write (handle, source, length);
+  close (handle);
+  
+  if (count < length) {
+    unlink(name); // CPhipps - no corrupt data files around, they only confuse people.
+    return false;
+  }
+    
+  return true;
 }
 
-/*
- * M_ReadFile
- *
- * killough 9/98: rewritten to use stdio and to flash disk icon
- */
 
-int M_ReadFile(char const *name, byte **buffer)
+//
+// M_ReadFile
+//
+
+int M_ReadFile(char const* name,byte** buffer)
 {
-  FILE *fp;
+  int handle, count, length;
+  struct stat fileinfo;
+  byte   *buf;
+  
+  handle = open (name, O_RDONLY | O_BINARY, 0666);
+  if ((handle == -1) || (fstat (handle,&fileinfo) == -1))
+    I_Error ("M_ReadFile: Couldn't read file %s", name);
 
-  errno = 0;
-
-  if ((fp = fopen(name, "rb")))
-    {
-      size_t length;
-
-      I_BeginRead();
-      fseek(fp, 0, SEEK_END);
-      length = ftell(fp);
-      fseek(fp, 0, SEEK_SET);
-      *buffer = Z_Malloc(length, PU_STATIC, 0);
-      if (fread(*buffer, 1, length, fp) == length)
-        {
-          fclose(fp);
-          I_EndRead();
-          return length;
-        }
-      fclose(fp);
-    }
-
-  I_Error("Couldn't read file %s: %s", name, 
-	  errno ? strerror(errno) : "(Unknown Error)");
-
-  return 0;
+  length = fileinfo.st_size;
+  buf = Z_Malloc (length, PU_STATIC, NULL);
+  count = read (handle, buf, length);
+  close (handle);
+  
+  if (count < length)
+    I_Error ("M_ReadFile: Couldn't read file %s", name);
+    
+  *buffer = buf;
+  return length;
 }
 
 //
@@ -216,25 +201,10 @@ int X_opt;
  */
 int map_point_coordinates;
 
-/* cph - zone memory size
- * proff - OpenGL needs even more ram at least 16megs are allocated
- */
-#ifndef GL_DOOM
-#define MIN_RAM (8*1024)
-#else
-#define MIN_RAM (16*1024)
-#endif
-
-/* cph - stub joystick variables.
- * Replace once we add real SDL joystick support
- */
-
-int usejoystick, joybfire,joybstrafe,joybspeed,joybuse;
-
 default_t defaults[] =
 {
   {"Misc settings",{NULL},{0},UL,UL,def_none,ss_none},
-  {"default_compatibility_level",{(int*)&default_compatibility_level},
+  {"default_compatibility_level",{&default_compatibility_level},
    {-1},-1,MAX_COMPATIBILITY_LEVEL-1,
    def_int,ss_none}, // compatibility level" - CPhipps  
   {"realtic_clock_rate",{&realtic_clock_rate},{100},0,UL,
@@ -249,8 +219,6 @@ default_t defaults[] =
    def_hex, ss_none}, // 0, +1 for colours, +2 for non-ascii chars, +4 for skip-last-line
   {"level_precache",{(int*)&precache},{0},0,1,
    def_bool,ss_none}, // precache level data?
-  {"zone_mem",{&zone_size},{MIN_RAM},MIN_RAM/2,UL,
-   def_int,ss_none}, /* z_zone heap size (in kb) */
   
   {"Files",{NULL},{0},UL,UL,def_none,ss_none},
   /* cph - MBF-like wad/deh/bex autoload code 
@@ -565,6 +533,10 @@ default_t defaults[] =
   {"Joystick settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"use_joystick",{&usejoystick},{0},0,2,
    def_int,ss_none}, // number of joystick to use (0 for none)
+  {"joy_left",{&joyleft},{0},  UL,UL,def_int,ss_none},
+  {"joy_right",{&joyright},{0},UL,UL,def_int,ss_none},
+  {"joy_up",  {&joyup},  {0},  UL,UL,def_int,ss_none},
+  {"joy_down",{&joydown},{0},  UL,UL,def_int,ss_none},
   {"joyb_fire",{&joybfire},{0},0,UL,
    def_int,ss_keys}, // joystick button number to use for fire
   {"joyb_strafe",{&joybstrafe},{1},0,UL,
@@ -813,15 +785,8 @@ void M_LoadDefaults (void)
   i = M_CheckParm ("-config");
   if (i && i < myargc-1)
     defaultfile = myargv[i+1];
-  else {
-    defaultfile = malloc(PATH_MAX+1);
-    /* get config file from same directory as executable */
-#ifdef GL_DOOM
-    snprintf((char *)defaultfile,PATH_MAX,"%s/glboom.cfg", D_DoomExeDir());
-#else
-    snprintf((char *)defaultfile,PATH_MAX,"%s/prboom.cfg", D_DoomExeDir());
-#endif
-  }
+  else
+    defaultfile = basedefault;
 
   lprintf (LO_CONFIRM, " default file: %s\n",defaultfile);
 
@@ -908,14 +873,6 @@ typedef unsigned long dword_t;
 typedef long     long_t;
 typedef unsigned char ubyte_t;
 
-#ifdef _MSC_VER
-#define GCC_PACKED
-#else //_MSC_VER
-/* we might want to make this sensitive to whether configure has detected
-   a build with GCC */
-#define GCC_PACKED __attribute__((packed))
-#endif //_MSC_VER
-
 #ifdef _MSC_VER // proff: This is the same as __attribute__ ((packed)) in GNUC
 #pragma pack(push)
 #pragma pack(1)
@@ -932,7 +889,7 @@ typedef struct tagBITMAPFILEHEADER
   unsigned short  bfReserved1;
   unsigned short  bfReserved2;
   dword_t bfOffBits;
-  } GCC_PACKED BITMAPFILEHEADER;
+  } PACKEDATTR BITMAPFILEHEADER;
 
 typedef struct tagBITMAPINFOHEADER
   {
@@ -947,7 +904,7 @@ typedef struct tagBITMAPINFOHEADER
   long_t  biYPelsPerMeter;
   dword_t biClrUsed;
   dword_t biClrImportant;
-  } GCC_PACKED BITMAPINFOHEADER;
+  } PACKEDATTR BITMAPINFOHEADER;
 
 #if defined(__MWERKS__)
 #pragma options align=reset

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: g_game.c,v 1.35 2001/04/18 18:18:46 cph Exp $
+ * $Id: g_game.c,v 1.30.2.3 2001/06/18 19:53:00 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -35,7 +35,7 @@
  */
 
 static const char
-rcsid[] = "$Id: g_game.c,v 1.35 2001/04/18 18:18:46 cph Exp $";
+rcsid[] = "$Id: g_game.c,v 1.30.2.3 2001/06/18 19:53:00 cph Exp $";
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -212,7 +212,7 @@ int     joybspeed;
 #define TURBOTHRESHOLD  0x32
 #define SLOWTURNTICS  6
 #define QUICKREVERSE (short)32768 // 180 degree reverse                    // phares
-#define NUMKEYS   256
+#define NUMKEYS   512
 
 fixed_t forwardmove[2] = {0x19, 0x32};
 fixed_t sidemove[2]    = {0x18, 0x28};
@@ -661,6 +661,12 @@ boolean G_Responder (event_t* ev)
       return true;
     }
 
+  // killough 9/29/98: reformatted
+  if (gamestate == GS_LEVEL && (HU_Responder(ev) ||  // chat ate the event
+				ST_Responder(ev) ||  // status window ate it
+				AM_Responder(ev)))   // automap ate it
+    return true;
+
   // any other key pops up menu if in demos
   //
   // killough 8/2/98: enable automap in -timedemo demos
@@ -724,8 +730,8 @@ boolean G_Responder (event_t* ev)
        * Removed the mouseSensitivity "*4" to allow more low end
        * sensitivity resolution especially for lsdoom users.
        */
-      mousex += (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
-      mousey += (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
+      mousex = (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
+      mousey = (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
       return true;    // eat events
 
     case ev_joystick:
@@ -800,6 +806,10 @@ void G_Ticker (void)
           break;
         case ga_worlddone:
           G_DoWorldDone ();
+          break;
+        case ga_screenshot:
+          M_ScreenShot ();
+          gameaction = ga_nothing;
           break;
         case ga_nothing:
           break;
@@ -1170,6 +1180,11 @@ void G_DoReborn (int playernum)
     }
 }
 
+void G_ScreenShot (void)
+{
+  gameaction = ga_screenshot;
+}
+
 // DOOM Par Times
 int pars[4][10] = {
   {0},
@@ -1472,10 +1487,8 @@ static void G_LoadGameErr(const char *msg)
 #define VERSIONSIZE   16
 
 const char * comp_lev_str[MAX_COMPATIBILITY_LEVEL] = 
-{ "doom v1.2", "doom v1.666", "doom2 v1.9", "final/ultimate doom/doom95", 
-  "early DosDoom", "TASDoom",
-  "\"boom compatibility\"", "boom v2.01", "boom v2.02", "lxdoom v1.3.2+", 
-  "MBF", "PrBoom 2.03beta", "PrBoom v2.1.0-2.1.1", "PrBoom v2.1.2-v2.2.0",
+{ "doom v1.2", "demo", "doom", "\"boom compatibility\"", "boom v2.01", "boom v2.02", "lxdoom v1.3.2+", 
+  "MBF", "PrBoom 2.03beta", "PrBoom v2.1.0-2.1.1", 
   "Current PrBoom"  };
 
 static const struct {
@@ -1567,13 +1580,13 @@ void G_DoLoadGame(void)
   idmusnum = *save_p++;           // jff 3/17/98 restore idmus music
   if (idmusnum==255) idmusnum=-1; // jff 3/18/98 account for unsigned byte
 
-  // load a base level
-  G_InitNew (gameskill, gameepisode, gamemap);
-
   /* killough 3/1/98: Read game options
    * killough 11/98: move down to here
    */
   save_p = (char*)G_ReadOptions(save_p);
+
+  // load a base level
+  G_InitNew (gameskill, gameepisode, gamemap);
 
   /* get the times - killough 11/98: save entire word */
   memcpy(&leveltime, save_p, sizeof leveltime);
@@ -1841,14 +1854,6 @@ extern int monsters_remember, default_monsters_remember;
  *  introduced.
  */
 
-static byte comp_options_by_version[] = 
- { 0,0,0,0, /* Original Doom's don't have comp[] */
-   0,0,0,0,0,0, /* Nor did DosDoom, Boom, LxDoom */
-   19,19, /* MBF and early PrBoom had 19 */
-   21,21, /* PrBoom v2.1-v2.2 have 21 */
-   23, /* PrBoom v2.3 has 23 and counting... */
- };
-
 static void G_Compatibility(void)
 {
   static const complevel_t fix_levels[COMP_NUM] = {
@@ -1886,13 +1891,9 @@ static void G_Compatibility(void)
 			     * mancubi shots going thru walls */
     prboom_2_compatibility, /* comp_respawn - objects which aren't on the map 
                              * at game start respawn at (0,0) */
-    doom_1666_compatibility, /* comp_666 - enables tag 666 in non-E1Mx levels */
-    prboom_4_compatibility, /* comp_soul - enables lost souls bouncing (see P_ZMovement */
   };
   int i;
-  if (sizeof(comp_options_by_version) != MAX_COMPATIBILITY_LEVEL)
-    I_Error("G_Compatibility: consistency error");
-  for (i=comp_options_by_version[compatibility_level]; i<COMP_NUM; i++)
+  for (i=0; i<COMP_NUM; i++)
     comp[i] = compatibility_level < fix_levels[i];
   for (; i<COMP_TOTAL; i++) comp[i] = 1;
 }
@@ -1966,16 +1967,13 @@ void G_ReloadDefaults(void)
   consoleplayer = 0;
 
   compatibility_level = default_compatibility_level;
-  {
-    int i = M_CheckParm("-complevel");
-    if (i && (1+i) < myargc) compatibility_level = atoi(myargv[i+1]);
-  }
   if (compatibility_level == -1) 
-    compatibility_level = best_compatibility;
+    compatibility_level = MAX_COMPATIBILITY_LEVEL-1;
 
   if (mbf_features)
     memcpy(comp, default_comp, sizeof comp);
-  G_Compatibility();
+  else 
+    G_Compatibility();
 
   // killough 3/31/98, 4/5/98: demo sync insurance
   demo_insurance = default_demo_insurance == 1;
@@ -2345,6 +2343,8 @@ const byte *G_ReadOptions(const byte *demo_p)
     }
   else  /* defaults for versions <= 2.02 */
     {
+      /* cph - comp[] has already been set up right by G_Compatibility */
+
       monster_infighting = 1;           // killough 7/19/98
 
       monster_backing = 0;              // killough 9/8/98
@@ -2363,7 +2363,6 @@ const byte *G_ReadOptions(const byte *demo_p)
       monkeys = 0;
     }
 
-  G_Compatibility();
   return target;
 }
 
@@ -2381,7 +2380,6 @@ void G_BeginRecording (void)
 	      case mbf_compatibility: v = 204; break;
 	      case prboom_2_compatibility: v = 210; break;
 	      case prboom_3_compatibility: v = 211; break;
-	      case prboom_4_compatibility: v = 212; break;
       }
       *demo_p++ = v;
     }
@@ -2416,7 +2414,7 @@ void G_BeginRecording (void)
     for (; i<MIN_MAXPLAYERS; i++)
       *demo_p++ = 0;
 
-  } else if (compatibility_level >= boom_compatibility_compatibility) {
+  } else if (compatibility_level > doom_compatibility) {
     byte v, c; /* Nominally, version and compatibility bits */
     switch (compatibility_level) {
     case boom_compatibility_compatibility: v = 202, c = 1; break;
@@ -2487,17 +2485,6 @@ void G_DeferedPlayDemo (const char* name)
 
 static int demolumpnum = -1;
 
-static int G_GetOriginalDoomCompatLevel(int ver)
-{
-  {
-    int i = M_CheckParm("-complevel");
-    if (i && (i+1 < myargc)) return atoi(myargv[i+1]);
-  }
-  if (ver < 107) return doom_1666_compatibility;
-  return ((gamemode == retail || gamemission >= pack_tnt)
-		  ? finaldoom_compatibility : doom2_19_compatibility);
-}
-
 static const byte* G_ReadDemoHeader(const byte *demo_p)
 {
   skill_t skill;
@@ -2515,6 +2502,9 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
   if (demover < 200)     // Autodetect old demos
     {
+      compatibility_level = doom_demo_compatibility;
+      G_Compatibility();
+
       // killough 3/2/98: force these variables to be 0 in demo_compatibility
 
       variable_friction = 0;
@@ -2543,7 +2533,6 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
       if ((skill=demover) >= 100)         // For demos from versions >= 1.4
         {
-	  compatibility_level = G_GetOriginalDoomCompatLevel(demover);
           skill = *demo_p++;
           episode = *demo_p++;
           map = *demo_p++;
@@ -2555,13 +2544,11 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
         }
       else
         {
-	  compatibility_level = doom_12_compatibility;
           episode = *demo_p++;
           map = *demo_p++;
           deathmatch = respawnparm = fastparm =
             nomonsters = consoleplayer = 0;
         }
-      G_Compatibility();
     }
   else    // new versions of demos
     {
@@ -2603,6 +2590,7 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 	demo_p++;
 	break;
       }
+      G_Compatibility();
       skill = *demo_p++;
       episode = *demo_p++;
       map = *demo_p++;
@@ -2619,8 +2607,6 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
         demo_p += 128-GAME_OPTION_SIZE;
     }
 
-  if (sizeof(comp_lev_str)/sizeof(comp_lev_str[0]) != MAX_COMPATIBILITY_LEVEL)
-    I_Error("G_ReadDemoHeader: compatibility level strings incomplete");
   lprintf(LO_INFO, "G_DoPlayDemo: playing demo with %s compatibility\n", 
 	  comp_lev_str[compatibility_level]);
 
@@ -2646,14 +2632,6 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
   if (gameaction != ga_loadgame) { /* killough 12/98: support -loadgame */
     G_InitNew(skill, episode, map);
-
-    /* killough 11/98: If OPTIONS were loaded from the wad in G_InitNew(),
-     * reload any demo sync-critical ones from the demo itself, to be exactly
-     * the same as during recording.
-     */
-
-    if (option_p)
-      G_ReadOptions(option_p);
   }
 
   for (i=0; i<MAXPLAYERS;i++)         // killough 4/24/98

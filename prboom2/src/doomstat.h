@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: doomstat.h,v 1.15 2001/04/15 15:05:37 cph Exp $
+ * $Id: doomstat.h,v 1.13.2.1 2001/05/19 15:42:56 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -40,7 +40,6 @@
 
 // We need globally shared data structures,
 //  for defining the global state variables.
-#include "doomdata.h"
 #include "d_net.h"
 
 // We need the playr data structure as well.
@@ -74,7 +73,7 @@ extern complevel_t compatibility_level, default_compatibility_level;
 
 // CPhipps - old compatibility testing flags aliased to new handling
 #define compatibility (compatibility_level<=boom_compatibility_compatibility)
-#define demo_compatibility (compatibility_level < boom_compatibility_compatibility)
+#define demo_compatibility (compatibility_level <= doom_demo_compatibility)
 #define mbf_features (compatibility_level>=mbf_compatibility)
 
 // v1.1-like pitched sounds
@@ -110,8 +109,6 @@ enum {
   comp_zerotags,
   comp_moveblock,
   comp_respawn,  /* cph - this is the inverse of comp_respawnfix from eternity */
-  comp_666,
-  comp_soul,
   COMP_NUM,      /* cph - should be last in sequence */
   COMP_TOTAL=32  // Some extra room for additional variables
 };
@@ -277,6 +274,7 @@ extern int maxammo[];
 //
 
 // File handling stuff.
+extern  char    basedefault[];
 extern  FILE   *debugfile;
 
 // if true, load all graphics at level load

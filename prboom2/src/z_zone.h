@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: z_zone.h,v 1.7 2000/12/31 15:08:55 cph Exp $
+ * $Id: z_zone.h,v 1.5 2000/09/16 20:20:43 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -79,7 +79,6 @@ void (Z_Free)(void *ptr DA(const char *, int));
 void (Z_FreeTags)(int lowtag, int hightag DA(const char *, int));
 void (Z_ChangeTag)(void *ptr, int tag DA(const char *, int));
 void (Z_Init)(void);
-void Z_Close(void);
 void *(Z_Calloc)(size_t n, size_t n2, int tag, void **user DA(const char *, int));
 void *(Z_Realloc)(void *p, size_t n, int tag, void **user DA(const char *, int));
 char *(Z_Strdup)(const char *s, int tag, void **user DA(const char *, int));
@@ -115,7 +114,5 @@ char *strdup(const char *s);
 void doom_printf(const char *, ...) __attribute__((format(printf,1,2)));
 
 void Z_ZoneHistory(char *);
-
-extern size_t zone_size;
 
 #endif

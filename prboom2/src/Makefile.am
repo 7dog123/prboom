@@ -1,7 +1,7 @@
 #
 # automake Makefile.am for the LxDoom source directory
 #
-# $Id: Makefile.am,v 1.20 2001/02/18 18:34:10 proff_fs Exp $
+# $Id: Makefile.am,v 1.17.2.1 2001/02/18 18:07:22 proff_fs Exp $
 #
 # Process this file with automake to produce Makefile.in
 #
@@ -33,15 +33,15 @@ COMMON_SRC = \
  hu_lib.h       lprintf.h          p_plats.c        r_sky.c	\
  d_deh.c        hu_stuff.c         m_argv.c         p_pspr.c    r_sky.h	    \
  d_deh.h        hu_stuff.h         m_argv.h         p_pspr.h    r_state.h   \
- d_englsh.h     m_bbox.c           p_saveg.c        r_things.c  \
+ d_englsh.h     i_joy.h            m_bbox.c         p_saveg.c   r_things.c  \
  d_event.h      i_net.h            m_bbox.h         p_saveg.h   r_things.h  \
  d_items.c      i_network.h        m_cheat.c        p_setup.c   s_sound.c   \
  d_items.h      i_sound.h          m_cheat.h        p_setup.h   s_sound.h   \
  d_main.c       i_system.h         m_fixed.h        p_sight.c   sounds.c    \
  d_main.h       i_video.h          m_menu.c         p_spec.c    sounds.h    \
- i_joy.h        info.c             m_menu.h         p_spec.h    st_lib.c    \
+                info.c             m_menu.h         p_spec.h    st_lib.c    \
  d_net.h        info.h             m_misc.c         p_switch.c  st_lib.h    \
- d_player.h     m_misc.h           p_telept.c       st_stuff.c  \
+ d_player.h                        m_misc.h         p_telept.c  st_stuff.c  \
  m_random.c     p_tick.c           st_stuff.h       i_main.c    i_main.h    \
  d_think.h      m_random.h         p_tick.h         tables.c    \
  d_ticcmd.h     m_swap.h           p_user.c         tables.h     \
@@ -76,17 +76,9 @@ else
 USE_GL_SRC = 
 endif
 
-DLL_SRC = gl_dll.h  gl_dll.c
-
-if BUILD_DLL
-USE_DLL_SRC = gl_dll.h  gl_dll.c
-else
-USE_DLL_SRC = 
-endif
-
-prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC) $(USE_DLL_SRC)
-prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @DLL_LIBS@ @MATH_LIB@
+prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC)
+prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @MATH_LIB@
 
 # Must remember to include 'optional' sources in the tarball
-EXTRA_prboom_SOURCES = $(GL_SRC) $(DLL_SRC)
+EXTRA_prboom_SOURCES = $(GL_SRC)
 

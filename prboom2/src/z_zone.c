@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: z_zone.c,v 1.12 2001/01/15 18:06:05 proff_fs Exp $
+ * $Id: z_zone.c,v 1.9 2000/11/12 14:59:29 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -39,7 +39,7 @@
  *-----------------------------------------------------------------------------
  */
 
-static const char rcsid[] = "$Id: z_zone.c,v 1.12 2001/01/15 18:06:05 proff_fs Exp $";
+static const char rcsid[] = "$Id: z_zone.c,v 1.9 2000/11/12 14:59:29 cph Exp $";
 
 // use config.h if autoconf made one -- josh
 #ifdef HAVE_CONFIG_H
@@ -75,6 +75,16 @@ static const char rcsid[] = "$Id: z_zone.c,v 1.12 2001/01/15 18:06:05 proff_fs E
 // How much RAM to leave aside for other libraries
 #define LEAVE_ASIDE (128*1024)
 
+// Minimum RAM machine is assumed to have
+  /* cph - Select zone size. 6megs is usable, but with the SDL version 
+   * storing sounds in the zone, 8 is more sensible */
+#ifndef GL_DOOM
+#define MIN_RAM (8*1024*1024)
+#else
+  /* proff - OpenGL needs even more ram at least 16megs are allocated */
+#define MIN_RAM (16*1024*1024)
+#endif
+
 // Amount to subtract when retrying failed attempts to allocate initial pool
 #define RETRY_AMOUNT (256*1024)
 
@@ -108,6 +118,7 @@ typedef struct memblock {
 static memblock_t *rover;                // roving pointer to memory blocks
 static memblock_t *zone;                 // pointer to first block
 static memblock_t *zonebase;             // pointer to entire zone memory
+static size_t zonebase_size;             // zone memory allocated size
 static memblock_t *blockbytag[PU_MAX];
 
 #ifdef INSTRUMENTED
@@ -200,7 +211,6 @@ static const char *file_history[NUM_HISTORY_TYPES][ZONE_HISTORY];
 static int line_history[NUM_HISTORY_TYPES][ZONE_HISTORY];
 static int history_index[NUM_HISTORY_TYPES];
 static const char *const desc[NUM_HISTORY_TYPES] = {"malloc()'s", "free()'s"};
-size_t zone_size;
 
 void Z_DumpHistory(char *buf)
 {
@@ -225,14 +235,13 @@ void Z_DumpHistory(char *buf)
 }
 #else
 
-size_t zone_size;
 void Z_DumpHistory(char *buf)
 {
 }
 
 #endif
 
-void Z_Close(void)
+static void Z_Close(void)
 {
   (free)(zonebase);
   zone = rover = zonebase = NULL;
@@ -240,26 +249,48 @@ void Z_Close(void)
 
 void Z_Init(void)
 {
-  size_t size = zone_size*1000;
+#ifdef DJGPP
+  size_t size = _go32_dpmi_remaining_physical_memory();    // Get free RAM
+#else
+  size_t size = MIN_RAM;
+  {  /* cph - allow -heapsize or -heapkb parameters */
+    int p;
+    if ((p=M_CheckParm("-heapsize")))
+      if (++p < myargc) {
+	size = atol(myargv[p]) << 20;
+      }
+    
+    if ((p=M_CheckParm("-heapkb")))
+      if (++p < myargc) {
+	size = atol(myargv[p]) << 10; 
+      }
+  }
+#endif
+  if (size < MIN_RAM)         // If less than MIN_RAM, assume MIN_RAM anyway
+    size = MIN_RAM;
 
   size -= LEAVE_ASIDE;        // Leave aside some for other libraries
 
 #ifdef INSTRUMENTED
-  if (!(HEADER_SIZE >= sizeof(memblock_t) && size > HEADER_SIZE)) 
+  if (!(HEADER_SIZE >= sizeof(memblock_t) && MIN_RAM > LEAVE_ASIDE)) 
     I_Error("Z_Init: Sanity check failed");
 #endif
 
+  atexit(Z_Close);            // exit handler
+
   size = (size+CHUNK_SIZE-1) & ~(CHUNK_SIZE-1);  // round to chunk size
-  size += HEADER_SIZE + CACHE_ALIGN;
 
-  // Allocate the memory
+   // Allocate the memory
 
-  zonebase=(malloc)(size);
-  if (!zonebase)
-    I_Error("Z_Init: Failed on allocation of %lu bytes", (unsigned long)size);
+  while (!(zonebase=(malloc)(zonebase_size=size + HEADER_SIZE + CACHE_ALIGN)))
+    if (size < (MIN_RAM-LEAVE_ASIDE < RETRY_AMOUNT ? RETRY_AMOUNT :
+                                                     MIN_RAM-LEAVE_ASIDE))
+      I_Error("Z_Init: Failed on allocation of %lu bytes",(unsigned long)
+              zonebase_size);
+    else
+      size -= RETRY_AMOUNT;
 
-  lprintf(LO_INFO,"Z_Init : Allocated %lukb zone memory\n",
-		  (long unsigned)size / 1000);
+  lprintf(LO_INFO,"Z_Init : Allocated %luKb zone memory\n", (long unsigned)size >> 10);
 
   // Align on cache boundary
 
@@ -278,7 +309,8 @@ void Z_Init(void)
 
 #ifdef INSTRUMENTED
   free_memory = size;
-  /* cph - remove unnecessary initialisations to 0 */
+  inactive_memory = zonebase_size - size;
+  active_memory = purgable_memory = virtual_memory = 0;
 #endif
 }
 
@@ -302,7 +334,7 @@ void *(Z_Malloc)(size_t size, int tag, void **user
 {
   register memblock_t *block;
   memblock_t *start, *first_of_free;
-  register size_t contig_free = 0;
+  register size_t contig_free;
 
 #ifdef INSTRUMENTED
   size_t size_orig = size;
@@ -331,17 +363,13 @@ void *(Z_Malloc)(size_t size, int tag, void **user
 
   block = rover;
 
-  /* cph - allow memory allocation even before Z_Init;
-   *  just drop through to the malloc(3) fallback
-   */
-  if (block) {
-   if (block->prev->tag == PU_FREE)
+  if (block->prev->tag == PU_FREE)
     block = block->prev;
 
-   start = block;
-   first_of_free = NULL;
+  start = block;
+  first_of_free = NULL; contig_free = 0;
 
-   do {
+  do {
     /* If we just wrapped, we're not contiguous with the previous block */
     if (block == zone) contig_free = 0;
 
@@ -357,9 +385,8 @@ void *(Z_Malloc)(size_t size, int tag, void **user
       if (contig_free >= size)
 	break;
     }
-   }
-   while ((block = block->next) != start);   // detect cycles as failure
   }
+  while ((block = block->next) != start);   // detect cycles as failure
 
   if (contig_free >= size) {
     /* We have a block of free(able) memory on the heap which will suffice */
@@ -752,7 +779,6 @@ void (Z_CheckHeap)(
 		   )
 {
   memblock_t *block = zone;   // Start at base of zone mem
-  if (!block) return;
   do                          // Consistency check (last node treated special)
     if ((block->next != zone &&
          (memblock_t *)((char *) block+HEADER_SIZE+block->size) != block->next)
