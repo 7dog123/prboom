@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -6,9 +6,9 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,8 +31,6 @@
 
 #ifndef __P_MOBJ__
 #define __P_MOBJ__
-
-typedef struct mobj_s mobj_t;   //sf: move up here
 
 // Basics.
 #include "tables.h"
@@ -99,7 +97,7 @@ typedef struct mobj_s mobj_t;   //sf: move up here
 // things, but nothing can run into a missile).
 // Each block in the grid is 128*128 units, and knows about
 // every line_t that it contains a piece of, and every
-// interactable mobj_t that has its origin contained.  
+// interactable mobj_t that has its origin contained.
 //
 // A valid mobj_t is a mobj_t that has the proper subsector_t
 // filled in for its xy coordinates and is linked into the
@@ -181,7 +179,7 @@ typedef struct mobj_s mobj_t;   //sf: move up here
 //  towards intermission kill total.
 // Happy gathering.
 #define MF_COUNTKILL    (uint_64_t)(0x0000000000400000)
-    
+
 // On picking up, count this item object
 //  towards intermission item total.
 #define MF_COUNTITEM    (uint_64_t)(0x0000000000800000)
@@ -204,12 +202,12 @@ typedef struct mobj_s mobj_t;   //sf: move up here
 // Hmm ???.
 #define MF_TRANSSHIFT 26
 
-	  // proff 11/19/98: Andy Baker's stealth monsters - unused yet
-	  //Stealth Mode - Creatures that dissappear and reappear.
+    // proff 11/19/98: Andy Baker's stealth monsters - unused yet
+    //Stealth Mode - Creatures that dissappear and reappear.
 
 #define MF_STEALTH      (uint_64_t)(0x0000000010000000)
 
-	  // proff 11/19/98: 3 (4 counting opaque) levels of translucency
+    // proff 11/19/98: 3 (4 counting opaque) levels of translucency
     // not very good to set the next one in this enum, should be seperate
 #define MF_TRANSLUCBITS (uint_64_t)(0x0000000060000000)
 #define MF_TRANSLUC25   (uint_64_t)(0x0000000020000000)
@@ -243,12 +241,12 @@ enum {
 // reason behind monsters going to sleep when loading savegames (the "target"
 // pointer was simply nullified after loading, to prevent Doom from crashing),
 // and the whole reason behind loadgames crashing on savegames of AV attacks.
-// 
+//
 
 // killough 9/8/98: changed some fields to shorts,
 // for better memory usage (if only for cache).
 
-struct mobj_s
+typedef struct mobj_s
 {
     // List: thinker links.
     thinker_t           thinker;
@@ -271,7 +269,7 @@ struct mobj_s
     // Links in blocks (if needed).
     struct mobj_s*      bnext;
     struct mobj_s**     bprev; // killough 8/11/98: change to ptr-to-ptr
-    
+
     struct subsector_s* subsector;
 
     // The closest interval over all contacted Sectors.
@@ -283,7 +281,7 @@ struct mobj_s
 
     // For movement checking.
     fixed_t             radius;
-    fixed_t             height; 
+    fixed_t             height;
 
     // Momentums, used to update position.
     fixed_t             momx;
@@ -295,7 +293,7 @@ struct mobj_s
 
     mobjtype_t          type;
     mobjinfo_t*         info;   // &mobjinfo[mobj->type]
-    
+
     int                 tics;   // state tic counter
     state_t*            state;
     uint_64_t           flags;
@@ -313,7 +311,7 @@ struct mobj_s
 
     // Reaction time: if non 0, don't attack yet.
     // Used by player to freeze a bit after teleporting.
-    short               reactiontime;   
+    short               reactiontime;
 
     // If >0, the current target will be chased no
     // matter what (even if shot by another object)
@@ -329,16 +327,16 @@ struct mobj_s
     struct player_s*    player;
 
     // Player number last looked for.
-    short               lastlook;       
+    short               lastlook;
 
     // For nightmare respawn.
-    mapthing_t          spawnpoint;     
+    mapthing_t          spawnpoint;
 
     // Thing being chased/attacked for tracers.
-    struct mobj_s*      tracer; 
+    struct mobj_s*      tracer;
 
-	  //proff 11/22/98: Andy Baker's stealth monsters
-	  boolean             invisible;
+    //proff 11/22/98: Andy Baker's stealth monsters
+    boolean             invisible;
 
     // new field: last known enemy -- killough 2/15/98
     struct mobj_s*      lastenemy;
@@ -361,18 +359,14 @@ struct mobj_s
     struct msecnode_s* touching_sectorlist;                 // phares 3/14/98
 
     // SEE WARNING ABOVE ABOUT POINTER FIELDS!!!
-};
-
-        // put it here, it works, ok?
-#include "d_player.h"
+} mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98
 
 #define VIEWHEIGHT      (41*FRACUNIT)
 #define PLAYERRADIUS    (16*FRACUNIT)
 
-                // sf: gravity >>> defaultgravity
-#define DEFAULTGRAVITY  FRACUNIT
+#define GRAVITY         FRACUNIT
 #define MAXMOVE         (30*FRACUNIT)
 
 #define ONFLOORZ        INT_MIN
@@ -398,7 +392,6 @@ extern mapthing_t itemrespawnque[];
 extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
-extern int gravity;
 
 void    P_RespawnSpecials(void);
 mobj_t  *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
@@ -409,9 +402,7 @@ void    P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
 void    P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
 mobj_t  *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 void    P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
-boolean P_IsDoomnumAllowed(int doomnum);
-void    P_SpawnMapThing (const mapthing_t*  mthing);
-void    P_SpawnPlayer(int n, const mapthing_t *mthing);
+void    P_SpawnMapThing (mapthing_t*  mthing);
 void    P_CheckMissileSpawn(mobj_t*);  // killough 8/2/98
 void    P_ExplodeMissile(mobj_t*);    // killough
 #endif

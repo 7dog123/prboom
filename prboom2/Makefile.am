@@ -3,7 +3,7 @@
 #
 #
 
-# From "GNU autoconf, automake and libtool" Vaughan, Elliston,
+# From "GNU autoconf, automake and libtool" Vaughan, Elliston, 
 #  Tromey and Taylor, publisher New Riders, p.134
 # They made me do it! :-)
 AUX_DIST_GEN =				\
@@ -16,8 +16,8 @@ AUX_DIST_GEN =				\
 MAINTAINERCLEANFILES =  $(AUX_DIST_GEN)
 
 docdir=$(prefix)/share/doc/@PACKAGE@
-SUBDIRS = doc data src ICONS VISUALC5 VISUALC6 VISUALCNET
-EXTRA_DIST = ChangeLog prboom.spec.in prboom.spec config.h bootstrap $(AUX_DIST_GEN)
+SUBDIRS = doc data src ICONS VISUALC5 VISUALC6
+EXTRA_DIST = prboom.spec.in prboom.spec config.h bootstrap $(AUX_DIST_GEN)
 doc_DATA = README COPYING AUTHORS NEWS
 
 rpm:	dist

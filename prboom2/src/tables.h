@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -53,6 +53,14 @@
 // 0x100000000 to 0x2000
 #define ANGLETOFINESHIFT        19
 
+#ifndef ALL_IN_ONE
+
+// TABLES_AS_LUMPS causes the tables to be loaded from a wad lump, and the normal
+// data to be stored as a predefined lump.
+// Only really useful for dumping the trig tables or with NO_PREDEFINED_LUMPS
+#define TABLES_AS_LUMPS
+#endif
+
 // Binary Angle Measument, BAM.
 #define ANG45   0x20000000
 #define ANG90   0x40000000
@@ -66,23 +74,29 @@
 typedef unsigned angle_t;
 
 // Load trig tables if needed
+#if defined NO_PREDEFINED_LUMPS && defined TABLES_AS_LUMPS
 void R_LoadTrigTables(void);
+#define TRIG_CONST
+#else
+#define TRIG_CONST const
+#endif
 
 // Effective size is 10240.
-extern fixed_t finesine[5*FINEANGLES/4];
+extern TRIG_CONST fixed_t finesine[5*FINEANGLES/4];
 
 // Re-use data, is just PI/2 phase shift.
-static fixed_t *const finecosine = finesine + (FINEANGLES/4);
+static TRIG_CONST fixed_t *const finecosine = finesine + (FINEANGLES/4);
 
 // Effective size is 4096.
-extern fixed_t finetangent[FINEANGLES/2];
+extern TRIG_CONST fixed_t finetangent[FINEANGLES/2];
 
 // Effective size is 2049;
 // The +1 size is to handle the case when x==y without additional checking.
 
-extern angle_t tantoangle[SLOPERANGE+1];
+extern TRIG_CONST angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
 int SlopeDiv(unsigned num, unsigned den);
 
+#undef TRIG_CONST
 #endif

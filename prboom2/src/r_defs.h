@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -59,8 +59,6 @@
 
 #define MAXDRAWSEGS   256
 
-extern int r_blockmap;
-
 //
 // INTERNAL MAP TYPES
 //  used by play and refresh
@@ -90,9 +88,11 @@ typedef struct
 
 typedef struct
 {
+#ifdef GL_DOOM
   int iSectorID; // proff 04/05/2000: needed for OpenGL and used in debugmode by the HUD to draw sectornum
   boolean no_toptextures;
   boolean no_bottomtextures;
+#endif
   fixed_t floorheight;
   fixed_t ceilingheight;
   int nexttag,firsttag;  // killough 1/30/98: improves searches for tags.
@@ -118,7 +118,7 @@ typedef struct
   int stairlock;   // -2 on first locked -1 after thinker done 0 normally
   int prevsec;     // -1 or number of sector for previous step
   int nextsec;     // -1 or number of next step sector
-  
+
   // killough 3/7/98: support flat heights drawn at another sector's heights
   int heightsec;    // other sector, or -1 if no other sector
 
@@ -126,13 +126,13 @@ typedef struct
 
   // list of mobjs that are at least partially in the sector
   // thinglist is a subset of touching_thinglist
-  struct msecnode_s *touching_thinglist;               // phares 3/14/98  
+  struct msecnode_s *touching_thinglist;               // phares 3/14/98
 
   int linecount;
   struct line_s **lines;
 
   // killough 10/98: support skies coming from sidedefs. Allows scrolling
-  // skies and other effects. No "level info" kind of lump is needed, 
+  // skies and other effects. No "level info" kind of lump is needed,
   // because you can use an arbitrary number of skies per level with this
   // method. This field only applies when skyflatnum is used for floorpic
   // or ceilingpic, because the rest of Doom needs to know which is sky
@@ -163,7 +163,7 @@ typedef struct
 {
   fixed_t textureoffset; // add this to the calculated texture column
   fixed_t rowoffset;     // add this to the calculated texture top
-  short toptexture;      // Texture indices. We do not maintain names here. 
+  short toptexture;      // Texture indices. We do not maintain names here.
   short bottomtexture;
   short midtexture;
   sector_t* sector;      // Sector the SideDef is facing.
@@ -189,17 +189,19 @@ typedef enum
 
 typedef struct line_s
 {
+#ifdef GL_DOOM
   int iLineID;           // proff 04/05/2000: needed for OpenGL
+#endif
   vertex_t *v1, *v2;     // Vertices, from v1 to v2.
   fixed_t dx, dy;        // Precalculated v2 - v1 for side checking.
   short flags;           // Animation related.
-  short special;         
+  short special;
   short tag;
   short sidenum[2];      // Visual appearance: SideDefs.
   fixed_t bbox[4];       // A bounding box, for the linedef's extent
   slopetype_t slopetype; // To aid move clipping.
   sector_t *frontsector; // Front and back sector.
-  sector_t *backsector; 
+  sector_t *backsector;
   int validcount;        // if == validcount, already checked
   void *specialdata;     // thinker_t for reversable actions
   int tranlump;          // killough 4/11/98: translucency filter, -1 == none
@@ -253,11 +255,14 @@ typedef struct
   side_t* sidedef;
   line_t* linedef;
 
-  int iSegID;	// proff 11/05/2000: needed for OpenGL
-  float			length; // figgi -- needed for glnodes
-  boolean		miniseg;
+#ifdef GL_DOOM
+  int iSegID; // proff 11/05/2000: needed for OpenGL
+  // figgi -- needed for glnodes
+  float     length;
+#endif
+  boolean   miniseg;
 
-  
+
   // Sector references.
   // Could be retrieved from linedef, too
   // (but that would be slower -- killough)
@@ -292,6 +297,15 @@ typedef struct
   unsigned short children[2];    // If NF_SUBSECTOR its a subsector.
 } node_t;
 
+// posts are runs of non masked source pixels
+typedef struct
+{
+  byte topdelta; // -1 is the last post in a column
+  byte length;   // length data bytes follows
+} post_t;
+
+// column_t is a list of 0 or more post_t, (byte)-1 terminated
+typedef post_t column_t;
 
 //
 // OTHER TYPES
@@ -303,7 +317,7 @@ typedef struct
 // from darkening PLAYPAL to all black.
 // Could use even more than 32 levels.
 
-typedef byte  lighttable_t; 
+typedef byte  lighttable_t;
 
 //
 // Masked 2s linedefs
@@ -318,9 +332,6 @@ typedef struct drawseg_s
   fixed_t bsilheight;                   // do not clip sprites above this
   fixed_t tsilheight;                   // do not clip sprites below this
 
-  // Added for filtering (fractional texture u coord) support - POPE
-  fixed_t rw_offset, rw_distance, rw_centerangle; 
-  
   // Pointers to lists for sprite clipping,
   // all three adjusted so [x1] is first value.
 
@@ -335,27 +346,13 @@ typedef struct drawseg_s
 // of patches.
 //
 
-/*
-//---------------------------------------------------------------------------
-// Legacy patch format, moved to private in r_patch.c - POPE
-// posts are runs of non masked source pixels
-//---------------------------------------------------------------------------
-typedef struct {
-  byte topdelta; // -1 is the last post in a column
-  byte length;   // length data bytes follows
-} post_t;
-// column_t is a list of 0 or more post_t, (byte)-1 terminated
-typedef post_t column_t;
-
-typedef struct 
-{ 
-  short width, height;  // bounding box size 
-  short leftoffset;     // pixels to the left of origin 
-  short topoffset;      // pixels below the origin 
+typedef struct
+{
+  short width, height;  // bounding box size
+  short leftoffset;     // pixels to the left of origin
+  short topoffset;      // pixels below the origin
   int columnofs[8];     // only [width] used
 } patch_t;
-//---------------------------------------------------------------------------
-*/
 
 // proff: Added for OpenGL
 typedef struct
@@ -372,8 +369,10 @@ typedef struct
 
 typedef struct vissprite_s
 {
+#ifdef GL_DOOM
   mobj_t *thing;
   boolean flip;
+#endif
   int x1, x2;
   fixed_t gx, gy;              // for line side calculation
   fixed_t gz, gzt;             // global bottom / top for silhouette clipping
@@ -385,13 +384,13 @@ typedef struct vissprite_s
   uint_64_t mobjflags;
 
   // for color translation and shadow draw, maxbright frames as well
-  const lighttable_t *colormap;
-   
+  lighttable_t *colormap;
+
   // killough 3/27/98: height sector for underwater/fake ceiling support
   int heightsec;
 } vissprite_t;
 
-//  
+//
 // Sprites are patches with a special naming convention
 //  so they can be recognized by R_InitSprites.
 // The base name is NNNNFx or NNNNFxFx, with

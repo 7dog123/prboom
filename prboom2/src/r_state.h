@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -50,6 +50,12 @@
 // needed for texture pegging
 extern fixed_t *textureheight;
 
+// needed for pre rendering (fracs)
+extern fixed_t *spritewidth;
+
+extern fixed_t *spriteoffset;
+extern fixed_t *spritetopoffset;
+
 extern lighttable_t **colormaps;          // killough 3/20/98, 4/4/98
 extern lighttable_t *fullcolormap;        // killough 3/20/98
 
@@ -60,8 +66,8 @@ extern int viewheight;
 extern int firstflat;
 
 // for global animation
-extern int *flattranslation;    
-extern int *texturetranslation; 
+extern int *flattranslation;
+extern int *texturetranslation;
 
 // Sprite....
 extern int firstspritelump;
@@ -95,9 +101,6 @@ extern line_t           *lines;
 extern int              numsides;
 extern side_t           *sides;
 
-        // sf: for scripting
-extern int              numthings;
-extern mobj_t           **spawnedthings;
 
 //
 // POV data.

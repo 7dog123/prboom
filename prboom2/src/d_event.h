@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,12 +21,12 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
  *  Event information structures.
- *    
+ *
  *-----------------------------------------------------------------------------*/
 
 
@@ -47,19 +47,19 @@ typedef enum
   ev_keydown,
   ev_keyup,
   ev_mouse,
-  ev_axis
+  ev_joystick
 } evtype_t;
 
 // Event structure.
 typedef struct
 {
   evtype_t  type;
-  int       data1;    // keys / mouse/joystick buttons; device number
-  int       data2;    // mouse x move; axis number
-  int       data3;    // mouse y move; axis value
+  int       data1;    // keys / mouse/joystick buttons
+  int       data2;    // mouse/joystick x move
+  int       data3;    // mouse/joystick y move
 } event_t;
 
- 
+
 typedef enum
 {
   ga_nothing,
@@ -71,8 +71,7 @@ typedef enum
   ga_completed,
   ga_victory,
   ga_worlddone,
-  ga_screenshot,
-  ga_loadhublevel,   // sf: for hubs
+  ga_screenshot
 } gameaction_t;
 
 
@@ -91,7 +90,7 @@ typedef enum
   // Flag: game events, not really buttons.
   BT_SPECIAL      = 128,
   BT_SPECIALMASK  = 3,
-    
+
   // Flag, weapon change pending.
   // If true, the next 4 bits hold weapon num.
   BT_CHANGE       = 4,
@@ -109,10 +108,10 @@ typedef enum
   BTS_SAVEGAME    = 2,
   BTS_RESTARTLEVEL= 3, // Restarts the current level
 
-  // Savegame slot numbers occupy the second byte of buttons.    
+  // Savegame slot numbers occupy the second byte of buttons.
   BTS_SAVEMASK    = (4+8+16),
   BTS_SAVESHIFT   = 2,
-  
+
 } buttoncode_t;
 
 

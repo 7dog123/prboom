@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,17 +21,15 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
- * DESCRIPTION:  
+ * DESCRIPTION:
  *   Ceiling aninmation (lowering, crushing, raising)
  *
  *-----------------------------------------------------------------------------*/
 
-#include "doomdef.h"
 #include "doomstat.h"
-#include "z_zone.h"
 #include "r_main.h"
 #include "p_spec.h"
 #include "p_tick.h"
@@ -53,9 +51,9 @@ ceilinglist_t *activeceilings;
 // Action routine that moves ceilings. Called once per tick.
 //
 // Passed a ceiling_t structure that contains all the info about the move.
-// see P_SPEC.H for fields. No return value.
+// see P_SPEC.H for fields. No return.
 //
-// jff 02/08/98 all cases with labels beginning with gen added to support 
+// jff 02/08/98 all cases with labels beginning with gen added to support
 // generalized line type behaviors.
 //
 void T_MoveCeiling (ceiling_t* ceiling)
@@ -64,11 +62,11 @@ void T_MoveCeiling (ceiling_t* ceiling)
 
   switch(ceiling->direction)
   {
-    case plat_stop:
+    case 0:
       // If ceiling in stasis, do nothing
       break;
 
-    case plat_up:
+    case 1:
       // Ceiling is moving up
       res = T_MovePlane
             (
@@ -81,7 +79,7 @@ void T_MoveCeiling (ceiling_t* ceiling)
             );
 
       // if not a silent crusher, make moving sound
-      if (!(leveltime&7) && !silentmove(ceiling->sector))
+      if (!(leveltime&7))
       {
         switch(ceiling->type)
         {
@@ -118,13 +116,12 @@ void T_MoveCeiling (ceiling_t* ceiling)
 
           // crushers reverse direction at the top
           case silentCrushAndRaise:
-            if(!silentmove(ceiling->sector))    // sf: silentmove
             S_StartSound((mobj_t *)&ceiling->sector->soundorg,sfx_pstop);
           case genSilentCrusher:
           case genCrusher:
           case fastCrushAndRaise:
           case crushAndRaise:
-            ceiling->direction = plat_down;
+            ceiling->direction = -1;
             break;
 
           default:
@@ -132,8 +129,8 @@ void T_MoveCeiling (ceiling_t* ceiling)
         }
       }
       break;
-  
-    case plat_down:
+
+    case -1:
       // Ceiling moving down
       res = T_MovePlane
             (
@@ -146,7 +143,7 @@ void T_MoveCeiling (ceiling_t* ceiling)
             );
 
       // if not silent crusher type make moving sound
-      if (!(leveltime&7) && !silentmove(ceiling->sector))
+      if (!(leveltime&7))
       {
         switch(ceiling->type)
         {
@@ -169,20 +166,19 @@ void T_MoveCeiling (ceiling_t* ceiling)
           case genCrusher:
             if (ceiling->oldspeed<CEILSPEED*3)
               ceiling->speed = ceiling->oldspeed;
-            ceiling->direction = plat_up; //jff 2/22/98 make it go back up!
+            ceiling->direction = 1; //jff 2/22/98 make it go back up!
             break;
 
           // make platform stop at bottom of all crusher strokes
           // except generalized ones, reset speed, start back up
           case silentCrushAndRaise:
-            if(!silentmove(ceiling->sector))    // sf: silentmove
             S_StartSound((mobj_t *)&ceiling->sector->soundorg,sfx_pstop);
-          case crushAndRaise: 
+          case crushAndRaise:
             ceiling->speed = CEILSPEED;
           case fastCrushAndRaise:
-            ceiling->direction = plat_up;
+            ceiling->direction = 1;
             break;
-          
+
           // in the case of ceiling mover/changer, change the texture
           // then remove the active ceiling
           case genCeilingChgT:
@@ -216,7 +212,7 @@ void T_MoveCeiling (ceiling_t* ceiling)
           switch(ceiling->type)
           {
             //jff 02/08/98 slow down slow crushers on obstacle
-            case genCrusher:  
+            case genCrusher:
             case genSilentCrusher:
               if (ceiling->oldspeed < CEILSPEED*3)
                 ceiling->speed = CEILSPEED / 8;
@@ -269,7 +265,7 @@ int EV_DoCeiling
     default:
       break;
   }
-  
+
   // affects all sectors with the same tag as the linedef
   while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
   {
@@ -278,7 +274,7 @@ int EV_DoCeiling
     // if ceiling already moving, don't start a second function on it
     if (P_SectorActive(ceiling_special,sec))  //jff 2/22/98
       continue;
-  
+
     // create a new ceiling thinker
     rtn = 1;
     ceiling = Z_Malloc (sizeof(*ceiling), PU_LEVSPEC, 0);
@@ -287,7 +283,7 @@ int EV_DoCeiling
     ceiling->thinker.function = T_MoveCeiling;
     ceiling->sector = sec;
     ceiling->crush = false;
-  
+
     // setup ceiling structure according to type of function
     switch(type)
     {
@@ -295,7 +291,7 @@ int EV_DoCeiling
         ceiling->crush = true;
         ceiling->topheight = sec->ceilingheight;
         ceiling->bottomheight = sec->floorheight + (8*FRACUNIT);
-        ceiling->direction = plat_down;
+        ceiling->direction = -1;
         ceiling->speed = CEILSPEED * 2;
         break;
 
@@ -308,32 +304,32 @@ int EV_DoCeiling
         ceiling->bottomheight = sec->floorheight;
         if (type != lowerToFloor)
           ceiling->bottomheight += 8*FRACUNIT;
-        ceiling->direction = plat_down;
+        ceiling->direction = -1;
         ceiling->speed = CEILSPEED;
         break;
 
       case raiseToHighest:
         ceiling->topheight = P_FindHighestCeilingSurrounding(sec);
-        ceiling->direction = plat_up;
+        ceiling->direction = 1;
         ceiling->speed = CEILSPEED;
         break;
 
       case lowerToLowest:
         ceiling->bottomheight = P_FindLowestCeilingSurrounding(sec);
-        ceiling->direction = plat_down;
+        ceiling->direction = -1;
         ceiling->speed = CEILSPEED;
         break;
 
       case lowerToMaxFloor:
         ceiling->bottomheight = P_FindHighestFloorSurrounding(sec);
-        ceiling->direction = plat_down;
+        ceiling->direction = -1;
         ceiling->speed = CEILSPEED;
         break;
 
       default:
         break;
     }
-    
+
     // add the ceiling to the active list
     ceiling->tag = sec->tag;
     ceiling->type = type;
@@ -353,7 +349,7 @@ int EV_DoCeiling
 // The following were all rewritten by Lee Killough
 // to use the new structure which places no limits
 // on active ceilings. It also avoids spending as much
-// time searching for active ceilings. Previously a 
+// time searching for active ceilings. Previously a
 // fixed-size array was used, with NULL indicating
 // empty entries, while now a doubly-linked list
 // is used.
@@ -402,10 +398,10 @@ int EV_CeilingCrushStop(line_t* line)
   for (cl=activeceilings; cl; cl=cl->next)
   {
     ceiling_t *ceiling = cl->ceiling;
-    if (ceiling->direction != plat_stop && ceiling->tag == line->tag)
+    if (ceiling->direction != 0 && ceiling->tag == line->tag)
     {
       ceiling->olddirection = ceiling->direction;
-      ceiling->direction = plat_stop;
+      ceiling->direction = 0;
       ceiling->thinker.function = NULL;
       rtn=1;
     }
@@ -460,7 +456,7 @@ void P_RemoveActiveCeiling(ceiling_t* ceiling)
 void P_RemoveAllActiveCeilings(void)
 {
   while (activeceilings)
-  {  
+  {
     ceilinglist_t *next = activeceilings->next;
     free(activeceilings);
     activeceilings = next;

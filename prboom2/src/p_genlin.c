@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -30,7 +30,6 @@
  *
  *-----------------------------------------------------------------------------*/
 
-#include "z_zone.h"
 #include "doomstat.h" //jff 6/19/98 for demo_compatibility
 #include "r_main.h"
 #include "p_spec.h"
@@ -95,7 +94,7 @@ int EV_DoGenFloor
   {
     sec = &sectors[secnum];
 
-manual_floor:                
+manual_floor:
     // Do not start another function if floor already moving
     if (P_SectorActive(floor_special,sec))
     {
@@ -112,7 +111,7 @@ manual_floor:
     sec->floordata = floor;
     floor->thinker.function = T_MoveFloor;
     floor->crush = Crsh;
-    floor->direction = Dirn? plat_up : plat_down;
+    floor->direction = Dirn? 1 : -1;
     floor->sector = sec;
     floor->texture = sec->floorpic;
     floor->newspecial = sec->special;
@@ -298,7 +297,7 @@ int EV_DoGenCeiling
   {
     sec = &sectors[secnum];
 
-manual_ceiling:                
+manual_ceiling:
     // Do not start another function if ceiling already moving
     if (P_SectorActive(ceiling_special,sec)) //jff 2/22/98
     {
@@ -315,7 +314,7 @@ manual_ceiling:
     sec->ceilingdata = ceiling; //jff 2/22/98
     ceiling->thinker.function = T_MoveCeiling;
     ceiling->crush = Crsh;
-    ceiling->direction = Dirn? plat_up : plat_down;
+    ceiling->direction = Dirn? 1 : -1;
     ceiling->sector = sec;
     ceiling->texture = sec->ceilingpic;
     ceiling->newspecial = sec->special;
@@ -396,7 +395,7 @@ manual_ceiling:
 
         //jff 5/23/98 find model with floor at target height if target
         //is a floor type
-        sec = (Targ==CtoHnF || Targ==CtoF)?         
+        sec = (Targ==CtoHnF || Targ==CtoF)?
           P_FindModelFloorSector(targheight,secnum) :
           P_FindModelCeilingSector(targheight,secnum);
         if (sec)
@@ -487,7 +486,7 @@ int EV_DoGenLift
 
   if (Targ==LnF2HnF)
     P_ActivateInStasis(line->tag);
-        
+
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -513,12 +512,12 @@ manual_lift:
       else
         return rtn;
     }
-      
+
     // Setup the plat thinker
     rtn = 1;
     plat = Z_Malloc( sizeof(*plat), PU_LEVSPEC, 0);
     P_AddThinker(&plat->thinker);
-              
+
     plat->sector = sec;
     plat->sector->floordata = plat;
     plat->thinker.function = T_PlatRaise;
@@ -595,7 +594,6 @@ manual_lift:
         break;
     }
 
-    if(!silentmove(sec))        //sf: silentmove
     S_StartSound((mobj_t *)&sec->soundorg,sfx_pstart);
     P_AddActivePlat(plat); // add this plat to the list of active plats
 
@@ -625,12 +623,12 @@ int EV_DoGenStairs
   int                   ok;
   int                   rtn;
   boolean               manual;
-    
+
   sector_t*             sec;
   sector_t*             tsec;
 
   floormove_t*  floor;
-    
+
   fixed_t               stairsize;
   fixed_t               speed;
 
@@ -663,7 +661,7 @@ int EV_DoGenStairs
   {
     sec = &sectors[secnum];
 
-manual_stair:          
+manual_stair:
     //Do not start another function if floor already moving
     //jff 2/26/98 add special lockout condition to wait for entire
     //staircase to build before retriggering
@@ -674,14 +672,14 @@ manual_stair:
       else
         return rtn;
     }
-      
+
     // new floor thinker
     rtn = 1;
     floor = Z_Malloc (sizeof(*floor), PU_LEVSPEC, 0);
     P_AddThinker (&floor->thinker);
     sec->floordata = floor;
     floor->thinker.function = T_MoveFloor;
-    floor->direction = Dirn? plat_up : plat_down;
+    floor->direction = Dirn? 1 : -1;
     floor->sector = sec;
 
     // setup speed of stair building
@@ -731,7 +729,7 @@ manual_stair:
     sec->nextsec = -1;
     sec->prevsec = -1;
 
-    osecnum = secnum;            //jff 3/4/98 preserve loop index  
+    osecnum = secnum;            //jff 3/4/98 preserve loop index
     // Find next sector to raise
     // 1.     Find 2-sided line with same sector side[0]
     // 2.     Other side is the next sector to raise
@@ -742,10 +740,10 @@ manual_stair:
       {
         if ( !((sec->lines[i])->backsector) )
           continue;
-                                  
+
         tsec = (sec->lines[i])->frontsector;
         newsecnum = tsec-sectors;
-          
+
         if (secnum != newsecnum)
           continue;
 
@@ -762,7 +760,7 @@ manual_stair:
         //jff 2/26/98 special lockout condition for retriggering
         if (P_SectorActive(floor_special,tsec) || tsec->stairlock)
           continue;
-        
+
         /* jff 6/19/98 increase height AFTER continue */
         if (compatibility_level >= boom_202_compatibility)
           height += floor->direction * stairsize;
@@ -783,7 +781,7 @@ manual_stair:
 
         sec->floordata = floor;
         floor->thinker.function = T_MoveFloor;
-        floor->direction = Dirn? plat_up : plat_down;
+        floor->direction = Dirn? 1 : -1;
         floor->sector = sec;
         floor->speed = speed;
         floor->floordestheight = height;
@@ -849,7 +847,7 @@ int EV_DoGenCrusher
   {
     sec = &sectors[secnum];
 
-manual_crusher:                
+manual_crusher:
     // Do not start another function if ceiling already moving
     if (P_SectorActive(ceiling_special,sec)) //jff 2/22/98
     {
@@ -866,7 +864,7 @@ manual_crusher:
     sec->ceilingdata = ceiling; //jff 2/22/98
     ceiling->thinker.function = T_MoveCeiling;
     ceiling->crush = true;
-    ceiling->direction = plat_down;
+    ceiling->direction = -1;
     ceiling->sector = sec;
     ceiling->texture = sec->ceilingpic;
     ceiling->newspecial = sec->special;
@@ -939,7 +937,7 @@ int EV_DoGenLockedDoor
 
   secnum = -1;
   rtn = 0;
-  
+
   // if not manual do all sectors tagged the same as the line
   while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
   {
@@ -953,7 +951,7 @@ manual_locked:
       else
         return rtn;
     }
-  
+
     // new door thinker
     rtn = 1;
     door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
@@ -966,10 +964,10 @@ manual_locked:
     door->line = line;
     door->topheight = P_FindLowestCeilingSurrounding(sec);
     door->topheight -= 4*FRACUNIT;
-    door->direction = plat_up;
+    door->direction = 1;
 
     /* killough 10/98: implement gradual lighting */
-    door->lighttag = !comp[comp_doorlight] && 
+    door->lighttag = !comp[comp_doorlight] &&
       (line->special&6) == 6 &&
       line->special > GenLockedBase ? line->tag : 0;
 
@@ -1048,7 +1046,7 @@ int EV_DoGenDoor
 
   secnum = -1;
   rtn = 0;
-  
+
   // if not manual do all sectors tagged the same as the line
   while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
   {
@@ -1062,7 +1060,7 @@ manual_door:
       else
         return rtn;
     }
-  
+
     // new door thinker
     rtn = 1;
     door = Z_Malloc (sizeof(*door), PU_LEVSPEC, 0);
@@ -1109,7 +1107,7 @@ manual_door:
     door->line = line; // jff 1/31/98 remember line that triggered us
 
     /* killough 10/98: implement gradual lighting */
-    door->lighttag = !comp[comp_doorlight] && 
+    door->lighttag = !comp[comp_doorlight] &&
       (line->special&6) == 6 &&
       line->special > GenLockedBase ? line->tag : 0;
 
@@ -1118,7 +1116,7 @@ manual_door:
     switch(Kind)
     {
       case OdCDoor:
-        door->direction = plat_up;
+        door->direction = 1;
         door->topheight = P_FindLowestCeilingSurrounding(sec);
         door->topheight -= 4*FRACUNIT;
         if (door->topheight != sec->ceilingheight)
@@ -1126,7 +1124,7 @@ manual_door:
         door->type = Sped>=SpeedFast? genBlazeRaise : genRaise;
         break;
       case ODoor:
-        door->direction = plat_up;
+        door->direction = 1;
         door->topheight = P_FindLowestCeilingSurrounding(sec);
         door->topheight -= 4*FRACUNIT;
         if (door->topheight != sec->ceilingheight)
@@ -1135,14 +1133,14 @@ manual_door:
         break;
       case CdODoor:
         door->topheight = sec->ceilingheight;
-        door->direction = plat_down;
+        door->direction = -1;
         S_StartSound((mobj_t *)&door->sector->soundorg,sfx_dorcls);
         door->type = Sped>=SpeedFast? genBlazeCdO : genCdO;
         break;
       case CDoor:
         door->topheight = P_FindLowestCeilingSurrounding(sec);
         door->topheight -= 4*FRACUNIT;
-        door->direction = plat_down;
+        door->direction = -1;
         S_StartSound((mobj_t *)&door->sector->soundorg,sfx_dorcls);
         door->type = Sped>=SpeedFast? genBlazeClose : genClose;
         break;

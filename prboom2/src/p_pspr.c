@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -128,7 +128,7 @@ static void P_BringUpWeapon(player_t *player)
 
   player->pendingweapon = wp_nochange;
   // killough 12/98: prevent pistol from starting visibly at bottom of screen:
-  player->psprites[ps_weapon].sy = 
+  player->psprites[ps_weapon].sy =
     mbf_features ? WEAPONBOTTOM+FRACUNIT*2 : WEAPONBOTTOM;
 
   P_SetPsprite(player, ps_weapon, newstate);
@@ -268,7 +268,7 @@ boolean P_CheckAmmo(player_t *player)
 // P_FireWeapon.
 //
 
-/* cph 2001/07/07 - removed lastshottic, unused */
+int lastshottic; // killough 3/22/98
 
 static void P_FireWeapon(player_t *player)
 {
@@ -281,6 +281,7 @@ static void P_FireWeapon(player_t *player)
   newstate = weaponinfo[player->readyweapon].atkstate;
   P_SetPsprite(player, ps_weapon, newstate);
   P_NoiseAlert(player->mo, player->mo);
+  lastshottic = gametic;                       // killough 3/22/98
 }
 
 //
@@ -373,14 +374,7 @@ void A_ReFire(player_t *player, pspdef_t *psp)
 
 void A_CheckReload(player_t *player, pspdef_t *psp)
 {
-  if (!P_CheckAmmo(player) && compatibility_level >= prboom_4_compatibility) {
-    /* cph 2002/08/08 - In old Doom, P_CheckAmmo would start the weapon lowering
-     * immediately. This was lost in Boom when the weapon switching logic was
-     * rewritten. But we must tell Doom that we don't need to complete the
-     * reload frames for the weapon here. G_BuildTiccmd will set ->pendingweapon
-     * for us later on. */
-    P_SetPsprite(player,ps_weapon,weaponinfo[player->readyweapon].downstate);
-  }
+  P_CheckAmmo(player);
 }
 
 //
@@ -627,9 +621,9 @@ static void P_BulletSlope(mobj_t *mo)
     {
       bulletslope = P_AimLineAttack(mo, an, 16*64*FRACUNIT, mask);
       if (!linetarget)
-	bulletslope = P_AimLineAttack(mo, an += 1<<26, 16*64*FRACUNIT, mask);
+  bulletslope = P_AimLineAttack(mo, an += 1<<26, 16*64*FRACUNIT, mask);
       if (!linetarget)
-	bulletslope = P_AimLineAttack(mo, an -= 2<<26, 16*64*FRACUNIT, mask);
+  bulletslope = P_AimLineAttack(mo, an -= 2<<26, 16*64*FRACUNIT, mask);
     }
   while (mask && (mask=0, !linetarget));  /* killough 8/2/98 */
 }
@@ -775,7 +769,7 @@ void A_BFGSpray(mobj_t *mo)
       if (!mbf_features ||
          (P_AimLineAttack(mo->target, an, 16*64*FRACUNIT, MF_FRIEND),
          !linetarget))
-	      P_AimLineAttack(mo->target, an, 16*64*FRACUNIT, 0);
+        P_AimLineAttack(mo->target, an, 16*64*FRACUNIT, 0);
 
       if (!linetarget)
         continue;

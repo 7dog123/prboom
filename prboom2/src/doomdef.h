@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -129,13 +129,10 @@ extern int SCREENHEIGHT;
 // at the intermission screen, the game final animation, or a demo.
 
 typedef enum {
-  GS_INIT          = -1,         // loading doom
-  GS_LEVEL         = 0,          // in level
-  GS_INTERMISSION  = 1,          // intermission screen
-  GS_FINALE        = 2,          // finale screen
-  GS_DEMOSCREEN    = 3,          // demo screen
-  GS_CONSOLE       = 4,          // fullscreen console
-  GS_SERVERWAIT    = 5,          // waiting for server to start game
+  GS_LEVEL,
+  GS_INTERMISSION,
+  GS_FINALE,
+  GS_DEMOSCREEN
 } gamestate_t;
 
 //
@@ -156,15 +153,6 @@ typedef enum {
 #define MTF_NOTCOOP            64
 #define MTF_FRIEND            128
 #define MTF_RESERVED          256
-
-// sf: sector flags, not me =)
-                // kill all sound in sector
-#define SF_KILLSOUND          1024
-                // kill all sounds due to moving
-#define SF_KILLMOVESOUND      2048
-
-        // a macro to find out whether to make moving sounds in a sector
-#define silentmove(s) ((s)->special & SF_KILLMOVESOUND)
 
 typedef enum {
   sk_none=-1, //jff 3/24/98 create unpicked skill setting
@@ -266,7 +254,7 @@ typedef enum {
 #define KEYD_RCTRL      (0x80+0x1d)
 #define KEYD_RALT       (0x80+0x38)
 #define KEYD_LALT       KEYD_RALT
-#define KEYD_CAPSLOCK   0xba                                        // phares 
+#define KEYD_CAPSLOCK   0xba                                        // phares
 
 // phares 3/2/98:
 #define KEYD_INSERT     0xd2
@@ -279,39 +267,11 @@ typedef enum {
 #define KEYD_SPACEBAR   0x20
 // phares 3/2/98
 
-// sf: console key
-#define KEYD_CONSOLE    '`'
-
 #define KEYD_NUMLOCK    0xC5                 // killough 3/6/98
 
-#define KEYD_MOUSE1       (0xe0 + 0)
-#define KEYD_MOUSE2       (0xe0 + 1)
-#define KEYD_MOUSE3       (0xe0 + 2)
-#define KEYD_MOUSE4       (0xe0 + 3)
-#define KEYD_MOUSE5       (0xe0 + 4)
-#define KEYD_MOUSED1      (0xe0 + 5)
-#define KEYD_MOUSED2      (0xe0 + 6)
-#define KEYD_MOUSED3      (0xe0 + 7)
-#define KEYD_JOY1         (0xe0 + 8)
-#define KEYD_JOY2         (0xe0 + 9)
-#define KEYD_JOY3         (0xe0 +10)
-#define KEYD_JOY4         (0xe0 +11)
-#define KEYD_JOY5         (0xe0 +12)
-#define KEYD_JOY6         (0xe0 +13)
-#define KEYD_JOY7         (0xe0 +14)
-#define KEYD_JOY8         (0xe0 +15)
-#define KEYD_JOY9         (0xe0 +16)
-#define KEYD_JOY10        (0xe0 +17)
-#define KEYD_JOY11        (0xe0 +18)
-#define KEYD_JOY12        (0xe0 +19)
-#define KEYD_JOY13        (0xe0 +20)
-#define KEYD_JOY14        (0xe0 +21)
-#define KEYD_JOY15        (0xe0 +22)
-#define KEYD_JOY16        (0xe0 +23)
-
 // cph - Add the numeric keypad keys, as suggested by krose 4/22/99:
-// The way numbers are assigned to keys is a mess, but it's too late to 
-// change that easily. At least these additions are don neatly. 
+// The way numbers are assigned to keys is a mess, but it's too late to
+// change that easily. At least these additions are don neatly.
 // Codes 0x100-0x200 are reserved for number pad
 
 #define KEYD_KEYPAD0      (0x100 + '0')
@@ -359,19 +319,4 @@ typedef enum {
 #define ORIG_FRICTION          0xE800      // original value
 #define ORIG_FRICTION_FACTOR   2048        // original value
 
-// sf: some useful macros
-
-#define isnumchar(c) ( (c) >= '0' && (c) <= '9')
-#define isExMy(s) ( (tolower((s)[0]) == 'e') && \
-                    (isnumchar((s)[1])) &&      \
-                    (tolower((s)[2]) == 'm') && \
-                    (isnumchar((s)[3])) &&      \
-                    ((s)[4] == '\0') )
-#define isMAPxy(s) ( (tolower((s)[0]) == 'm') && \
-                     (tolower((s)[1]) == 'a') && \
-                     (tolower((s)[2]) == 'p') && \
-                     (isnumchar((s)[3])) &&      \
-                     (isnumchar((s)[4])) &&      \
-                     ((s)[5] == '\0'))
-  
 #endif          // __DOOMDEF__

@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -33,7 +33,6 @@
 #define __D_MAIN__
 
 #include "d_event.h"
-#include "p_chase.h"
 #include "w_wad.h"
 
 #ifdef __GNUG__
@@ -44,7 +43,6 @@
 
 // jff make startskill globally visible
 extern skill_t startskill;
-extern char *startlevel;
 
 extern char basesavegame[];     // killough 2/16/98: savegame path
 
@@ -57,16 +55,9 @@ extern boolean clfastparm; // checkparm of -fast
 extern boolean nosfxparm;
 extern boolean nomusicparm;
 
-extern int use_startmap;
-extern boolean redrawsbar, redrawborder;
-
 // Called by IO functions when input is detected.
 void D_PostEvent(event_t* ev);
-
-extern camera_t *camera;
-
-extern boolean wad_level;
-extern char firstlevel[9];       // sf: first level of new wads
+void D_ProcessEvents (void);
 
 // Demo stuff
 extern boolean advancedemo;
@@ -82,13 +73,6 @@ void D_PageDrawer(void);
 void D_StartTitle(void);
 void D_DoomMain(void);
 void D_AddFile (const char *file, wad_source_t source);
-char *D_FindIWADFile(void); // Publicized for vidd support - POPE
-void D_AutoLoad(void);
-void IdentifyVersion(void);
-void D_ListWads();
-void D_ReInitWadfiles();
-void D_NewWadLumps(int handle);
-boolean D_AddNewFile(char *s);
 
 /* cph - MBF-like wad/deh/bex autoload code */
 #define MAXLOADFILES 2

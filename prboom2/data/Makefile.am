@@ -5,24 +5,13 @@
 
 waddir=$(datadir)/games/doom
 wad_DATA=prboom.wad
-EXTRA_DIST=prboom.wad prboom.txt
-
-prboom.wad      :       prboom.txt $(wildcard graphics/*.ppm sprites/*.ppm lumps/*.lmp sounds/*.wav)
-	-rm -f $@
-	deutex -make prboom.txt $@
+EXTRA_DIST=prboom.wad
 
 #
 # $Log: Makefile.am,v $
-# Revision 1.5  2003/07/19 11:45:51  proff_fs
+# Revision 1.2.2.1  2003/07/19 11:40:36  proff_fs
 # Removed $Id: $ lines.
 # This is for the future switch to subversion.
-#
-# Revision 1.4  2001/11/13 21:38:02  cph
-# Must distribute prboom.txt so the make can pass prboom.wad
-#
-# Revision 1.3  2001/07/19 20:38:37  cph
-# Generate prboom.wad from a DeuTex tree
-# Must be the biggest CVS commit I've ever made :-)
 #
 # Revision 1.2  2000/05/18 09:36:11  cph
 # Import new data WAD with Boom, MBF and PrBoom stuff

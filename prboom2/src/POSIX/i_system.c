@@ -50,13 +50,7 @@
 
 void I_uSleep(unsigned long usecs)
 {
-#ifdef HAVE_USLEEP
   usleep(usecs);
-#else
-  /* Fall back on select(2) */
-  struct timeval tv = { usecs / 1000000, usecs % 1000000 };
-  select(0,NULL,NULL,NULL,&tv);
-#endif
 }
 
 /* CPhipps - believe it or not, it is possible with consecutive calls to 

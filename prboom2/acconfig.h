@@ -113,9 +113,6 @@
 /* Define if you want to build with OpenGL support */
 #undef GL_DOOM
 
-/* Define if you want to build with dynamic OpenGL support */
-#undef DYNAMIC_GL
-
 /* Define if you want to use the gluTesselator  */
 #undef USE_GLU_TESS
 
@@ -127,4 +124,12 @@
 
 /* Define if you want to have prboom.wad in the exe  */
 #undef ALL_IN_ONE
+
+/* Define if you want to poll the mouse rather than rely on 
+ * (unreliable) X11 mouse motion events */
+#undef POLL_MOUSE
+
+/* Set to the attribute to apply to struct definitions to make them packed */
+#undef PACKEDATTR
+
 

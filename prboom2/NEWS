@@ -1,45 +1,26 @@
-This file shows a history of changes between PrBoom versions since v2.2.0.
-For historical reference, the changes since v2.1.0 and the complete LxDoom
-changelog follows it.
-
-Changes from v2.2.4 to v2.3.0
-- the OpenGL libs are loaded dynamically
-- only one executable for software rendering and OpenGL
-- option for sound compatibility with original Doom
-- added more compatibility levels (check frontend configurations!)
-- in game switching between fullscreen and windowed mode
-- fix super-shotgun reload on last shot
-- intermission demo sync bug fixed
-- support for more and less then 8 channels
-- improved response file parser
-- replaced use_vsync with use_doublebuffer in cfg file and implemented
-  double buffering
-- removed old Doom v1.2 lumps from prboom.wad
-- windows also uses prboom.wad now
-- removed lumps and tables which are in prboom.wad from source
-- fix translucency map file handle leak
-- added a quake like console
-- new menu code and much more options available through it
-- reworked software renderer
-- bilinear filter for software rendering
-- AdvanceScale2x like filter, but working on individual lines not fullscreen
-- smooth edges on masked textures and sprites
-- 16bit and 32bit software rendering
-- sound and video settings changeable while running (Software <-> OpenGL)
-- VIDD (Version Independant Doom Demo) support
+This file shows a history of changes between PrBoom versions since v2.1.0.
+For historical reference, the complete LxDoom changelog follows it.
 
 Changes from v2.2.3 to v2.2.4
 - fixed sky-over-sky HOM
+- add sound compatibility option
+- improve sound volume accuracy
 - shared texture palette isn't the default anymore
 - better invulnerabilty rendering for non paletted OpenGL
-- small compilation fix for OpenGL on some unix platforms
+- network game server can now read config files to set game options
+- fix latency problems in LAN games
+- small compilation fixed for OpenGL on some unix platforms
 - fix for dehacked files which change frames
 - fixed name clash when compiling for some unix platforms
 - flag counted items with different colour on the IDDT automap
 - fixed extra shot sound when chaingun runs out of ammo
+- fix some telefragging related desyncs
+- fixed offsets for flipped sprites
+- hopefully fix problems with network games on big-endian platforms
 
 Changes from v2.2.2 to v2.2.3
 - improved mouse handling
+- intermission demo sync bug fixed
 - framebuffer update fixes (solves flicker on fbcon)
 - -forceoldbsp allowed in non-GL version, and saved in demos
 - fix player colours in multiplayer demos
