@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: m_fixed.h,v 1.10 2001/07/01 15:10:13 cph Exp $
+ * $Id: m_fixed.h,v 1.7.2.3 2002/07/20 18:08:36 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -68,9 +68,9 @@ __inline static int D_abs(int x)
 # else /* I386_ASM */
 inline static const int D_abs(x)
 {
-	fixed_t _t = (x),_s;
-	_s = _t >> (8*sizeof _t-1);
-	return (_t^_s)-_s;
+  fixed_t _t = (x),_s;
+  _s = _t >> (8*sizeof _t-1);
+  return (_t^_s)-_s;
 }
 # endif /* I386_ASM */
 #else /* _MSC_VER */
@@ -98,21 +98,22 @@ __inline static fixed_t FixedMul(fixed_t a, fixed_t b)
 # else /* _MSC_VER */
 /* killough 5/10/98: In djgpp, use inlined assembly for performance
  * CPhipps - made __inline__ to inline, as specified in the gcc docs
- * Also made const. Also __asm__ to asm, as in docs. 
- * Replaced inline asm with Julian's version for Eternity dated 6/7/2001
- */
+ * Also made const */
 inline
 static const fixed_t FixedMul(fixed_t a, fixed_t b)
 {
   fixed_t result;
+  int dummy;
 
-  asm (
-      "  imull %2 ;"
-      "  shrdl $16,%%edx,%0 ;"
-      : "=a" (result)           /* eax is always the result */
+  asm("  imull %3 ;"
+      "  shrdl $16,%1,%0 ;"
+      : "=a" (result),          /* eax is always the result */
+        "=d" (dummy)    /* cphipps - fix compile problem with gcc-2.95.1
+           edx is clobbered, but it might be an input */
       : "0" (a),                /* eax is also first operand */
-        "rm" (b)                /* second operand can be reg or mem */
-      : "%edx", "%cc"           /* edx and condition codes clobbered */
+        "r" (b)                 /* second operand could be mem or reg before,
+           but gcc compile problems mean i can only us reg */
+      : "%cc"                   /* edx and condition codes clobbered */
       );
 
   return result;
@@ -146,7 +147,7 @@ __inline static fixed_t FixedDiv(fixed_t a, fixed_t b)
     __asm
     {
         mov  eax,a
-        mov  ebx,b        
+        mov  ebx,b
         mov  edx,eax
         shl  eax,16     // proff 11/06/98: Changed from sal to shl, I think
                         // this is better
@@ -160,23 +161,23 @@ __inline static fixed_t FixedDiv(fixed_t a, fixed_t b)
 /* killough 5/10/98: In djgpp, use inlined assembly for performance
  * killough 9/5/98: optimized to reduce the number of branches
  * CPhipps - made __inline__ to inline, as specified in the gcc docs
- * Also made const, also __asm__ to asm as in docs.
- * Replaced inline asm with Julian's version for Eternity dated 6/7/2001
- */
+ * Also made const */
 inline
 static const fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
   if (D_abs(a) >> 14 < D_abs(b))
     {
       fixed_t result;
-      asm (
-          " idivl %3 ;"
-	  : "=a" (result)
-	  : "0" (a<<16),
-	    "d" (a>>16),
-	    "rm" (b)
-	  : "%cc"
-	  );
+      int dummy;
+      asm(" idivl %4 ;"
+    : "=a" (result),
+      "=d" (dummy)  /* cphipps - fix compile problems with gcc 2.95.1
+           edx is clobbered, but also an input */
+    : "0" (a<<16),
+      "1" (a>>16),
+      "r" (b)
+    : "%cc"
+    );
       return result;
     }
   return ((a^b)>>31) ^ INT_MAX;
@@ -195,7 +196,7 @@ inline static const fixed_t FixedDiv(fixed_t a, fixed_t b)
 
 #endif /* I386_ASM */
 
-/* CPhipps - 
+/* CPhipps -
  * FixedMod - returns a % b, guaranteeing 0<=a<b
  * (notice that the C standard for % does not guarantee this)
  */
@@ -204,7 +205,7 @@ inline static const fixed_t FixedMod(fixed_t a, fixed_t b)
 {
   if (b & (b-1)) {
     fixed_t r = a % b;
-    return ((r<0) ? r+b : r);  
+    return ((r<0) ? r+b : r);
   } else
     return (a & (b-1));
 }

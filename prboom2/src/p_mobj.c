@@ -1,15 +1,15 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: p_mobj.c,v 1.21 2002/07/04 20:21:47 cph Exp $
+ * $Id: p_mobj.c,v 1.12.2.2 2002/07/20 18:08:36 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2002 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,7 +31,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_mobj.c,v 1.21 2002/07/04 20:21:47 cph Exp $";
+rcsid[] = "$Id: p_mobj.c,v 1.12.2.2 2002/07/20 18:08:36 proff_fs Exp $";
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -194,8 +194,8 @@ void P_XYMovement (mobj_t* mo)
       // CPhipps - compatibility optioned
 
       if (xmove > MAXMOVE/2 || ymove > MAXMOVE/2 ||
-	(!comp[comp_moveblock] 
-	 && (xmove < -MAXMOVE/2 || ymove < -MAXMOVE/2)))
+  (!comp[comp_moveblock]
+   && (xmove < -MAXMOVE/2 || ymove < -MAXMOVE/2)))
       {
       ptryx = mo->x + xmove/2;
       ptryy = mo->y + ymove/2;
@@ -213,70 +213,70 @@ void P_XYMovement (mobj_t* mo)
 
     if (!P_TryMove (mo, ptryx, ptryy, true))
       {
-	  // blocked move
+    // blocked move
 
-	  // killough 8/11/98: bouncing off walls
-	  // killough 10/98:
-	  // Add ability for objects other than players to bounce on ice
-	  
-	  if (!(mo->flags & MF_MISSILE) && 
-	      mbf_features &&
-	      (mo->flags & MF_BOUNCES ||
-	       (!player && blockline &&
-		variable_friction && mo->z <= mo->floorz &&
-		P_GetFriction(mo, NULL) > ORIG_FRICTION)))
-	    {
-	      if (blockline)
-		{
-		  fixed_t r = ((blockline->dx >> FRACBITS) * mo->momx +
-			       (blockline->dy >> FRACBITS) * mo->momy) /
-		    ((blockline->dx >> FRACBITS)*(blockline->dx >> FRACBITS)+
-		     (blockline->dy >> FRACBITS)*(blockline->dy >> FRACBITS));
-		  fixed_t x = FixedMul(r, blockline->dx);
-		  fixed_t y = FixedMul(r, blockline->dy);
+    // killough 8/11/98: bouncing off walls
+    // killough 10/98:
+    // Add ability for objects other than players to bounce on ice
 
-		  // reflect momentum away from wall
+    if (!(mo->flags & MF_MISSILE) &&
+        mbf_features &&
+        (mo->flags & MF_BOUNCES ||
+         (!player && blockline &&
+    variable_friction && mo->z <= mo->floorz &&
+    P_GetFriction(mo, NULL) > ORIG_FRICTION)))
+      {
+        if (blockline)
+    {
+      fixed_t r = ((blockline->dx >> FRACBITS) * mo->momx +
+             (blockline->dy >> FRACBITS) * mo->momy) /
+        ((blockline->dx >> FRACBITS)*(blockline->dx >> FRACBITS)+
+         (blockline->dy >> FRACBITS)*(blockline->dy >> FRACBITS));
+      fixed_t x = FixedMul(r, blockline->dx);
+      fixed_t y = FixedMul(r, blockline->dy);
 
-		  mo->momx = x*2 - mo->momx;
-		  mo->momy = y*2 - mo->momy;
+      // reflect momentum away from wall
 
-		  // if under gravity, slow down in
-		  // direction perpendicular to wall.
+      mo->momx = x*2 - mo->momx;
+      mo->momy = y*2 - mo->momy;
 
-		  if (!(mo->flags & MF_NOGRAVITY))
-		    {
-		      mo->momx = (mo->momx + x)/2;
-		      mo->momy = (mo->momy + y)/2;
-		    }
-		}
-	      else
-		mo->momx = mo->momy = 0;
-	    }
-	  else
-	    if (player)   // try to slide along it
-	      P_SlideMove (mo);
-	    else 
-	      if (mo->flags & MF_MISSILE)
-		{
-		  // explode a missile
+      // if under gravity, slow down in
+      // direction perpendicular to wall.
 
-		  if (ceilingline &&
-		      ceilingline->backsector &&
-		      ceilingline->backsector->ceilingpic == skyflatnum)
-		    if (demo_compatibility ||  // killough
-			mo->z > ceilingline->backsector->ceilingheight)
-		      {
-			// Hack to prevent missiles exploding
-			// against the sky.
-			// Does not handle sky floors.
+      if (!(mo->flags & MF_NOGRAVITY))
+        {
+          mo->momx = (mo->momx + x)/2;
+          mo->momy = (mo->momy + y)/2;
+        }
+    }
+        else
+    mo->momx = mo->momy = 0;
+      }
+    else
+      if (player)   // try to slide along it
+        P_SlideMove (mo);
+      else
+        if (mo->flags & MF_MISSILE)
+    {
+      // explode a missile
 
-			P_RemoveMobj (mo);
-			return;
-		      }
-		  P_ExplodeMissile (mo);
-		}
-	      else // whatever else it is, it is now standing still in (x,y)
-		mo->momx = mo->momy = 0;
+      if (ceilingline &&
+          ceilingline->backsector &&
+          ceilingline->backsector->ceilingpic == skyflatnum)
+        if (demo_compatibility ||  // killough
+      mo->z > ceilingline->backsector->ceilingheight)
+          {
+      // Hack to prevent missiles exploding
+      // against the sky.
+      // Does not handle sky floors.
+
+      P_RemoveMobj (mo);
+      return;
+          }
+      P_ExplodeMissile (mo);
+    }
+        else // whatever else it is, it is now standing still in (x,y)
+    mo->momx = mo->momy = 0;
       }
     } while (xmove || ymove);
 
@@ -321,9 +321,9 @@ void P_XYMovement (mobj_t* mo)
       // killough 10/98:
       // Don't affect main player when voodoo dolls stop, except in old demos:
 
-      if (player && (unsigned)(player->mo->state - states - S_PLAY_RUN1) < 4 
-	  && (player->mo == mo || compatibility_level >= lxdoom_1_compatibility))
-	P_SetMobjState(player->mo, S_PLAY);
+      if (player && (unsigned)(player->mo->state - states - S_PLAY_RUN1) < 4
+    && (player->mo == mo || compatibility_level >= lxdoom_1_compatibility))
+  P_SetMobjState(player->mo, S_PLAY);
 
       mo->momx = mo->momy = 0;
 
@@ -331,7 +331,7 @@ void P_XYMovement (mobj_t* mo)
        * cph - DEMOSYNC - needs compatibility check?
        */
       if (player && player->mo == mo)
-	player->momx = player->momy = 0;
+  player->momx = player->momy = 0;
     }
   else
     {
@@ -363,10 +363,10 @@ void P_XYMovement (mobj_t* mo)
        */
 
       if (player && player->mo == mo)     /* Not voodoo dolls */
-	{
-	  player->momx = FixedMul(player->momx, ORIG_FRICTION);
-	  player->momy = FixedMul(player->momy, ORIG_FRICTION);
-	}
+  {
+    player->momx = FixedMul(player->momx, ORIG_FRICTION);
+    player->momy = FixedMul(player->momy, ORIG_FRICTION);
+  }
 
     }
   }
@@ -391,45 +391,45 @@ static void P_ZMovement (mobj_t* mo)
       mo->z = mo->floorz;
       if (mo->momz < 0) {
         mo->momz = -mo->momz;
-	if (!(mo->flags & MF_NOGRAVITY)) { /* bounce back with decay */
-	  mo->momz = mo->flags & MF_FLOAT ?   // floaters fall slowly
-	    mo->flags & MF_DROPOFF ?          // DROPOFF indicates rate
-	    FixedMul(mo->momz, (fixed_t)(FRACUNIT*.85)) :
-	    FixedMul(mo->momz, (fixed_t)(FRACUNIT*.70)) :
-	    FixedMul(mo->momz, (fixed_t)(FRACUNIT*.45)) ;
-		  
-	  /* Bring it to rest below a certain speed */
-	  if (D_abs(mo->momz) <= mo->info->mass*(GRAVITY*4/256))
-	    mo->momz = 0;
-	}
+  if (!(mo->flags & MF_NOGRAVITY)) { /* bounce back with decay */
+    mo->momz = mo->flags & MF_FLOAT ?   // floaters fall slowly
+      mo->flags & MF_DROPOFF ?          // DROPOFF indicates rate
+      FixedMul(mo->momz, (fixed_t)(FRACUNIT*.85)) :
+      FixedMul(mo->momz, (fixed_t)(FRACUNIT*.70)) :
+      FixedMul(mo->momz, (fixed_t)(FRACUNIT*.45)) ;
 
-	/* killough 11/98: touchy objects explode on impact */
-	if (mo->flags & MF_TOUCHY && mo->intflags & MIF_ARMED
-			&& mo->health > 0)
-	  P_DamageMobj(mo, NULL, NULL, mo->health);
-	else if (mo->flags & MF_FLOAT && sentient(mo))
-	  goto floater;
-	return;
+    /* Bring it to rest below a certain speed */
+    if (abs(mo->momz) <= mo->info->mass*(GRAVITY*4/256))
+      mo->momz = 0;
+  }
+
+  /* killough 11/98: touchy objects explode on impact */
+  if (mo->flags & MF_TOUCHY && mo->intflags & MIF_ARMED
+      && mo->health > 0)
+    P_DamageMobj(mo, NULL, NULL, mo->health);
+  else if (mo->flags & MF_FLOAT && sentient(mo))
+    goto floater;
+  return;
       }
     } else if (mo->z >= mo->ceilingz - mo->height) {
       /* bounce off ceilings */
       mo->z = mo->ceilingz - mo->height;
       if (mo->momz > 0) {
-	if (mo->subsector->sector->ceilingpic != skyflatnum)
-	  mo->momz = -mo->momz;    /* always bounce off non-sky ceiling */
-	else if (mo->flags & MF_MISSILE)
-	  P_RemoveMobj(mo);        /* missiles don't bounce off skies */
-	else if (mo->flags & MF_NOGRAVITY)
-	  mo->momz = -mo->momz; // bounce unless under gravity
-	
-	if (mo->flags & MF_FLOAT && sentient(mo))
-	  goto floater;
+  if (mo->subsector->sector->ceilingpic != skyflatnum)
+    mo->momz = -mo->momz;    /* always bounce off non-sky ceiling */
+  else if (mo->flags & MF_MISSILE)
+    P_RemoveMobj(mo);        /* missiles don't bounce off skies */
+  else if (mo->flags & MF_NOGRAVITY)
+    mo->momz = -mo->momz; // bounce unless under gravity
 
-	return;
+  if (mo->flags & MF_FLOAT && sentient(mo))
+    goto floater;
+
+  return;
       }
     } else {
       if (!(mo->flags & MF_NOGRAVITY))      /* free-fall under gravity */
-	      mo->momz -= mo->info->mass*(GRAVITY/256);
+        mo->momz -= mo->info->mass*(GRAVITY/256);
 
       if (mo->flags & MF_FLOAT && sentient(mo)) goto floater;
       return;
@@ -439,13 +439,13 @@ static void P_ZMovement (mobj_t* mo)
     mo->momz = 0;
 
     if (mo->flags & MF_MISSILE) {
-	if (ceilingline &&
-	    ceilingline->backsector &&
-	    ceilingline->backsector->ceilingpic == skyflatnum &&
-	    mo->z > ceilingline->backsector->ceilingheight)
-	  P_RemoveMobj(mo);  /* don't explode on skies */
-	else
-	  P_ExplodeMissile(mo);
+  if (ceilingline &&
+      ceilingline->backsector &&
+      ceilingline->backsector->ceilingpic == skyflatnum &&
+      mo->z > ceilingline->backsector->ceilingheight)
+    P_RemoveMobj(mo);  /* don't explode on skies */
+  else
+    P_ExplodeMissile(mo);
     }
 
     if (mo->flags & MF_FLOAT && sentient(mo)) goto floater;
@@ -474,12 +474,12 @@ floater:
     // float down towards target if too close
 
     if (!((mo->flags ^ MF_FLOAT) & (MF_FLOAT | MF_SKULLFLY | MF_INFLOAT)) &&
-	mo->target)     /* killough 11/98: simplify */
+  mo->target)     /* killough 11/98: simplify */
       {
-	fixed_t delta;
-	if (P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) <
-	    D_abs(delta = mo->target->z + (mo->height>>1) - mo->z)*3)
-	  mo->z += delta < 0 ? -FLOATSPEED : FLOATSPEED;
+  fixed_t delta;
+  if (P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) <
+      abs(delta = mo->target->z + (mo->height>>1) - mo->z)*3)
+    mo->z += delta < 0 ? -FLOATSPEED : FLOATSPEED;
       }
 
   // clip movement
@@ -491,56 +491,48 @@ floater:
     /* Note (id):
      *  somebody left this after the setting momz to 0,
      *  kinda useless there.
-     * cph - revised 2001/04/15 -
-     * This was a bug in the Doom/Doom 2 source; the following code
-     *  is meant to make charging lost souls bounce off of floors, but it 
-     *  was incorrectly placed after momz was set to 0.
-     *  However, this bug was fixed in Doom95, Final/Ultimate Doom, and 
-     *  the v1.10 source release (which is one reason why it failed to sync 
-     *  some Doom2 v1.9 demos)
-     * I've added a comp_soul compatibility option to make this behavior 
-     *  selectable for PrBoom v2.3+. For older demos, we do this here only 
-     *  if we're in a compatibility level above Doom 2 v1.9 (in which case we
-     *  mimic the bug and do it further down instead)
+     * cph - This was the a bug in the linuxdoom-1.10 source which
+     *  caused it not to sync Doom 2 v1.9 demos. Someone
+     *  added the above comment and moved up the following code. So
+     *  demos would desync in close lost soul fights.
+     * Note that this only applies to original Doom 1 or Doom2 demos -
+     *  Final Doom and Ultimate Doom.  So we test demo_compatibility *and*
+     *  gamemission. (Note we assume that Doom1 is always Ult Doom, which
+     *  seems to hold for most published demos.)
      */
+    int correct_lost_soul_bounce = !demo_compatibility || (gamemission != doom2);
 
-    if (mo->flags & MF_SKULLFLY &&
-	(!comp[comp_soul] ||
-	 (compatibility_level > doom2_19_compatibility &&
-	  compatibility_level < prboom_4_compatibility)
-	))
+    if (correct_lost_soul_bounce && mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if (mo->momz < 0)
       {
-	/* killough 11/98: touchy objects explode on impact */
-	if (mo->flags & MF_TOUCHY && mo->intflags & MIF_ARMED && mo->health > 0)
-	  P_DamageMobj(mo, NULL, NULL, mo->health);
-	else
-	  if (mo->player && /* killough 5/12/98: exclude voodoo dolls */
-	      mo->player->mo == mo && mo->momz < -GRAVITY*8)
-	    {
-	      // Squat down.
-	      // Decrease viewheight for a moment
-	      // after hitting the ground (hard),
-	      // and utter appropriate sound.
-	      
-	      mo->player->deltaviewheight = mo->momz>>3;
-	      if (mo->health) /* cph - prevent "oof" when dead */
-		S_StartSound (mo, sfx_oof);
-	    }
-	mo->momz = 0;
+  /* killough 11/98: touchy objects explode on impact */
+  if (mo->flags & MF_TOUCHY && mo->intflags & MIF_ARMED && mo->health > 0)
+    P_DamageMobj(mo, NULL, NULL, mo->health);
+  else
+    if (mo->player && /* killough 5/12/98: exclude voodoo dolls */
+        mo->player->mo == mo && mo->momz < -GRAVITY*8)
+      {
+        // Squat down.
+        // Decrease viewheight for a moment
+        // after hitting the ground (hard),
+        // and utter appropriate sound.
+
+        mo->player->deltaviewheight = mo->momz>>3;
+        if (mo->health) /* cph - prevent "oof" when dead */
+    S_StartSound (mo, sfx_oof);
+      }
+  mo->momz = 0;
       }
     mo->z = mo->floorz;
 
-    /* cph 2001/04/15 - 
-     * This is the buggy lost-soul bouncing code referenced above.
-     * We've already set momz = 0 normally by this point, so it's useless.
-     * However we might still have upward momentum, in which case this will
-     * incorrectly reverse it, so we might still need this for demo sync
+    /* cph 2001/05/26 -
+     * See lost soul bouncing comment above. We need this here for bug
+     * compatibility with original Doom2 v1.9 - if a soul is charging and
+     * hit by a raising floor this incorrectly reverses its Y momentum.
      */
-    if (mo->flags & MF_SKULLFLY &&
-	compatibility_level <= doom2_19_compatibility)
+    if (!correct_lost_soul_bounce && mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if ( (mo->flags & MF_MISSILE) && !(mo->flags & MF_NOCLIP) )
@@ -552,19 +544,13 @@ floater:
   else // still above the floor                                     // phares
     if (!(mo->flags & MF_NOGRAVITY))
       {
-	if (!mo->momz)
-	  mo->momz = -GRAVITY;
+  if (!mo->momz)
+    mo->momz = -GRAVITY;
         mo->momz -= GRAVITY;
       }
 
   if (mo->z + mo->height > mo->ceilingz)
     {
-    /* cph 2001/04/15 - 
-     * Lost souls were meant to bounce off of ceilings;
-     *  new comp_soul compatibility option added
-     */
-    if (!comp[comp_soul] && mo->flags & MF_SKULLFLY)
-      mo->momz = -mo->momz; // the skull slammed into something
 
     // hit the ceiling
 
@@ -573,12 +559,7 @@ floater:
 
     mo->z = mo->ceilingz - mo->height;
 
-    /* cph 2001/04/15 - 
-     * We might have hit a ceiling but had downward momentum (e.g. ceiling is 
-     *  lowering on us), so for old demos we must still do the buggy 
-     *  momentum reversal here
-     */
-    if (comp[comp_soul] && mo->flags & MF_SKULLFLY)
+    if (mo->flags & MF_SKULLFLY)
       mo->momz = -mo->momz; // the skull slammed into something
 
     if ( (mo->flags & MF_MISSILE) && !(mo->flags & MF_NOCLIP) )
@@ -613,7 +594,7 @@ void P_NightmareRespawn(mobj_t* mobj)
    * regardless of that point's nature. SMMU and Eternity need this for
    * script-spawned things like Halif Swordsmythe, as well.
    *
-   * cph - copied from eternity, except comp_respawnfix becomes comp_respawn 
+   * cph - copied from eternity, except comp_respawnfix becomes comp_respawn
    *   and the logic is reversed (i.e. like the rest of comp_ it *disables*
    *   the fix)
    */
@@ -683,7 +664,7 @@ void P_NightmareRespawn(mobj_t* mobj)
 
 void P_MobjThinker (mobj_t* mobj)
   {
-  // killough 11/98: 
+  // killough 11/98:
   // removed old code which looked at target references
   // (we use pointer reference counting now)
 
@@ -692,29 +673,29 @@ void P_MobjThinker (mobj_t* mobj)
     {
       P_XYMovement(mobj);
       if (mobj->thinker.function != P_MobjThinker) // cph - Must've been removed
-	return;       // killough - mobj was removed
+  return;       // killough - mobj was removed
     }
 
   if (mobj->z != mobj->floorz || mobj->momz)
     {
       P_ZMovement(mobj);
       if (mobj->thinker.function != P_MobjThinker) // cph - Must've been removed
-	return;       // killough - mobj was removed
+  return;       // killough - mobj was removed
     }
   else
     if (!(mobj->momx | mobj->momy) && !sentient(mobj))
       {                                  // non-sentient objects at rest
-	mobj->intflags |= MIF_ARMED;     // arm a mine which has come to rest
+  mobj->intflags |= MIF_ARMED;     // arm a mine which has come to rest
 
-	// killough 9/12/98: objects fall off ledges if they are hanging off
-	// slightly push off of ledge if hanging more than halfway off
+  // killough 9/12/98: objects fall off ledges if they are hanging off
+  // slightly push off of ledge if hanging more than halfway off
 
-	if (mobj->z > mobj->dropoffz &&      // Only objects contacting dropoff
-	    !(mobj->flags & MF_NOGRAVITY) && // Only objects which fall
-	    !comp[comp_falloff]) // Not in old demos
-	  P_ApplyTorque(mobj);               // Apply torque
-	else
-	  mobj->intflags &= ~MIF_FALLING, mobj->gear = 0;  // Reset torque
+  if (mobj->z > mobj->dropoffz &&      // Only objects contacting dropoff
+      !(mobj->flags & MF_NOGRAVITY) && // Only objects which fall
+      !comp[comp_falloff]) // Not in old demos
+    P_ApplyTorque(mobj);               // Apply torque
+  else
+    mobj->intflags &= ~MIF_FALLING, mobj->gear = 0;  // Reset torque
       }
 
   // cycle through states,
@@ -780,7 +761,7 @@ mobj_t* P_SpawnMobj(fixed_t x,fixed_t y,fixed_t z,mobjtype_t type)
 
   /* killough 8/23/98: no friends, bouncers, or touchy things in old demos */
   if (!mbf_features)
-    mobj->flags &= ~(MF_BOUNCES | MF_FRIEND | MF_TOUCHY); 
+    mobj->flags &= ~(MF_BOUNCES | MF_FRIEND | MF_TOUCHY);
   else
     if (type == MT_PLAYER)         // Except in old demos, players
       mobj->flags |= MF_FRIEND;    // are always friends.
@@ -830,12 +811,12 @@ int        iquehead;
 int        iquetail;
 
 
-/*
- * P_RemoveMobj
- */
+//
+// P_RemoveMobj
+//
 
 void P_RemoveMobj (mobj_t* mobj)
-{
+  {
   if ((mobj->flags & MF_SPECIAL)
       && !(mobj->flags & MF_DROPPED)
       && (mobj->type != MT_INV)
@@ -877,16 +858,17 @@ void P_RemoveMobj (mobj_t* mobj)
   // CPhipps - only leave dead references in old demos; I hope lxdoom_1 level
   // demos are rare and don't rely on this. I hope.
 
-  if ((compatibility_level >= lxdoom_1_compatibility) || 
+  if ((compatibility_level >= lxdoom_1_compatibility) ||
       (!demorecording && !demoplayback)) {
     P_SetTarget(&mobj->target,    NULL);
     P_SetTarget(&mobj->tracer,    NULL);
     P_SetTarget(&mobj->lastenemy, NULL);
   }
   // free block
-  
+
+//  P_RemoveThinker ((thinker_t*)mobj);
   P_RemoveThinker (&mobj->thinker);
-}
+  }
 
 
 /*
@@ -906,16 +888,16 @@ int P_FindDoomedNum(unsigned type)
     {
       hash = Z_Malloc(sizeof *hash * NUMMOBJTYPES, PU_CACHE, (void **) &hash);
       for (i=0; i<NUMMOBJTYPES; i++)
-	hash[i].first = NUMMOBJTYPES;
+  hash[i].first = NUMMOBJTYPES;
       for (i=0; i<NUMMOBJTYPES; i++)
-	if (mobjinfo[i].doomednum != -1)
-	  {
-	    unsigned h = (unsigned) mobjinfo[i].doomednum % NUMMOBJTYPES;
-	    hash[i].next = hash[h].first;
-	    hash[h].first = i;
-	  }
+  if (mobjinfo[i].doomednum != -1)
+    {
+      unsigned h = (unsigned) mobjinfo[i].doomednum % NUMMOBJTYPES;
+      hash[i].next = hash[h].first;
+      hash[h].first = i;
     }
-  
+    }
+
   i = hash[type % NUMMOBJTYPES].first;
   while ((i < NUMMOBJTYPES) && ((unsigned)mobjinfo[i].doomednum != type))
     i = hash[i].next;
@@ -992,7 +974,7 @@ void P_RespawnSpecials (void)
 
 extern byte playernumtotrans[MAXPLAYERS];
 
-void P_SpawnPlayer (int n, const mapthing_t* mthing)
+void P_SpawnPlayer (mapthing_t* mthing)
   {
   player_t* p;
   fixed_t   x;
@@ -1003,20 +985,14 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   // not playing?
 
-  if (!playeringame[n])
+  if (!playeringame[mthing->type-1])
     return;
 
-  p = &players[n];
+  p = &players[mthing->type-1];
 
   if (p->playerstate == PST_REBORN)
     G_PlayerReborn (mthing->type-1);
 
-  /* cph 2001/08/14 - use the options field of memorised player starts to
-   * indicate whether the start really exists in the level.
-   */
-  if (!mthing->options)
-    I_Error("P_SpawnPlayer: attempt to spawn player at unavailable start point");
-  
   x    = mthing->x << FRACBITS;
   y    = mthing->y << FRACBITS;
   z    = ONFLOORZ;
@@ -1024,7 +1000,8 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 
   // set color translations for player sprites
 
-  mobj->flags |= playernumtotrans[n]<<MF_TRANSSHIFT;
+  if (mthing->type > 0)
+    mobj->flags |= playernumtotrans[mthing->type-1]<<MF_TRANSSHIFT;
 
   mobj->angle      = ANG45 * (mthing->angle/45);
   mobj->player     = p;
@@ -1066,7 +1043,7 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
 // already be in host byte order.
 //
 
-void P_SpawnMapThing (const mapthing_t* mthing)
+void P_SpawnMapThing (mapthing_t* mthing)
   {
   int     i;
   //int     bit;
@@ -1074,7 +1051,6 @@ void P_SpawnMapThing (const mapthing_t* mthing)
   fixed_t x;
   fixed_t y;
   fixed_t z;
-  int options = mthing->options; /* cph 2001/07/07 - make writable copy */
 
   // killough 2/26/98: Ignore type-0 things as NOPs
   // phares 5/14/98: Ignore Player 5-8 starts (for now)
@@ -1097,13 +1073,13 @@ void P_SpawnMapThing (const mapthing_t* mthing)
   // bits that weren't used in Doom (such as HellMaker wads). So we should
   // then simply ignore all upper bits.
 
-  if (demo_compatibility || 
-      (compatibility_level >= lxdoom_1_compatibility  && 
-       options & MTF_RESERVED)) {
+  if (demo_compatibility ||
+      (compatibility_level >= lxdoom_1_compatibility  &&
+       mthing->options & MTF_RESERVED)) {
     if (!demo_compatibility) // cph - Add warning about bad thing flags
       lprintf(LO_WARN, "P_SpawnMapThing: correcting bad flags (%u) (thing type %d)\n",
-	      options, mthing->type);
-    options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
+        mthing->options, mthing->type);
+    mthing->options &= MTF_EASY|MTF_NORMAL|MTF_HARD|MTF_AMBUSH|MTF_NOTSINGLE;
   }
 
   // count deathmatch start positions
@@ -1124,7 +1100,6 @@ void P_SpawnMapThing (const mapthing_t* mthing)
       deathmatch_p = deathmatchstarts + offset;
       }
     memcpy(deathmatch_p++, mthing, sizeof(*mthing));
-    (deathmatch_p-1)->options = 1;
     return;
     }
 
@@ -1135,62 +1110,47 @@ void P_SpawnMapThing (const mapthing_t* mthing)
 #ifdef DOGS
       // killough 7/19/98: Marine's best friend :)
       if (!netgame && mthing->type > 1 && mthing->type <= dogs+1 &&
-	  !players[mthing->type-1].secretcount)
-	{  // use secretcount to avoid multiple dogs in case of multiple starts
-	  players[mthing->type-1].secretcount = 1;
+    !players[mthing->type-1].secretcount)
+  {  // use secretcount to avoid multiple dogs in case of multiple starts
+    players[mthing->type-1].secretcount = 1;
 
-  
-	  // killough 10/98: force it to be a friend
-	  ((mapthing_t *)mthing)->options |= MTF_FRIEND;
-          if(HelperThing != -1) // haleyjd 9/22/99: deh substitution
-          {
-            int type = HelperThing - 1;
-            if(type >= 0 && type < NUMMOBJTYPES)
-            {
-              i = type;
-            }
-            else
-            {
-              doom_printf("Invalid value %i for helper, ignored.", HelperThing);
-              i = MT_DOGS;
-            }
-          }
-          else {
-            i = MT_DOGS;
-          }
-	  goto spawnit;
-	}
+    // killough 10/98: force it to be a friend
+    mthing->options |= MTF_FRIEND;
+    i = MT_DOGS;
+    goto spawnit;
+  }
 #endif
-    // save spots for respawning in coop games
-    playerstarts[mthing->type-1] = *mthing;
-    playerstarts[mthing->type-1].options = 1;
 
+
+    // save spots for respawning in network games
+
+    playerstarts[mthing->type-1] = *mthing;
     if (!deathmatch)
-      P_SpawnPlayer (mthing->type-1, &playerstarts[mthing->type-1]);
+      P_SpawnPlayer (mthing);
     return;
     }
 
   // check for apropriate skill level
 
   /* jff "not single" thing flag */
-  if (!netgame && options & MTF_NOTSINGLE) 
+  if (!netgame && mthing->options & MTF_NOTSINGLE)
     return;
 
   //jff 3/30/98 implement "not deathmatch" thing flag
 
-  if (netgame && deathmatch && options & MTF_NOTDM)
+  if (netgame && deathmatch && mthing->options & MTF_NOTDM)
     return;
 
   //jff 3/30/98 implement "not cooperative" thing flag
 
-  if (netgame && !deathmatch && options & MTF_NOTCOOP)
+  if (netgame && !deathmatch && mthing->options & MTF_NOTCOOP)
     return;
 
   // killough 11/98: simplify
-  if (gameskill == sk_baby || gameskill == sk_easy ? 
-      !(options & MTF_EASY) :
+  if (gameskill == sk_baby || gameskill == sk_easy ?
+      !(mthing->options & MTF_EASY) :
       gameskill == sk_hard || gameskill == sk_nightmare ?
-      !(options & MTF_HARD) : !(options & MTF_NORMAL))
+      !(mthing->options & MTF_HARD) : !(mthing->options & MTF_NORMAL))
     return;
 
   // find which type to spawn
@@ -1238,7 +1198,7 @@ spawnit:
     mobj->tics = 1 + (P_Random (pr_spawnthing) % mobj->tics);
 
   if (!(mobj->flags & MF_FRIEND) &&
-      options & MTF_FRIEND && 
+      mthing->options & MTF_FRIEND &&
       mbf_features)
     {
       mobj->flags |= MF_FRIEND;            // killough 10/98:
@@ -1253,7 +1213,7 @@ spawnit:
     totalitems++;
 
   mobj->angle = ANG45 * (mthing->angle/45);
-  if (options & MTF_AMBUSH)
+  if (mthing->options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
   }
 
@@ -1406,15 +1366,15 @@ void P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
       uint_64_t mask = mbf_features ? MF_FRIEND : 0;
 
       do
-	{
-	  slope = P_AimLineAttack(source, an, 16*64*FRACUNIT, mask);
-	  if (!linetarget)
-	    slope = P_AimLineAttack(source, an += 1<<26, 16*64*FRACUNIT, mask);
-	  if (!linetarget)
-	    slope = P_AimLineAttack(source, an -= 2<<26, 16*64*FRACUNIT, mask);
-	  if (!linetarget)
-	    an = source->angle, slope = 0;
-	}
+  {
+    slope = P_AimLineAttack(source, an, 16*64*FRACUNIT, mask);
+    if (!linetarget)
+      slope = P_AimLineAttack(source, an += 1<<26, 16*64*FRACUNIT, mask);
+    if (!linetarget)
+      slope = P_AimLineAttack(source, an -= 2<<26, 16*64*FRACUNIT, mask);
+    if (!linetarget)
+      an = source->angle, slope = 0;
+  }
       while (mask && (mask=0, !linetarget));  // killough 8/2/98
     }
 

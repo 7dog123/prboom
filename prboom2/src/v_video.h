@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: v_video.h,v 1.15 2002/01/07 15:56:20 proff_fs Exp $
+ * $Id: v_video.h,v 1.11.2.1 2002/07/20 18:08:37 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -74,6 +74,8 @@ typedef enum
 #define CR_DEFAULT CR_RED   /* default value for out of range colors */
 
 extern byte      *screens[6];
+extern int        dirtybox[4];
+extern const byte gammatable[5][256];
 extern int        usegamma;
 
 //jff 4/24/98 loads color translation lumps
@@ -109,15 +111,15 @@ void V_FillRect(int scrn, int x, int y, int width, int height, byte colour);
 #ifdef GL_DOOM
 #define V_DrawMemPatch(x,y,s,p,t,f) gld_DrawPatchFromMem(x,y,p,t,f)
 #else
-void V_DrawMemPatch(int x, int y, int scrn, const patch_t *patch, 
-		    int cm, enum patch_translation_e flags);
+void V_DrawMemPatch(int x, int y, int scrn, const patch_t *patch,
+        int cm, enum patch_translation_e flags);
 #endif
 // V_DrawNumPatch - Draws the patch from lump num
 #ifdef GL_DOOM
 #define V_DrawNumPatch(x,y,s,l,t,f) gld_DrawNumPatch(x,y,l,t,f)
 #else
-void V_DrawNumPatch(int x, int y, int scrn, int lump, 
-		    int cm, enum patch_translation_e flags);
+void V_DrawNumPatch(int x, int y, int scrn, int lump,
+        int cm, enum patch_translation_e flags);
 #endif
 // V_DrawNamePatch - Draws the patch from lump "name"
 #ifdef GL_DOOM
@@ -131,16 +133,39 @@ void V_DrawNumPatch(int x, int y, int scrn, int lump,
  * Doesn't really belong here, but is often used in conjunction with
  * this code.
  */
-int V_NumPatchWidth(int lump);
-int V_NumPatchHeight(int lump);
-#define V_NamePatchWidth(n) V_NumPatchWidth(W_GetNumForName(n))
-#define V_NamePatchHeight(n) V_NumPatchHeight(W_GetNumForName(n))
+int V_NamePatchWidth(const char* name);
+int V_NamePatchHeight(const char* name);
+
+// Draw a linear block of pixels into the view buffer.
+
+// CPhipps - added const's, patch translation flags for stretching
+#ifndef GL_DOOM
+void V_DrawBlock(int x, int y, int scrn, int width, int height,
+     const byte *src, enum patch_translation_e flags);
+#endif
 
 /* cphipps 10/99: function to tile a flat over the screen */
 #ifdef GL_DOOM
 #define V_DrawBackground(n,s) gld_DrawBackground(n)
 #else
 void V_DrawBackground(const char* flatname, int scrn);
+#endif
+
+// Reads a linear block of pixels into the view buffer.
+
+#ifndef GL_DOOM
+void V_GetBlock(int x, int y, int scrn, int width, int height, byte *dest);
+
+void V_MarkRect(int x, int y, int width,int height);
+
+// CPhipps - function to convert a patch_t into a simple block bitmap
+// Returns pointer to the malloc()'ed bitmap, and its width and height
+byte *V_PatchToBlock(const char* name, int cm,
+         enum patch_translation_e flags,
+         unsigned short* width, unsigned short* height);
+#else
+#define V_MarkRect(x,y,w,h)
+#define V_PatchToBlock(n,cm,f,w,h) NULL
 #endif
 
 // CPhipps - function to set the palette to palette number pal.
@@ -154,27 +179,6 @@ void V_SetPalette(int pal);
 
 #define V_AllocScreen(scrn) screens[scrn] = malloc(SCREENWIDTH*SCREENHEIGHT)
 #define V_FreeScreen(scrn) free(screens[scrn]); screens[scrn] = NULL
-
-/* Font */
-
-/* font colours (CR_ colors + 0x80 as char) */
-#define FC_BASEVALUE     0x80
-#define FC_BRICK        "\x80"
-#define FC_TAN          "\x81"
-#define FC_GRAY         "\x82"
-#define FC_GREEN        "\x83"
-#define FC_BROWN        "\x84"
-#define FC_GOLD         "\x85"
-#define FC_RED          "\x86"
-#define FC_BLUE         "\x87"
-#define FC_ORANGE       "\x88"
-#define FC_YELLOW       "\x89"
-#define FC_BLUE2        "\x8a"
-
-void V_WriteText(unsigned char *s, int x, int y, int gap);
-void V_WriteTextColoured(unsigned char *s, int colour, int x, int y, int gap);
-int V_StringWidth(unsigned char *s, int gap);
-int V_StringHeight(unsigned char *s);
 
 #ifdef GL_DOOM
 #include "gl_struct.h"

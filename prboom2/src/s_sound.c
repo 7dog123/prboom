@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: s_sound.c,v 1.7 2002/01/07 15:56:20 proff_fs Exp $
+ * $Id: s_sound.c,v 1.4.2.3 2002/07/20 18:08:37 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:  Platform-independent sound code
@@ -30,20 +30,23 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: s_sound.c,v 1.7 2002/01/07 15:56:20 proff_fs Exp $";
+rcsid[] = "$Id: s_sound.c,v 1.4.2.3 2002/07/20 18:08:37 proff_fs Exp $";
 
 // killough 3/7/98: modified to allow arbitrary listeners in spy mode
 // killough 5/2/98: reindented, removed useless code, beautified
 
+#ifdef HAVE_CONFIG_H
+#include "../config.h"
+#endif
+
 #include "doomstat.h"
 #include "s_sound.h"
 #include "i_sound.h"
+#include "i_system.h"
 #include "r_main.h"
 #include "m_random.h"
 #include "w_wad.h"
 #include "lprintf.h"
-#include "c_io.h"
-#include "c_runcmd.h"
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
@@ -67,6 +70,8 @@ rcsid[] = "$Id: s_sound.c,v 1.7 2002/01/07 15:56:20 proff_fs Exp $";
 extern int snd_card, mus_card;
 extern boolean nosfxparm, nomusicparm;
 //jff end sound enabling variables readable here
+
+const char* S_music_files[NUMMUSIC]; // cournia - stores music file names
 
 typedef struct
 {
@@ -96,7 +101,7 @@ static musicinfo_t *mus_playing;
 // following is set
 //  by the defaults code in M_misc:
 // number of channels available
-int default_numChannels = 8;
+int default_numChannels;
 int numChannels;
 
 //jff 3/17/98 to keep track of last IDMUS specified music num
@@ -125,7 +130,7 @@ void S_Init(int sfxVolume, int musicVolume)
   if (snd_card && !nosfxparm)
   {
     int i;
-    
+
     lprintf(LO_CONFIRM, "S_Init: default sfx volume %d\n", sfxVolume);
 
     // Whatever these did with DMX, these are rather dummies now.
@@ -399,7 +404,7 @@ void S_UpdateSounds(void* listener_p)
                   S_StopChannel(cnum);
                 else
                   I_UpdateSoundParams(c->handle, volume, sep, pitch);
-	      }
+        }
             }
           else   // if channel is allocated but sound has stopped, free it
             S_StopChannel(cnum);
@@ -449,6 +454,8 @@ void S_StartMusic(int m_id)
 void S_ChangeMusic(int musicnum, int looping)
 {
   musicinfo_t *music;
+  int music_file_failed; // cournia - if true load the default MIDI music
+  char* music_filename;  // cournia
 
   //jff 1/22/98 return if music is not enabled
   if (!mus_card || nomusicparm)
@@ -473,9 +480,29 @@ void S_ChangeMusic(int musicnum, int looping)
       music->lumpnum = W_GetNumForName(namebuf);
     }
 
-  // load & register it
-  music->data = W_CacheLumpNum(music->lumpnum);
-  music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
+  music_file_failed = 1;
+
+  // proff_fs - only load when from IWAD
+  if (lumpinfo[music->lumpnum].source == source_iwad)
+    {
+      // cournia - check to see if we can play a higher quality music file
+      //           rather than the default MIDI
+      music_filename = I_FindFile(S_music_files[musicnum], "");
+      if (music_filename)
+        {
+          music_file_failed = I_RegisterMusic(music_filename, music);
+          free(music_filename);
+        }
+    }
+
+  if (music_file_failed)
+    {
+      //cournia - could not load music file, play default MIDI music
+
+      // load & register it
+      music->data = W_CacheLumpNum(music->lumpnum);
+      music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
+    }
 
   // play it
   I_PlaySong(music->handle, looping);
@@ -497,7 +524,8 @@ void S_StopMusic(void)
 
       I_StopSong(mus_playing->handle);
       I_UnRegisterSong(mus_playing->handle);
-      W_UnlockLumpNum(mus_playing->lumpnum); // cph - release the music data
+      if (mus_playing->lumpnum >= 0)
+  W_UnlockLumpNum(mus_playing->lumpnum); // cph - release the music data
 
       mus_playing->data = 0;
       mus_playing = 0;
@@ -632,34 +660,4 @@ static int S_getChannel(void *origin, sfxinfo_t *sfxinfo, int is_pickup)
   c->origin = origin;
   c->is_pickup = is_pickup;         // killough 4/25/98
   return cnum;
-}
-
-///////////////////////////////////////////////////////////////////////////
-//
-// Console Commands
-//
-
-void S_ResetVolume()
-{
-  S_SetMusicVolume(snd_MusicVolume);
-  S_SetSfxVolume(snd_SfxVolume);
-}
-
-CONSOLE_BOOLEAN(s_pitched, pitched_sounds, NULL,   onoff, 0) {}
-CONSOLE_INT(snd_channels, default_numChannels, NULL, 1, 32, NULL, 0) {}
-CONSOLE_INT(sfx_volume, snd_SfxVolume, NULL,         0, 15, NULL, 0)
-{
-  S_ResetVolume();
-}
-CONSOLE_INT(music_volume, snd_MusicVolume, NULL,     0, 15, NULL, 0)
-{
-  S_ResetVolume();
-}
-
-void S_AddCommands()
-{
-  C_AddCommand(s_pitched);
-  C_AddCommand(snd_channels);
-  C_AddCommand(sfx_volume);
-  C_AddCommand(music_volume);
 }

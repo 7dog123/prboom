@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: p_maputl.c,v 1.8 2001/09/02 10:24:28 proff_fs Exp $
+ * $Id: p_maputl.c,v 1.4.2.1 2002/07/20 18:08:36 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -34,7 +34,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: p_maputl.c,v 1.8 2001/09/02 10:24:28 proff_fs Exp $";
+rcsid[] = "$Id: p_maputl.c,v 1.4.2.1 2002/07/20 18:08:36 proff_fs Exp $";
 
 #include "doomstat.h"
 #include "m_bbox.h"
@@ -142,16 +142,9 @@ void P_MakeDivline(const line_t *li, divline_t *dl)
 
 fixed_t CONSTFUNC P_InterceptVector(const divline_t *v2, const divline_t *v1)
 {
- if (compatibility_level < prboom_4_compatibility) {
   fixed_t den = FixedMul(v1->dy>>8, v2->dx) - FixedMul(v1->dx>>8, v2->dy);
   return den ? FixedDiv((FixedMul((v1->x-v2->x)>>8, v1->dy) +
                          FixedMul((v2->y-v1->y)>>8, v1->dx)), den) : 0;
- } else {
-  int_64_t den = (int_64_t)v1->dy * v2->dx - (int_64_t)v1->dx * v2->dy;
-  den >>= 16;
-  if (!den) return 0;
-  return (fixed_t)(((int_64_t)(v1->x - v2->x) * v1->dy - (int_64_t)(v1->y - v2->y) * v1->dx) / den);
- }
 }
 
 //
@@ -227,7 +220,7 @@ void P_UnsetThingPosition (mobj_t *thing)
       mobj_t **sprev = thing->sprev;
       mobj_t  *snext = thing->snext;
       if ((*sprev = snext))  // unlink from sector list
-	      snext->sprev = sprev;
+        snext->sprev = sprev;
 
         // phares 3/14/98
         //
@@ -261,7 +254,7 @@ void P_UnsetThingPosition (mobj_t *thing)
 
       mobj_t *bnext, **bprev = thing->bprev;
       if (bprev && (*bprev = bnext = thing->bnext))  // unlink from block map
-      	bnext->bprev = bprev;
+        bnext->bprev = bprev;
     }
 }
 
@@ -286,7 +279,7 @@ void P_SetThingPosition(mobj_t *thing)
       mobj_t **link = &ss->sector->thinglist;
       mobj_t *snext = *link;
       if ((thing->snext = snext))
-      	snext->sprev = &thing->snext;
+        snext->sprev = &thing->snext;
       thing->sprev = link;
       *link = thing;
 
@@ -316,14 +309,14 @@ void P_SetThingPosition(mobj_t *thing)
       int blocky = (thing->y - bmaporgy)>>MAPBLOCKSHIFT;
       if (blockx>=0 && blockx < bmapwidth && blocky>=0 && blocky < bmapheight)
         {
-    	  // killough 8/11/98: simpler scheme using pointer-to-pointer prev
-	      // pointers, allows head nodes to be treated like everything else
+        // killough 8/11/98: simpler scheme using pointer-to-pointer prev
+        // pointers, allows head nodes to be treated like everything else
 
         mobj_t **link = &blocklinks[blocky*bmapwidth+blockx];
-	      mobj_t *bnext = *link;
+        mobj_t *bnext = *link;
         if ((thing->bnext = bnext))
-	        bnext->bprev = &thing->bnext;
-	      thing->bprev = link;
+          bnext->bprev = &thing->bnext;
+        thing->bprev = link;
         *link = thing;
       }
       else        // thing is off the map

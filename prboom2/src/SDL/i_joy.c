@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: i_joy.c,v 1.4 2001/07/16 15:41:26 proff_fs Exp $
+ * $Id: i_joy.c,v 1.1.2.4 2002/07/21 17:14:05 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -32,7 +32,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: i_joy.c,v 1.4 2001/07/16 15:41:26 proff_fs Exp $";
+static const char rcsid[] = "$Id: i_joy.c,v 1.1.2.4 2002/07/21 17:14:05 cph Exp $";
 #endif /* lint */
 
 #include "SDL.h"
@@ -43,7 +43,6 @@ static const char rcsid[] = "$Id: i_joy.c,v 1.4 2001/07/16 15:41:26 proff_fs Exp
 #include "d_main.h"
 #include "i_joy.h"
 #include "lprintf.h"
-#include "m_fixed.h"
 
 int joyleft;
 int joyright;
@@ -52,7 +51,9 @@ int joydown;
 
 int usejoystick;
 
+#ifdef HAVE_SDL_JOYSTICKGETAXIS
 static SDL_Joystick *joystick;
+#endif
 
 void I_EndJoystick(void)
 {
@@ -61,6 +62,7 @@ void I_EndJoystick(void)
 
 void I_PollJoystick(void)
 {
+#ifdef HAVE_SDL_JOYSTICKGETAXIS
   event_t ev;
   Sint16 axis_value;
 
@@ -72,17 +74,19 @@ void I_PollJoystick(void)
     (SDL_JoystickGetButton(joystick, 2)<<2) |
     (SDL_JoystickGetButton(joystick, 3)<<3);
   axis_value = SDL_JoystickGetAxis(joystick, 0) / 3000;
-  if (D_abs(axis_value)<10) axis_value=0;
+  if (abs(axis_value)<10) axis_value=0;
   ev.data2 = axis_value;
   axis_value = SDL_JoystickGetAxis(joystick, 1) / 3000;
-  if (D_abs(axis_value)<10) axis_value=0;
+  if (abs(axis_value)<10) axis_value=0;
   ev.data3 = axis_value;
 
   D_PostEvent(&ev);
+#endif
 }
 
 void I_InitJoystick(void)
 {
+#ifdef HAVE_SDL_JOYSTICKGETAXIS
   const char* fname = "I_InitJoystick : ";
   int num_joysticks;
 
@@ -107,4 +111,5 @@ void I_InitJoystick(void)
     joyright = 32767;
     joyleft = -32768;
   }
+#endif
 }

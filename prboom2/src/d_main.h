@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: d_main.h,v 1.8 2002/01/07 15:56:19 proff_fs Exp $
+ * $Id: d_main.h,v 1.5.2.2 2002/07/20 18:08:34 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -45,8 +45,6 @@
 // jff make startskill globally visible
 extern skill_t startskill;
 
-char *D_DoomExeDir(void); // killough 2/16/98: path to executable's dir
-
 extern char basesavegame[];     // killough 2/16/98: savegame path
 
 //jff 1/24/98 make command line copies of play modes available
@@ -58,10 +56,9 @@ extern boolean clfastparm; // checkparm of -fast
 extern boolean nosfxparm;
 extern boolean nomusicparm;
 
-extern boolean redrawsbar, redrawborder;
-
 // Called by IO functions when input is detected.
 void D_PostEvent(event_t* ev);
+void D_ProcessEvents (void);
 
 // Demo stuff
 extern boolean advancedemo;
@@ -79,11 +76,7 @@ void D_DoomMain(void);
 void D_AddFile (const char *file, wad_source_t source);
 
 /* cph - MBF-like wad/deh/bex autoload code */
-/* proff 2001/7/1 - added prboom.wad as last entry so it's always loaded and
-   doesn't overlap with the cfg settings */
-#define MAXLOADFILES 3
-/* proff 2001/7/1 - added prboom.wad as last entry so it's always loaded and
-   doesn't overlap with the cfg settings */
+#define MAXLOADFILES 2
 extern const char *wad_files[MAXLOADFILES], *deh_files[MAXLOADFILES];
 
 #endif

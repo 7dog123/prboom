@@ -1,15 +1,15 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: r_things.c,v 1.18 2002/01/03 21:39:35 cph Exp $
+ * $Id: r_things.c,v 1.14.2.1 2002/07/20 18:08:37 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,7 +31,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: r_things.c,v 1.18 2002/01/03 21:39:35 cph Exp $";
+rcsid[] = "$Id: r_things.c,v 1.14.2.1 2002/07/20 18:08:37 proff_fs Exp $";
 
 #include "doomstat.h"
 #include "w_wad.h"
@@ -68,6 +68,8 @@ fixed_t pspritescale;
 fixed_t pspriteiscale;
 // proff 11/06/98: Added for high-res
 fixed_t pspriteyscale;
+
+static lighttable_t **spritelights;        // killough 1/25/98 made static
 
 // constant arrays
 //  used for psprite clipping and initializing clipping
@@ -418,7 +420,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 // Generates a vissprite for a thing if it might be visible.
 //
 
-void R_ProjectSprite (mobj_t* thing, int lightlevel)
+void R_ProjectSprite (mobj_t* thing)
 {
   fixed_t   gzt;               // killough 3/27/98
   fixed_t   tx;
@@ -443,7 +445,6 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   fixed_t gyt = -FixedMul(tr_y,viewsin);
 
   fixed_t tz = gxt-gyt;
-  int width;
 
     // thing is behind view plane?
   if (tz < MINZ)
@@ -490,24 +491,22 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
       flip = (boolean) sprframe->flip[0];
     }
 
-  {
-    const patch_t* p = W_CacheLumpNum(lump+firstspritelump);
+  // calculate edges of the shape
+  tx -= spriteoffset[lump];
+  x1 = (centerxfrac + FixedMul(tx,xscale)) >>FRACBITS;
 
-    // calculate edges of the shape
-    tx -= SHORT(p->leftoffset)<<FRACBITS;
-    x1 = (centerxfrac + FixedMul(tx,xscale)) >>FRACBITS;
-
-    tx += SHORT(p->width)<<FRACBITS;
-    x2 = ((centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS) - 1;
-
-    gzt = thing->z + (SHORT(p->topoffset)<<FRACBITS);
-    width = SHORT(p->width);
-    W_UnlockLumpNum(lump+firstspritelump);
-  }
-
-  // off the side?
-  if (x1 > viewwidth || x2 < 0)
+    // off the right side?
+  if (x1 > viewwidth)
     return;
+
+  tx +=  spritewidth[lump];
+  x2 = ((centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS) - 1;
+
+    // off the left side
+  if (x2 < 0)
+    return;
+
+  gzt = thing->z + spritetopoffset[lump];
 
   // killough 4/9/98: clip things which are out of view due to height
   if (thing->z > viewz + FixedDiv(centeryfrac, xscale) ||
@@ -522,11 +521,12 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
 
   if (heightsec != -1)   // only clip things which are in special sectors
     {
-      if (viewheightsec != -1 && viewz < sectors[viewheightsec].floorheight ?
+      int phs = viewplayer->mo->subsector->sector->heightsec;
+      if (phs != -1 && viewz < sectors[phs].floorheight ?
           thing->z >= sectors[heightsec].floorheight :
           gzt < sectors[heightsec].floorheight)
         return;
-      if (viewheightsec != -1 && viewz > sectors[viewheightsec].ceilingheight ?
+      if (phs != -1 && viewz > sectors[phs].ceilingheight ?
           gzt < sectors[heightsec].ceilingheight &&
           viewz >= sectors[heightsec].ceilingheight :
           thing->z >= sectors[heightsec].ceilingheight)
@@ -562,7 +562,7 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
 
   if (flip)
     {
-      vis->startfrac = (width<<FRACBITS)-1;
+      vis->startfrac = spritewidth[lump]-1;
       vis->xiscale = -iscale;
     }
   else
@@ -584,7 +584,10 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
     vis->colormap = fullcolormap;     // full bright  // killough 3/20/98
   else
     {      // diminished light
-      vis->colormap = R_ColourMap(lightlevel,xscale);
+      int index = xscale>>LIGHTSCALESHIFT;
+      if (index >= MAXLIGHTSCALE)
+        index = MAXLIGHTSCALE-1;
+      vis->colormap = spritelights[index];
     }
 #endif
 }
@@ -598,6 +601,7 @@ void R_AddSprites(subsector_t* subsec, int lightlevel)
 {
   sector_t* sec=subsec->sector;
   mobj_t *thing;
+  int    lightnum;
 
   // BSP is traversed by subsector.
   // A sector might have been split into several
@@ -610,18 +614,28 @@ void R_AddSprites(subsector_t* subsec, int lightlevel)
   // Well, now it will be done.
   sec->validcount = validcount;
 
+  lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+  if (lightnum < 0)
+    spritelights = scalelight[0];
+  else if (lightnum >= LIGHTLEVELS)
+    spritelights = scalelight[LIGHTLEVELS-1];
+  else
+    spritelights = scalelight[lightnum];
+
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
-    R_ProjectSprite(thing, lightlevel);
+    R_ProjectSprite(thing);
 }
 
 //
 // R_DrawPSprite
 //
 
-void R_DrawPSprite (pspdef_t *psp, int lightlevel)
+void R_DrawPSprite (pspdef_t *psp)
 {
+  fixed_t       tx;
   int           x1, x2;
   spritedef_t   *sprdef;
   spriteframe_t *sprframe;
@@ -629,8 +643,6 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   boolean       flip;
   vissprite_t   *vis;
   vissprite_t   avis;
-  int           width;
-  fixed_t       topoffset;
 
   // decide which patch to use
 
@@ -652,25 +664,21 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   lump = sprframe->lump[0];
   flip = (boolean) sprframe->flip[0];
 
-  {
-    const patch_t* p = W_CacheLumpNum(lump+firstspritelump);
-    // calculate edges of the shape
-    fixed_t       tx;
-    tx = psp->sx-160*FRACUNIT;
+  // calculate edges of the shape
+  tx = psp->sx-160*FRACUNIT;
 
-    tx -= SHORT(p->leftoffset)<<FRACBITS;
-    x1 = (centerxfrac + FixedMul (tx,pspritescale))>>FRACBITS;
+  tx -= spriteoffset[lump];
+  x1 = (centerxfrac + FixedMul (tx,pspritescale))>>FRACBITS;
 
-    tx += SHORT(p->width)<<FRACBITS;
-    x2 = ((centerxfrac + FixedMul (tx, pspritescale) ) >>FRACBITS) - 1;
+  // off the right side
+  if (x1 > viewwidth)
+    return;
 
-    width = SHORT(p->width);
-    topoffset = SHORT(p->topoffset)<<FRACBITS;
-    W_UnlockLumpNum(lump+firstspritelump);
-  }
+  tx +=  spritewidth[lump];
+  x2 = ((centerxfrac + FixedMul (tx, pspritescale) ) >>FRACBITS) - 1;
 
-  // off the side
-  if (x2 < 0 || x1 > viewwidth)
+  // off the left side
+  if (x2 < 0)
     return;
 
   // store information in a vissprite
@@ -678,7 +686,7 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   vis->mobjflags = 0;
    // killough 12/98: fix psprite positioning problem
   vis->texturemid = (BASEYCENTER<<FRACBITS) /* +  FRACUNIT/2 */ -
-                    (psp->sy-topoffset);
+                    (psp->sy-spritetopoffset[lump]);
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
 // proff 11/06/98: Added for high-res
@@ -687,7 +695,7 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   if (flip)
     {
       vis->xiscale = -pspriteiscale;
-      vis->startfrac = (width<<FRACBITS)-1;
+      vis->startfrac = spritewidth[lump]-1;
     }
   else
     {
@@ -708,7 +716,7 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   else if (psp->state->frame & FF_FULLBRIGHT)
     vis->colormap = fullcolormap;            // full bright // killough 3/20/98
   else
-    vis->colormap = R_ColourMap(lightlevel,pspritescale);  // local light
+    vis->colormap = spritelights[MAXLIGHTSCALE-1];  // local light
 
   // proff 11/99: don't use software stuff in OpenGL
 #ifndef GL_DOOM
@@ -735,7 +743,7 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
     }
     gld_DrawWeapon(lump,vis,lightlevel);
   }
-#endif	
+#endif
 }
 
 //
@@ -744,11 +752,20 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
 
 void R_DrawPlayerSprites(void)
 {
-  int i, lightlevel = viewplayer->mo->subsector->sector->lightlevel;
+  int i, lightnum;
   pspdef_t *psp;
 
-  if (viewcamera) return;
-  
+  // get light level
+  lightnum = (viewplayer->mo->subsector->sector->lightlevel >> LIGHTSEGSHIFT)
+    + extralight;
+
+  if (lightnum < 0)
+    spritelights = scalelight[0];
+  else if (lightnum >= LIGHTLEVELS)
+    spritelights = scalelight[LIGHTLEVELS-1];
+  else
+    spritelights = scalelight[lightnum];
+
   // clip to screen bounds
   mfloorclip = screenheightarray;
   mceilingclip = negonearray;
@@ -756,7 +773,7 @@ void R_DrawPlayerSprites(void)
   // add all active psprites
   for (i=0, psp=viewplayer->psprites; i<NUMPSPRITES; i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, lightlevel);
+      R_DrawPSprite (psp);
 }
 
 //
@@ -916,7 +933,7 @@ void R_DrawSprite (vissprite_t* spr)
   // Clip the sprite against deep water and/or fake ceilings.
   // killough 4/9/98: optimize by adding mh
   // killough 4/11/98: improve sprite clipping for underwater/fake ceilings
-  // killough 11/98: fix disappearing sprites 
+  // killough 11/98: fix disappearing sprites
 
   if (spr->heightsec != -1)  // only things in specially marked sectors
     {
@@ -932,10 +949,10 @@ void R_DrawSprite (vissprite_t* spr)
                 clipbot[x] = h;
           }
         else                        // clip top
-	  if (phs != -1 && viewz <= sectors[phs].floorheight) // killough 11/98
-	    for (x=spr->x1 ; x<=spr->x2 ; x++)
-	      if (cliptop[x] == -2 || h > cliptop[x])
-		cliptop[x] = h;
+    if (phs != -1 && viewz <= sectors[phs].floorheight) // killough 11/98
+      for (x=spr->x1 ; x<=spr->x2 ; x++)
+        if (cliptop[x] == -2 || h > cliptop[x])
+    cliptop[x] = h;
       }
 
       if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
@@ -961,7 +978,7 @@ void R_DrawSprite (vissprite_t* spr)
   for (x = spr->x1 ; x<=spr->x2 ; x++) {
     if (clipbot[x] == -2)
       clipbot[x] = viewheight;
-    
+
     if (cliptop[x] == -2)
       cliptop[x] = -1;
   }

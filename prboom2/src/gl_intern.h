@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: gl_intern.h,v 1.15 2001/02/05 16:20:19 proff_fs Exp $
+ * $Id: gl_intern.h,v 1.13.2.3 2002/07/27 15:58:45 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -43,9 +43,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include "SDL.h"
+#include "SDL_opengl.h"
 #include "doomtype.h"
 #include "w_wad.h"
 #include "m_argv.h"
@@ -75,7 +74,7 @@ typedef enum
 typedef struct
 {
   int index;
-	int width,height;
+  int width,height;
   int leftoffset,topoffset;
   int tex_width,tex_height;
   int realtexwidth, realtexheight;
@@ -91,16 +90,22 @@ extern char *gl_tex_format_string;
 extern int gl_tex_format;
 extern int gl_tex_filter;
 extern int gl_mipmap_filter;
-#ifdef USE_GLU_MIPMAP
+extern int gl_texture_filter_anisotropic;
+extern int gl_paletted_texture;
+extern int gl_shared_texture_palette;
 extern boolean use_mipmapping;
-#endif
-  
+extern int transparent_pal_index;
+extern unsigned char gld_palmap[256];
+extern GLTexture *last_gltexture;
+extern int last_cm;
+
 GLTexture *gld_RegisterTexture(int texture_num, boolean mipmap);
 void gld_BindTexture(GLTexture *gltexture);
 GLTexture *gld_RegisterPatch(int lump, int cm);
 void gld_BindPatch(GLTexture *gltexture, int cm);
 GLTexture *gld_RegisterFlat(int lump, boolean mipmap);
 void gld_BindFlat(GLTexture *gltexture);
+void gld_InitPalettedTextures(void);
 
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -109,14 +114,5 @@ void gld_BindFlat(GLTexture *gltexture);
 #define min(a,b) ((a)<(b)?(a):(b))
 #endif
 
-#ifndef APIENTRY
-#define APIENTRY
-#endif
-
-#define PROTOTYPE(ret, func, param) extern ret (APIENTRY *p_##func) param;
-#include "gl_funcs.h"
-
-#define PROTOTYPE(ret, func, param) extern ret (APIENTRY *p_##func) param;
-#include "glu_funcs.h"
-
+PFNGLCOLORTABLEEXTPROC glColorTableEXT;
 #endif // _GL_INTERN_H

@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: d_deh.c,v 1.15 2002/02/10 21:03:45 proff_fs Exp $
+ * $Id: d_deh.c,v 1.9.2.1 2002/07/20 18:08:34 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -34,11 +34,8 @@
  *--------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: d_deh.c,v 1.15 2002/02/10 21:03:45 proff_fs Exp $";
+rcsid[] = "$Id: d_deh.c,v 1.9.2.1 2002/07/20 18:08:34 proff_fs Exp $";
 
-#ifdef HAVE_CONFIG_H
-#include "../config.h"
-#endif
 // killough 5/2/98: fixed headers, removed rendunant external declarations:
 #include "doomdef.h"
 #include "doomtype.h"
@@ -57,7 +54,8 @@ rcsid[] = "$Id: d_deh.c,v 1.15 2002/02/10 21:03:45 proff_fs Exp $";
 #define TRUE 1
 #define FALSE 0
 
-#ifndef HAVE_STRLWR
+#if ((!defined DJGPP) && (!defined _MSC_VER))
+// CPhipps - hmm, odd...
 #include <ctype.h>
 
 char* strlwr(char* str)
@@ -108,8 +106,6 @@ int dehfgetc(DEHFILE *fp)
     fp->size--, *fp->inp++ : EOF;
 }
 
-// haleyjd 9/22/99
-int HelperThing = -1;     // in P_SpawnMapThing to substitute helper thing
 
 // variables used in other routines
 boolean deh_pars = FALSE; // in wi_stuff to allow pars in modified games
@@ -132,7 +128,6 @@ const char *s_D_CDROM     = D_CDROM;
 const char *s_PRESSKEY    = PRESSKEY;
 const char *s_PRESSYN     = PRESSYN;
 const char *s_QUITMSG     = QUITMSG;
-const char *s_LOADNET     = LOADNET;
 const char *s_QSAVESPOT   = QSAVESPOT; // PRESSKEY;
 const char *s_SAVEDEAD    = SAVEDEAD;  // PRESSKEY; // remove duplicate y/n
 const char *s_QSPROMPT    = QSPROMPT;  // PRESSYN;
@@ -371,9 +366,9 @@ const char *s_AMSTR_GRIDOFF      = AMSTR_GRIDOFF;
 const char *s_AMSTR_MARKEDSPOT   = AMSTR_MARKEDSPOT;
 const char *s_AMSTR_MARKSCLEARED = AMSTR_MARKSCLEARED;
 // CPhipps - automap rotate & overlay
-const char* s_AMSTR_ROTATEON     = AMSTR_ROTATEON; 
+const char* s_AMSTR_ROTATEON     = AMSTR_ROTATEON;
 const char* s_AMSTR_ROTATEOFF    = AMSTR_ROTATEOFF;
-const char* s_AMSTR_OVERLAYON    = AMSTR_OVERLAYON; 
+const char* s_AMSTR_OVERLAYON    = AMSTR_OVERLAYON;
 const char* s_AMSTR_OVERLAYOFF   = AMSTR_OVERLAYOFF;
 const char *s_STSTR_MUS          = STSTR_MUS;
 const char *s_STSTR_NOMUS        = STSTR_NOMUS;
@@ -475,7 +470,6 @@ static const deh_strs deh_strlookup[] = {
   {&s_PRESSKEY,"PRESSKEY"},
   {&s_PRESSYN,"PRESSYN"},
   {&s_QUITMSG,"QUITMSG"},
-  {&s_LOADNET,"LOADNET"},
   {&s_QSAVESPOT,"QSAVESPOT"},
   {&s_SAVEDEAD,"SAVEDEAD"},
   /* cph - disabled to prevent format string attacks in WAD files
@@ -795,7 +789,7 @@ const char *deh_newlevel = "NEWLEVEL"; // CPhipps - const
 
 // DOOM shareware/registered/retail (Ultimate) names.
 // CPhipps - const**const
-const char **const mapnames[] =  
+const char **const mapnames[] =
 {
   &s_HUSTR_E1M1,
   &s_HUSTR_E1M2,
@@ -976,25 +970,20 @@ char *  dehReformatStr(char *);
 // Prototypes for block processing functions
 // Pointers to these functions are used as the blocks are encountered.
 
-static void deh_procThing(DEHFILE *, FILE*, char *);
-static void deh_procFrame(DEHFILE *, FILE*, char *);
-static void deh_procPointer(DEHFILE *, FILE*, char *);
-static void deh_procSounds(DEHFILE *, FILE*, char *);
-static void deh_procAmmo(DEHFILE *, FILE*, char *);
-static void deh_procWeapon(DEHFILE *, FILE*, char *);
-static void deh_procSprite(DEHFILE *, FILE*, char *);
-static void deh_procCheat(DEHFILE *, FILE*, char *);
-static void deh_procMisc(DEHFILE *, FILE*, char *);
-static void deh_procText(DEHFILE *, FILE*, char *);
-static void deh_procPars(DEHFILE *, FILE*, char *);
-static void deh_procStrings(DEHFILE *, FILE*, char *);
-static void deh_procError(DEHFILE *, FILE*, char *);
-static void deh_procBexCodePointers(DEHFILE *, FILE*, char *);
-static void deh_procHelperThing(DEHFILE *, FILE *, char *); // haleyjd 9/22/99
-// haleyjd: handlers to fully deprecate the DeHackEd text section
-static void deh_procBexSounds(DEHFILE *, FILE *, char *);
-static void deh_procBexMusic(DEHFILE *, FILE *, char *);
-static void deh_procBexSprites(DEHFILE *, FILE *, char *);
+void deh_procThing(DEHFILE *, FILE*, char *);
+void deh_procFrame(DEHFILE *, FILE*, char *);
+void deh_procPointer(DEHFILE *, FILE*, char *);
+void deh_procSounds(DEHFILE *, FILE*, char *);
+void deh_procAmmo(DEHFILE *, FILE*, char *);
+void deh_procWeapon(DEHFILE *, FILE*, char *);
+void deh_procSprite(DEHFILE *, FILE*, char *);
+void deh_procCheat(DEHFILE *, FILE*, char *);
+void deh_procMisc(DEHFILE *, FILE*, char *);
+void deh_procText(DEHFILE *, FILE*, char *);
+void deh_procPars(DEHFILE *, FILE*, char *);
+void deh_procStrings(DEHFILE *, FILE*, char *);
+void deh_procError(DEHFILE *, FILE*, char *);
+void deh_procBexCodePointers(DEHFILE *, FILE*, char *);
 
 // Structure deh_block is used to hold the block names that can
 // be encountered, and the routines to use to decipher them
@@ -1030,11 +1019,7 @@ static const deh_block deh_blocks[] = { // CPhipps - static const
   /* 10 */ {"[STRINGS]",deh_procStrings}, // new string changes
   /* 11 */ {"[PARS]",deh_procPars}, // alternative block marker
   /* 12 */ {"[CODEPTR]",deh_procBexCodePointers}, // bex codepointers by mnemonic
-   /* 13 */ {"[HELPER]", deh_procHelperThing}, // helper thing substitution haleyjd 9/22/99
-   /* 14 */ {"[SPRITES]", deh_procBexSprites}, // bex style sprites
-   /* 15 */ {"[SOUNDS]", deh_procBexSounds},   // bex style sounds
-   /* 16 */ {"[MUSIC]", deh_procBexMusic},     // bex style music
-   /* 17 */ {"", deh_procError} // dummy to handle anything else
+  /* 13 */ {"",deh_procError} // dummy to handle anything else
 };
 
 // flag to skip included deh-style text, used with INCLUDE NOTEXT directive
@@ -1086,7 +1071,7 @@ static const char *deh_mobjinfo[DEH_MOBJINFOMAX] =
 
 #define DEH_MOBJFLAGMAX (sizeof deh_mobjflags/sizeof*deh_mobjflags)
 
-struct deh_mobjflags_s { 
+struct deh_mobjflags_s {
   const char *name; // CPhipps - const*
   uint_64_t value;
 };
@@ -1119,7 +1104,7 @@ static const struct deh_mobjflags_s deh_mobjflags[] = {
   {"COUNTITEM",    MF_COUNTITEM}, // count toward the items total
   {"SKULLFLY",     MF_SKULLFLY}, // special handling for flying skulls
   {"NOTDMATCH",    MF_NOTDMATCH}, // do not spawn in deathmatch
-  
+
   // killough 10/98: TRANSLATION consists of 2 bits, not 1:
 
   {"TRANSLATION",  MF_TRANSLATION1}, // for Boom bug-compatibility
@@ -1186,15 +1171,18 @@ static const char *deh_sfxinfo[] = // CPhipps - static const*
 // MUSICINFO is not supported in Dehacked.  Ignored here.
 // * music entries are base zero but have a dummy #0
 
+#if 0
+// CPhipps - unused?
 // SPRITE - Dehacked block name = "Sprite"
 // Usage = Sprite nn
 // Sprite redirection by offset into the text area - unsupported by BOOM
 // * sprites are base zero and dehacked uses it that way.
 
-// static const char *deh_sprite[] = // CPhipps - static const*
-// {
-//   "Offset"      // supposed to be the offset into the text section
-// };
+static const char *deh_sprite[] = // CPhipps - static const*
+{
+  "Offset"      // supposed to be the offset into the text section
+};
+#endif
 
 // AMMO - Dehacked block name = "Ammo"
 // usage = Ammo n (name)
@@ -1449,34 +1437,6 @@ static const deh_bexptr deh_bexptrs[] = // CPhipps - static const
 // CPhipps - static
 static actionf_t deh_codeptr[NUMSTATES];
 
-// haleyjd: support for BEX SPRITES, SOUNDS, and MUSIC
-char *deh_spritenames[NUMSPRITES + 1];
-char *deh_musicnames[NUMMUSIC + 1];
-char *deh_soundnames[NUMSFX + 1];
-
-void D_BuildBEXTables(void)
-{
-   int i;
-
-   for(i = 0; i < NUMSPRITES; i++)
-   {
-      deh_spritenames[i] = strdup(sprnames[i]);
-   }
-   deh_spritenames[NUMSPRITES] = NULL;
-
-   for(i = 1; i < NUMMUSIC; i++)
-   {
-      deh_musicnames[i] = strdup(S_music[i].name);
-   }
-   deh_musicnames[0] = deh_musicnames[NUMMUSIC] = NULL;
-
-   for(i = 1; i < NUMSFX; i++)
-   {
-      deh_soundnames[i] = strdup(S_sfx[i].name);
-   }
-   deh_soundnames[0] = deh_soundnames[NUMSFX] = NULL;
-}
-
 // ====================================================================
 // ProcessDehFile
 // Purpose: Read and process a DEH or BEX file
@@ -1623,7 +1583,7 @@ void ProcessDehFile(const char *filename, const char *outfilename, int lumpnum)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procBexCodePointers(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procBexCodePointers(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -1760,7 +1720,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
                           {
                             if (fpout)
                               fprintf(fpout, "ORed value 0x%08lX%08lX %s\n",
-                                      (unsigned long)(deh_mobjflags[iy].value>>32) & 0xffffffff, (unsigned long)deh_mobjflags[iy].value & 0xffffffff, strval);
+                                      (unsigned int)(deh_mobjflags[iy].value>>32) & 0xffffffff, (unsigned int)deh_mobjflags[iy].value & 0xffffffff, strval);
                             value |= deh_mobjflags[iy].value;
                             break;
                           }
@@ -1771,7 +1731,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
 
                   // Don't worry about conversion -- simply print values
                   if (fpout) fprintf(fpout, "Bits = 0x%08lX%08lX\n",
-                                     (unsigned long)(value>>32) & 0xffffffff, (unsigned long)value & 0xffffffff);
+                                     (unsigned int)(value>>32) & 0xffffffff, (unsigned int)value & 0xffffffff);
                 }
               if (!strcasecmp(key,"bits")) // proff
               {
@@ -1783,7 +1743,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
                 pix[ix] = (int)value;
               }
               if (fpout) fprintf(fpout,"Assigned 0x%08lx%08lx to %s(%d) at index %d\n",
-                                 (unsigned long)(value>>32) & 0xffffffff, (unsigned long)value & 0xffffffff, key, indexnum, ix);
+                                 (unsigned int)(value>>32) & 0xffffffff, (unsigned int)value & 0xffffffff, key, indexnum, ix);
             }
         }
     }
@@ -1798,7 +1758,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procFrame(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procFrame(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -1878,7 +1838,7 @@ static void deh_procFrame(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procPointer(DEHFILE *fpin, FILE* fpout, char *line) // done
+void deh_procPointer(DEHFILE *fpin, FILE* fpout, char *line) // done
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -1926,7 +1886,7 @@ static void deh_procPointer(DEHFILE *fpin, FILE* fpout, char *line) // done
         {
           states[indexnum].action = deh_codeptr[value];
           if (fpout) fprintf(fpout," - applied from codeptr[%lld] to states[%d]\n",
-			     value,indexnum);
+           value,indexnum);
           // Write BEX-oriented line to match:
           for (i=0;i<NUMSTATES;i++)
             {
@@ -1953,7 +1913,7 @@ static void deh_procPointer(DEHFILE *fpin, FILE* fpout, char *line) // done
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procSounds(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procSounds(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2021,7 +1981,7 @@ static void deh_procSounds(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procAmmo(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procAmmo(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2067,7 +2027,7 @@ static void deh_procAmmo(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procWeapon(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procWeapon(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2125,7 +2085,7 @@ static void deh_procWeapon(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procSprite(DEHFILE *fpin, FILE* fpout, char *line) // Not supported
+void deh_procSprite(DEHFILE *fpin, FILE* fpout, char *line) // Not supported
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2159,7 +2119,7 @@ static void deh_procSprite(DEHFILE *fpin, FILE* fpout, char *line) // Not suppor
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procPars(DEHFILE *fpin, FILE* fpout, char *line) // extension
+void deh_procPars(DEHFILE *fpin, FILE* fpout, char *line) // extension
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2245,7 +2205,7 @@ static void deh_procPars(DEHFILE *fpin, FILE* fpout, char *line) // extension
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procCheat(DEHFILE *fpin, FILE* fpout, char *line) // done
+void deh_procCheat(DEHFILE *fpin, FILE* fpout, char *line) // done
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2300,7 +2260,7 @@ static void deh_procCheat(DEHFILE *fpin, FILE* fpout, char *line) // done
                         !strncasecmp(cheat[i].cheat,
                                      cheat[iy].cheat,
                                      strlen(cheat[i].cheat)) && i != iy)
-		      cheat[i].deh_modified = true;
+          cheat[i].deh_modified = true;
                 }
 #endif
                 cheat[iy].cheat = strdup(p);
@@ -2322,7 +2282,7 @@ static void deh_procCheat(DEHFILE *fpin, FILE* fpout, char *line) // done
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procMisc(DEHFILE *fpin, FILE* fpout, char *line) // done
+void deh_procMisc(DEHFILE *fpin, FILE* fpout, char *line) // done
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2407,7 +2367,7 @@ static void deh_procMisc(DEHFILE *fpin, FILE* fpout, char *line) // done
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX*2];  // can't use line -- double size buffer too.
@@ -2461,13 +2421,13 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
 
               // killough 10/98: but it's an array of pointers, so we must
               // use strdup unless we redeclare sprnames and change all else
-	      {
-		// CPhipps - fix constness problem
-		char *s;
-		sprnames[i] = s = strdup(sprnames[i]);
+        {
+    // CPhipps - fix constness problem
+    char *s;
+    sprnames[i] = s = strdup(sprnames[i]);
 
-		strncpy(s,&inbuffer[fromlen],tolen);
-	      }
+    strncpy(s,&inbuffer[fromlen],tolen);
+        }
               found = TRUE;
               break;  // only one will match--quit early
             }
@@ -2534,7 +2494,7 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
   return;
 }
 
-static void deh_procError(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procError(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char inbuffer[DEH_BUFFERMAX];
 
@@ -2551,7 +2511,7 @@ static void deh_procError(DEHFILE *fpin, FILE* fpout, char *line)
 //          line  -- current line in file to process
 // Returns: void
 //
-static void deh_procStrings(DEHFILE *fpin, FILE* fpout, char *line)
+void deh_procStrings(DEHFILE *fpin, FILE* fpout, char *line)
 {
   char key[DEH_MAXKEYLEN];
   char inbuffer[DEH_BUFFERMAX];
@@ -2587,7 +2547,7 @@ static void deh_procStrings(DEHFILE *fpin, FILE* fpout, char *line)
         }
       while (strlen(holdstring) + strlen(inbuffer) > (size_t)maxstrlen) // Ty03/29/98 - fix stupid error
         {
-	  // killough 11/98: allocate enough the first time
+    // killough 11/98: allocate enough the first time
           maxstrlen += strlen(holdstring) + strlen(inbuffer) - maxstrlen;
           if (fpout) fprintf(fpout,
                              "* increased buffer from to %d for buffer size %d\n",
@@ -2645,7 +2605,7 @@ boolean deh_procStringSub(char *key, char *lookfor, char *newstring, FILE *fpout
 
       if (found)
         {
-	  char *t;
+    char *t;
           *deh_strlookup[i].ppstr = t = strdup(newstring); // orphan originalstring
           found = true;
           // Handle embedded \n's in the incoming string, convert to 0x0a's
@@ -2654,7 +2614,7 @@ boolean deh_procStringSub(char *key, char *lookfor, char *newstring, FILE *fpout
             for (s=*deh_strlookup[i].ppstr; *s; ++s, ++t)
               {
                 if (*s == '\\' && (s[1] == 'n' || s[1] == 'N')) //found one
-		  ++s, *t = '\n';  // skip one extra for second character
+      ++s, *t = '\n';  // skip one extra for second character
                 else
                   *t = *s;
               }
@@ -2688,226 +2648,6 @@ boolean deh_procStringSub(char *key, char *lookfor, char *newstring, FILE *fpout
   return found;
 }
 
-//========================================================================
-// haleyjd 9/22/99
-//
-// deh_procHelperThing
-//
-// Allows handy substitution of any thing for helper dogs.  DEH patches
-// are being made frequently for this purpose and it requires a complete
-// rewiring of the DOG thing.  I feel this is a waste of effort, and so
-// have added this new [HELPER] BEX block
-
-static void deh_procHelperThing(DEHFILE *fpin, FILE *fpout, char *line)
-{
-  char key[DEH_MAXKEYLEN];
-  char inbuffer[DEH_BUFFERMAX];
-  uint_64_t value;      // All deh values are ints or longs
-
-  strncpy(inbuffer,line,DEH_BUFFERMAX);
-  while (!dehfeof(fpin) && *inbuffer && (*inbuffer != ' '))
-  {
-      if (!dehfgets(inbuffer, sizeof(inbuffer), fpin)) break;
-      lfstrip(inbuffer);
-      if (!*inbuffer) break;    
-      if (!deh_GetData(inbuffer,key,&value,NULL,fpout)) // returns TRUE if ok
-      {
-          if (fpout) fprintf(fpout,"Bad data pair in '%s'\n",inbuffer);
-          continue;
-      }
-      // Otherwise it's ok
-      if (fpout)
-      {
-        fprintf(fpout,"Processing Helper Thing item '%s'\n", key);
-        fprintf(fpout,"value is %i", (int)value);
-      }
-      if (!strncasecmp(key, "type", 4))
-        HelperThing = (int)value;
-  }
-  return;
-}
-
-//
-// deh_procBexSprites
-//
-// Supports sprite name substitutions without requiring use
-// of the DeHackEd Text block
-//
-static void deh_procBexSprites(DEHFILE *fpin, FILE *fpout, char *line)
-{
-   char key[DEH_MAXKEYLEN];
-   char inbuffer[DEH_BUFFERMAX];
-   uint_64_t value;    // All deh values are ints or longs
-   char *strval;  // holds the string value of the line
-   char candidate[5];
-   int  rover;
-
-   if(fpout)
-      fprintf(fpout,"Processing sprite name substitution\n");
-   
-   strncpy(inbuffer,line,DEH_BUFFERMAX);
-
-   while(!dehfeof(fpin) && *inbuffer && (*inbuffer != ' '))
-   {
-      if(!dehfgets(inbuffer, sizeof(inbuffer), fpin))
-	 break;
-      if(*inbuffer == '#')
-	 continue;  // skip comment lines
-      lfstrip(inbuffer);
-      if(!*inbuffer) 
-	 break;  // killough 11/98
-      if(!deh_GetData(inbuffer,key,&value,&strval,fpout)) // returns TRUE if ok
-      {
-	 if(fpout)
-	    fprintf(fpout,"Bad data pair in '%s'\n",inbuffer);
-	 continue;
-      }
-      // do it
-      memset(candidate, 0, 7);
-      strncpy(candidate, ptr_lstrip(strval), 4);
-      if(strlen(candidate) != 4)
-      {
-	 if(fpout)
-	    fprintf(fpout, "Bad length for sprite name '%s'\n",
-	            candidate);
-	 continue;
-      }
-
-      rover = 0;
-      while(deh_spritenames[rover])
-      {
-	 if(!strncasecmp(deh_spritenames[rover], key, 4))
-	 {
-	    if(fpout)
-	       fprintf(fpout, "Substituting '%s' for sprite '%s'\n",
-	               candidate, deh_spritenames[rover]);
-
-	    sprnames[rover] = strdup(candidate);
-	    break;
-	 }
-	 rover++;
-      }
-   }
-}
-
-// ditto for sound names
-static void deh_procBexSounds(DEHFILE *fpin, FILE *fpout, char *line)
-{
-   char key[DEH_MAXKEYLEN];
-   char inbuffer[DEH_BUFFERMAX];
-   uint_64_t value;    // All deh values are ints or longs
-   char *strval;  // holds the string value of the line
-   char candidate[7];
-   int  rover, len;
-   
-   if(fpout)
-      fprintf(fpout,"Processing sound name substitution\n");
-   
-   strncpy(inbuffer,line,DEH_BUFFERMAX);
-
-   while(!dehfeof(fpin) && *inbuffer && (*inbuffer != ' '))
-   {
-      if(!dehfgets(inbuffer, sizeof(inbuffer), fpin))
-	 break;
-      if(*inbuffer == '#')
-	 continue;  // skip comment lines
-      lfstrip(inbuffer);
-      if(!*inbuffer) 
-	 break;  // killough 11/98
-      if(!deh_GetData(inbuffer,key,&value,&strval,fpout)) // returns TRUE if ok
-      {
-	 if(fpout)
-	    fprintf(fpout,"Bad data pair in '%s'\n",inbuffer);
-	 continue;
-      }
-      // do it
-      memset(candidate, 0, 7);
-      strncpy(candidate, ptr_lstrip(strval), 6);
-      len = strlen(candidate);
-      if(len < 1 || len > 6)
-      {
-	 if(fpout)
-	    fprintf(fpout, "Bad length for sound name '%s'\n",
-	            candidate);
-	 continue;
-      }
-
-      rover = 1;
-      while(deh_soundnames[rover])
-      {
-	 if(!strncasecmp(deh_soundnames[rover], key, 6))
-	 {
-	    if(fpout)
-	       fprintf(fpout, "Substituting '%s' for sound '%s'\n",
-	               candidate, deh_soundnames[rover]);
-
-	    S_sfx[rover].name = strdup(candidate);
-	    break;
-	 }
-	 rover++;
-      }
-   }
-}
-
-// ditto for music names
-static void deh_procBexMusic(DEHFILE *fpin, FILE *fpout, char *line)
-{
-   char key[DEH_MAXKEYLEN];
-   char inbuffer[DEH_BUFFERMAX];
-   uint_64_t value;    // All deh values are ints or longs
-   char *strval;  // holds the string value of the line
-   char candidate[7];
-   int  rover, len;
-   
-   if(fpout)
-      fprintf(fpout,"Processing music name substitution\n");
-   
-   strncpy(inbuffer,line,DEH_BUFFERMAX);
-
-   while(!dehfeof(fpin) && *inbuffer && (*inbuffer != ' '))
-   {
-      if(!dehfgets(inbuffer, sizeof(inbuffer), fpin))
-	 break;
-      if(*inbuffer == '#')
-	 continue;  // skip comment lines
-      lfstrip(inbuffer);
-      if(!*inbuffer) 
-	 break;  // killough 11/98
-      if(!deh_GetData(inbuffer,key,&value,&strval,fpout)) // returns TRUE if ok
-      {
-	 if(fpout)
-	    fprintf(fpout,"Bad data pair in '%s'\n",inbuffer);
-	 continue;
-      }
-      // do it
-      memset(candidate, 0, 7);
-      strncpy(candidate, ptr_lstrip(strval), 6);
-      len = strlen(candidate);
-      if(len < 1 || len > 6)
-      {
-	 if(fpout)
-	    fprintf(fpout, "Bad length for music name '%s'\n",
-	            candidate);
-	 continue;
-      }
-
-      rover = 1;
-      while(deh_musicnames[rover])
-      {
-	 if(!strncasecmp(deh_musicnames[rover], key, 6))
-	 {
-	    if(fpout)
-	       fprintf(fpout, "Substituting '%s' for music '%s'\n",
-	               candidate, deh_musicnames[rover]);
-
-	    S_music[rover].name = strdup(candidate);
-	    break;
-	 }
-	 rover++;
-      }
-   }
-}
-
 // ====================================================================
 // General utility function(s)
 // ====================================================================
@@ -2932,7 +2672,7 @@ char *dehReformatStr(char *string)
   while (*s)
     {
       if (*s == '\n')
-        ++s, *t++ = '\\', *t++ = 'n', *t++ = '\\', *t++='\n'; 
+        ++s, *t++ = '\\', *t++ = 'n', *t++ = '\\', *t++='\n';
       else
         *t++ = *s++;
     }

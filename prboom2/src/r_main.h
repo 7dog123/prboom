@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: r_main.h,v 1.6 2001/11/18 12:27:28 cph Exp $
+ * $Id: r_main.h,v 1.4.2.1 2002/07/20 18:08:37 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -35,7 +35,6 @@
 
 #include "d_player.h"
 #include "r_data.h"
-#include "p_chase.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -61,8 +60,6 @@ extern fixed_t  projectiony;
 extern int      validcount;
 extern int      linecount;
 extern int      loopcount;
-extern int      viewheightsec;
-extern camera_t *viewcamera;
 
 //
 // Rendering stats
@@ -87,6 +84,7 @@ extern boolean rendering_stats;
 #define LIGHTZSHIFT       20
 
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
+extern lighttable_t *(*scalelight)[MAXLIGHTSCALE];
 extern lighttable_t *(*zlight)[MAXLIGHTZ];
 extern lighttable_t *fullcolormap;
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
@@ -121,7 +119,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 // REFRESH - the actual rendering functions.
 //
 
-void R_RenderPlayerView(player_t *player, camera_t* viewcamera);
+void R_RenderPlayerView(player_t *player);   // Called by G_Drawer.
 void R_Init(void);                           // Called by startup code.
 void R_SetViewSize(int blocks);              // Called by M_Responder.
 void R_ExecuteSetViewSize(void);             // cph - called by D_Display to complete a view resize

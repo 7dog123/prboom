@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: d_client.c,v 1.18 2002/01/07 15:56:19 proff_fs Exp $
+ * $Id: d_client.c,v 1.12.2.1 2002/07/20 18:08:34 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,13 +22,13 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
- *    Network client. Passes information to/from server, staying 
+ *    Network client. Passes information to/from server, staying
  *    synchronised.
- *    Contains the main wait loop, waiting for network input or 
+ *    Contains the main wait loop, waiting for network input or
  *    time before doing the next tic.
  *    Rewritten for LxDoom, but based around bits of the old code.
  *
@@ -40,10 +40,9 @@
 #include "d_net.h"
 #include "z_zone.h"
 
-#include "c_io.h"
 #include "d_main.h"
 #include "g_game.h"
-#include "mn_engin.h"
+#include "m_menu.h"
 
 #include "protocol.h"
 #include "i_network.h"
@@ -56,6 +55,7 @@
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
+#include <sys/types.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -92,7 +92,7 @@ void D_InitNetGame (void)
     playeringame[consoleplayer = 0] = true;
   } else {
     // Get game info from server
-    packet_header_t *packet = malloc(1000);
+    packet_header_t *packet = Z_Malloc(1000, PU_STATIC, NULL);
     struct setup_packet_s *sinfo = (void*)(packet+1);
   struct { packet_header_t head; short pn; } initpacket;
 
@@ -123,18 +123,18 @@ void D_InitNetGame (void)
     xtratics = sinfo->extratic;
     G_ReadOptions(sinfo->game_options);
 
-    lprintf(LO_INFO, "\tjoined game as player %d/%d; %d WADs specified\n", 
-	    consoleplayer+1, numplayers = sinfo->players, sinfo->numwads);
+    lprintf(LO_INFO, "\tjoined game as player %d/%d; %d WADs specified\n",
+      consoleplayer+1, numplayers = sinfo->players, sinfo->numwads);
     {
       char *p = sinfo->wadnames;
       int i = sinfo->numwads;
 
       while (i--) {
-	D_AddFile(p, source_net);
-	p += strlen(p) + 1;
+  D_AddFile(p, source_net);
+  p += strlen(p) + 1;
       }
     }
-    free(packet);
+    Z_Free(packet);
   }
   localcmds = netcmds[displayplayer = consoleplayer];
   for (i=0; i<numplayers; i++)
@@ -150,13 +150,13 @@ void D_InitNetGame (void)
   doomcom = Z_Malloc(sizeof *doomcom, PU_STATIC, NULL);
   doomcom->consoleplayer = 0;
   doomcom->numnodes = 0; doomcom->numplayers = 1;
-  localcmds = netcmds[consoleplayer]; 
+  localcmds = netcmds[consoleplayer];
 
   for (i=0; i<doomcom->numplayers; i++)
     playeringame[i] = true;
   for (; i<MAXPLAYERS; i++)
     playeringame[i] = false;
-        
+
   consoleplayer = displayplayer = doomcom->consoleplayer;
 }
 #endif // HAVE_NET
@@ -164,20 +164,20 @@ void D_InitNetGame (void)
 #ifdef HAVE_NET
 void D_CheckNetGame(void)
 {
-  packet_header_t *packet = malloc(sizeof(packet_header_t)+1);
+  packet_header_t *packet = Z_Malloc(sizeof(packet_header_t)+1, PU_STATIC, NULL);
 
   if (server) {
     lprintf(LO_INFO, "D_CheckNetGame: waiting for server to signal game start\n");
     do {
       while (!I_GetPacket(packet, sizeof(packet_header_t)+1)) {
-	packet->tic = 0; packet->type = PKT_GO; 
-	*(byte*)(packet+1) = consoleplayer;
-	I_SendPacket(packet, sizeof(packet_header_t)+1);
-	I_uSleep(100000);
+  packet->tic = 0; packet->type = PKT_GO;
+  *(byte*)(packet+1) = consoleplayer;
+  I_SendPacket(packet, sizeof(packet_header_t)+1);
+  I_uSleep(100000);
       }
     } while (packet->type != PKT_GO);
   }
-  free(packet);
+  Z_Free(packet);
 }
 
 boolean D_NetGetWad(const char* name)
@@ -191,15 +191,15 @@ boolean D_NetGetWad(const char* name)
 
   do {
     // Send WAD request to remote
-    packet = malloc(psize);
+    packet = Z_Malloc(psize, PU_STATIC, NULL);
     packet->type = PKT_WAD; packet->tic = 0;
     *(byte*)(packet+1) = consoleplayer;
     strcpy(1+(byte*)(packet+1), name);
     I_SendPacket(packet, sizeof(packet_header_t) + strlen(name) + 2);
-    
+
     I_uSleep(10000);
   } while (!I_GetPacket(packet, psize) || (packet->type != PKT_WAD));
-  free(packet);
+  Z_Free(packet);
 
   if (!strcasecmp((void*)(packet+1), name)) {
     pid_t pid;
@@ -210,7 +210,7 @@ boolean D_NetGetWad(const char* name)
      * Unix systems have all these commands handy, this kind of thing is easy
      * Any windo$e port will have some awkward work replacing these.
      */
-    /* cph - caution here. This is data from an untrusted source. 
+    /* cph - caution here. This is data from an untrusted source.
      * Don't pass it via a shell. */
     if ((pid = fork()) == -1)
       perror("fork");
@@ -222,16 +222,16 @@ boolean D_NetGetWad(const char* name)
     wait(&rv);
     if (!(done = !access(name, R_OK))) {
       if (!strcmp(p+strlen(p)-4, ".zip")) {
-	p = strrchr(p, '/')+1; 
-	if ((pid = fork()) == -1)
-	  perror("fork");
-	else if (!pid) {
-	  /* Child executes decompressor */
-	  execlp("unzip", "unzip", p, name, NULL);
-	}
-	/* Parent waits for the file */
-	wait(&rv);
-	done = !!access(name, R_OK);
+  p = strrchr(p, '/')+1;
+  if ((pid = fork()) == -1)
+    perror("fork");
+  else if (!pid) {
+    /* Child executes decompressor */
+    execlp("unzip", "unzip", p, name, NULL);
+  }
+  /* Parent waits for the file */
+  wait(&rv);
+  done = !!access(name, R_OK);
       }
       /* Add more decompression protocols here as desired */
     }
@@ -251,51 +251,51 @@ void NetUpdate(void)
     while ((recvlen = I_GetPacket(packet, 10000))) {
       switch(packet->type) {
       case PKT_TICS:
-	{
-	  byte *p = (void*)(packet+1);
-	  int tics = *p++;
-	  if (packet->tic > (unsigned)remotetic) { // Missed some
-	    packet->type = PKT_RETRANS;
-	    packet->tic = remotetic;
-	    *(byte*)(packet+1) = consoleplayer;
-	    I_SendPacket(packet, sizeof(*packet)+1);
-	  } else {
-	    if (packet->tic + tics <= (unsigned)remotetic) break; // Will not improve things
-	    remotetic = packet->tic;
-	    while (tics--) {
-	      int players = *p++;
-	      while (players--) {
-		int n = *p++;
-		RawToTic(&netcmds[n][remotetic%BACKUPTICS], p);
-		p += sizeof(ticcmd_t);
-	      }
-	      remotetic++;
-	    }
-	  }
-	}
-	break;
+  {
+    byte *p = (void*)(packet+1);
+    int tics = *p++;
+    if (packet->tic > (unsigned)remotetic) { // Missed some
+      packet->type = PKT_RETRANS;
+      packet->tic = remotetic;
+      *(byte*)(packet+1) = consoleplayer;
+      I_SendPacket(packet, sizeof(*packet)+1);
+    } else {
+      if (packet->tic + tics <= (unsigned)remotetic) break; // Will not improve things
+      remotetic = packet->tic;
+      while (tics--) {
+        int players = *p++;
+        while (players--) {
+    int n = *p++;
+    RawToTic(&netcmds[n][remotetic%BACKUPTICS], p);
+    p += sizeof(ticcmd_t);
+        }
+        remotetic++;
+      }
+    }
+  }
+  break;
       case PKT_RETRANS: // Resend request
-	remotesend = packet->tic;
-	break;
+  remotesend = packet->tic;
+  break;
       case PKT_DOWN: // Server downed
-	{
-	  int j;
-	  for (j=0; j<MAXPLAYERS; j++)
-	    if (j != consoleplayer) playeringame[j] = false;
-	  server = false;
-	  doom_printf("Server is down\nAll other players are no longer in the game\n");
-	}
-	break;
+  {
+    int j;
+    for (j=0; j<MAXPLAYERS; j++)
+      if (j != consoleplayer) playeringame[j] = false;
+    server = false;
+    doom_printf("Server is down\nAll other players are no longer in the game\n");
+  }
+  break;
       case PKT_EXTRA: // Misc stuff
       case PKT_QUIT: // Player quit
-	// Queue packet to be processed when its tic time is reached
-	queuedpacket = Z_Realloc(queuedpacket, ++numqueuedpackets * sizeof *queuedpacket, 
-				 PU_STATIC, NULL);
-	queuedpacket[numqueuedpackets-1] = Z_Malloc(recvlen, PU_STATIC, NULL);
-	memcpy(queuedpacket[numqueuedpackets-1], packet, recvlen);
-	break;
+  // Queue packet to be processed when its tic time is reached
+  queuedpacket = Z_Realloc(queuedpacket, ++numqueuedpackets * sizeof *queuedpacket,
+         PU_STATIC, NULL);
+  queuedpacket[numqueuedpackets-1] = Z_Malloc(recvlen, PU_STATIC, NULL);
+  memcpy(queuedpacket[numqueuedpackets-1], packet, recvlen);
+  break;
       default: // Other packet, unrecognised or redundant
-	break;
+  break;
       }
     }
     Z_Free(packet);
@@ -307,6 +307,7 @@ void NetUpdate(void)
     lastmadetic += newtics;
     while (newtics--) {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
@@ -316,22 +317,22 @@ void NetUpdate(void)
       remotesend -= xtratics;
       sendtics = maketic - remotesend;
       {
-	size_t pkt_size = sizeof(packet_header_t) + 2 + sendtics * sizeof(ticcmd_t);
-	packet_header_t *packet = Z_Malloc(pkt_size, PU_STATIC, NULL);
-	
-	packet->tic = maketic - sendtics;
-	packet->type = PKT_TICC;
-	*(byte*)(packet+1) = sendtics;
-	*(((byte*)(packet+1))+1) = consoleplayer;
-	{
-	  void *tic = ((byte*)(packet+1)) +2;
-	  while (sendtics--) {
-	    TicToRaw(tic, &localcmds[remotesend++%BACKUPTICS]);
-	    tic = (byte *)tic + sizeof(ticcmd_t);
-	  }
-	}
-	I_SendPacket(packet, pkt_size);
-	Z_Free(packet);
+  size_t pkt_size = sizeof(packet_header_t) + 2 + sendtics * sizeof(ticcmd_t);
+  packet_header_t *packet = Z_Malloc(pkt_size, PU_STATIC, NULL);
+
+  packet->tic = maketic - sendtics;
+  packet->type = PKT_TICC;
+  *(byte*)(packet+1) = sendtics;
+  *(((byte*)(packet+1))+1) = consoleplayer;
+  {
+    void *tic = ((byte*)(packet+1)) +2;
+    while (sendtics--) {
+      TicToRaw(tic, &localcmds[remotesend++%BACKUPTICS]);
+      tic = (byte *)tic + sizeof(ticcmd_t);
+    }
+  }
+  I_SendPacket(packet, pkt_size);
+  Z_Free(packet);
       }
     }
   }
@@ -346,6 +347,7 @@ void D_BuildNewTiccmds()
     while (newtics--)
     {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
@@ -354,19 +356,19 @@ void D_BuildNewTiccmds()
 
 #ifdef HAVE_NET
 /* cph - data passed to this must be in the Doom (little-) endian */
-void D_NetSendMisc(netmisctype_t type, size_t len, void* data) 
+void D_NetSendMisc(netmisctype_t type, size_t len, void* data)
 {
   if (server) {
     size_t size = sizeof(packet_header_t) + 3*sizeof(int) + len;
     packet_header_t *packet = Z_Malloc(size, PU_STATIC, NULL);
     int *p = (void*)(packet+1);
-    
+
     packet->tic = gametic;
     packet->type = PKT_EXTRA;
     *p++ = LONG(type); *p++ = LONG(consoleplayer); *p++ = LONG(len);
     memcpy(p, data, len);
     I_SendPacket(packet, size);
-    
+
     Z_Free(packet);
   }
 }
@@ -378,32 +380,32 @@ static void CheckQueuedPackets(void)
     if (queuedpacket[i]->tic <= (unsigned)gametic)
       switch (queuedpacket[i]->type) {
       case PKT_QUIT: // Player quit the game
-	{
-	  int pn = *(byte*)(queuedpacket[i]+1);
-	  playeringame[pn] = false;
-	  doom_printf("Player %d left the game\n", pn);
-	}
-	break;
+  {
+    int pn = *(byte*)(queuedpacket[i]+1);
+    playeringame[pn] = false;
+    doom_printf("Player %d left the game\n", pn);
+  }
+  break;
       case PKT_EXTRA:
-	{
-	  int *p = (int*)(queuedpacket[i]+1);
-	  size_t len = LONG(*(p+2));
-	  switch (LONG(*p)) {
-	  case nm_plcolour:
-	    G_ChangedPlayerColour(LONG(*(p+1)), LONG(*(p+3)));
-	    break;
-	  case nm_savegamename:
-	    if (len < SAVEDESCLEN) {
-	      memcpy(savedescription, p+3, len);
-	      // Force terminating 0 in case
-	      savedescription[len] = 0;
-	    }
-	    break;
-	  }
-	}
-	break;
+  {
+    int *p = (int*)(queuedpacket[i]+1);
+    size_t len = LONG(*(p+2));
+    switch (LONG(*p)) {
+    case nm_plcolour:
+      G_ChangedPlayerColour(LONG(*(p+1)), LONG(*(p+3)));
+      break;
+    case nm_savegamename:
+      if (len < SAVEDESCLEN) {
+        memcpy(savedescription, p+3, len);
+        // Force terminating 0 in case
+        savedescription[len] = 0;
+      }
+      break;
+    }
+  }
+  break;
       default: // Should not be queued
-	break;
+  break;
       }
 
   { // Requeue remaining packets
@@ -412,9 +414,9 @@ static void CheckQueuedPackets(void)
 
     for (i=0; (unsigned)i<numqueuedpackets; i++)
       if (queuedpacket[i]->tic > (unsigned)gametic) {
-	newqueue = Z_Realloc(newqueue, ++newnum * sizeof *newqueue, 
-			     PU_STATIC, NULL);
-	newqueue[newnum-1] = queuedpacket[i];
+  newqueue = Z_Realloc(newqueue, ++newnum * sizeof *newqueue,
+           PU_STATIC, NULL);
+  newqueue[newnum-1] = queuedpacket[i];
       } else Z_Free(queuedpacket[i]);
 
     Z_Free(queuedpacket);
@@ -430,11 +432,8 @@ void TryRunTics (void)
 
   // Wait for tics to run
   while (1) {
-    if (I_GetTime() - entertime > 5)
-    {
-      C_Ticker();
-      MN_Ticker();
-      return;
+    if (I_GetTime() - entertime > 5) {
+      M_Ticker(); return;
     }
 #ifdef HAVE_NET
     NetUpdate();
@@ -444,11 +443,8 @@ void TryRunTics (void)
     runtics = (server ? remotetic : maketic) - gametic;
     if (!runtics) {
       I_uSleep(1000);
-      if (I_GetTime() - entertime > 10)
-      {
-	      C_Ticker();
-	      MN_Ticker();
-        return;
+      if (I_GetTime() - entertime > 10) {
+  M_Ticker(); return;
       }
     } else break;
   }
@@ -459,8 +455,7 @@ void TryRunTics (void)
 #endif
     if (advancedemo)
       D_DoAdvanceDemo ();
-    C_Ticker ();
-    MN_Ticker ();
+    M_Ticker ();
     G_Ticker ();
     gametic++;
 #ifdef HAVE_NET

@@ -1,7 +1,7 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
- * $Id: st_stuff.c,v 1.12 2002/01/07 15:56:20 proff_fs Exp $
+ * $Id: st_stuff.c,v 1.9.2.1 2002/07/20 18:08:37 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -9,7 +9,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -22,7 +22,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -33,7 +33,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: st_stuff.c,v 1.12 2002/01/07 15:56:20 proff_fs Exp $";
+rcsid[] = "$Id: st_stuff.c,v 1.9.2.1 2002/07/20 18:08:37 proff_fs Exp $";
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -288,6 +288,11 @@ static boolean st_armson;
 // !deathmatch
 static boolean st_fragson;
 
+// main bar left
+// CPhipps - convert to a bitmap
+static byte *sbar;
+static unsigned short sbar_width, sbar_height;
+
 // 0-9, tall numbers
 static patchnum_t tallnum[10];
 
@@ -317,14 +322,14 @@ static patchnum_t arms[6][2];
 static st_number_t w_ready;
 
 //jff 2/16/98 status color change levels
-int ammo_red=25;      // ammo percent less than which status is red
-int ammo_yellow=50;   // ammo percent less is yellow more green
-int health_red=25;    // health amount less than which status is red
-int health_yellow=50; // health amount less than which status is yellow
-int health_green=100; // health amount above is blue, below is green
-int armor_red=25;     // armor amount less than which status is red
-int armor_yellow=50;  // armor amount less than which status is yellow
-int armor_green=100;  // armor amount above is blue, below is green
+int ammo_red;      // ammo percent less than which status is red
+int ammo_yellow;   // ammo percent less is yellow more green
+int health_red;    // health amount less than which status is red
+int health_yellow; // health amount less than which status is yellow
+int health_green;  // health amount above is blue, below is green
+int armor_red;     // armor amount less than which status is red
+int armor_yellow;  // armor amount less than which status is yellow
+int armor_green;   // armor amount above is blue, below is green
 
  // in deathmatch only, summary of frags stats
 static st_number_t w_frags;
@@ -399,8 +404,8 @@ void ST_refreshBackground(void)
       if (netgame)
       {
         V_DrawNumPatch(ST_FX, y, BG, faceback.lumpnum,
-		       displayplayer ? CR_LIMIT+displayplayer : CR_DEFAULT, 
-		       displayplayer ? (VPT_TRANS | VPT_STRETCH) : VPT_STRETCH);
+           displayplayer ? CR_LIMIT+displayplayer : CR_DEFAULT,
+           displayplayer ? (VPT_TRANS | VPT_STRETCH) : VPT_STRETCH);
       }
 
       V_CopyRect(ST_X, y, screen, ST_SCALED_WIDTH, ST_SCALED_HEIGHT, ST_X, ST_SCALED_Y, FG, VPT_NONE);
@@ -624,7 +629,7 @@ void ST_updateFaceWidget(void)
 
 }
 
-int sts_traditional_keys = 0; // killough 2/28/98: traditional status bar keys
+int sts_traditional_keys; // killough 2/28/98: traditional status bar keys
 
 void ST_updateWidgets(void)
 {
@@ -822,7 +827,7 @@ void ST_diffDraw(void)
 
 void ST_Drawer(boolean st_statusbaron, boolean refresh)
 {
-  /* cph - let status bar on be controlled 
+  /* cph - let status bar on be controlled
    * completely by the call from D_Display
    * proff - really do it
    */
@@ -831,7 +836,7 @@ void ST_Drawer(boolean st_statusbaron, boolean refresh)
   ST_doPaletteStuff();  // Do red-/gold-shifts from damage/items
 
 #ifdef GL_DOOM
-  /* proff 05/17/2000: always draw everything in OpenGL, because there 
+  /* proff 05/17/2000: always draw everything in OpenGL, because there
    * is no backbuffer
    */
   if (st_statusbaron)
@@ -858,8 +863,13 @@ static void ST_loadGraphics(boolean doload)
 {
   int  i, facenum;
   char namebuf[9];
-  // cph - macro that either acquires a pointer and lock for a lump, or 
+  // cph - macro that either acquires a pointer and lock for a lump, or
   // unlocks it. var is referenced exactly once in either case, so ++ in arg works
+/*
+#define LOADORFREE(var,name) \
+if (!doload) { W_UnlockLumpName(name); var = NULL; } \
+else var = (const patch_t*)W_CacheLumpName(name)
+*/
 
   // Load the numbers, tall and short
   for (i=0;i<10;i++)
@@ -870,7 +880,7 @@ static void ST_loadGraphics(boolean doload)
       R_SetPatchNum(&shortnum[i],namebuf);
     }
 
-  // Load percent key. 
+  // Load percent key.
   R_SetPatchNum(&tallpercent,"STTPRCNT");
 
   // key cards
@@ -899,6 +909,14 @@ static void ST_loadGraphics(boolean doload)
   // killough 3/7/98: add better support for spy mode by loading all
   // player face backgrounds and using displayplayer to choose them:
   R_SetPatchNum(&faceback, "STFB0");
+
+  // status bar background bits
+  if (doload)
+    sbar = V_PatchToBlock("STBAR", CR_DEFAULT, VPT_NONE,
+      &sbar_width, &sbar_height);
+  else {
+    free(sbar); sbar=NULL;
+  }
 
   // face states
   facenum = 0;
@@ -1145,5 +1163,6 @@ void ST_Init(void)
   veryfirsttime = 0;
   ST_loadData();
 // proff 08/18/98: Changed for high-res
-  screens[4] = malloc(SCREENWIDTH*(ST_SCALED_HEIGHT+1));
+  screens[4] = Z_Malloc(SCREENWIDTH*(ST_SCALED_HEIGHT+1), PU_STATIC, 0);
+//  screens[4] = Z_Malloc(ST_WIDTH*ST_HEIGHT, PU_STATIC, 0);
 }

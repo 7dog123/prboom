@@ -1,21 +1,27 @@
 #
 # automake Makefile.am for the LxDoom source directory
 #
-# $Id: Makefile.am,v 1.26 2002/02/09 12:43:17 cph Exp $
+# $Id: Makefile.am,v 1.17.2.1 2001/02/18 18:07:22 proff_fs Exp $
 #
 # Process this file with automake to produce Makefile.in
 #
 #
 
+EXTRA_SUBDIRS = Posix SDL
+
 SUBDIRS = SDL POSIX
 
 gamesdir=$(prefix)/games
-EXTRA_PROGRAMS = prboom
-games_PROGRAMS = @BUILD_DOOM@ prboom-game-server
+EXTRA_PROGRAMS = prboom-game-server
+games_PROGRAMS = prboom @BUILD_SERVER@
 
 CFLAGS = @CFLAGS@ @SDL_CFLAGS@
 
+if SDL_NET
 UDP_SRC = i_udp_sdl.c
+else
+UDP_SRC = i_udp.c
+endif
 
 prboom_game_server_SOURCES = d_server.c i_udp_sdl.c protocol.h
 prboom_game_server_LDADD = POSIX/libposixdoom.a @NET_LIBS@ @SDL_LIBS@
@@ -27,18 +33,18 @@ COMMON_SRC = \
  hu_lib.h       lprintf.h          p_plats.c        r_sky.c	\
  d_deh.c        hu_stuff.c         m_argv.c         p_pspr.c    r_sky.h	    \
  d_deh.h        hu_stuff.h         m_argv.h         p_pspr.h    r_state.h   \
- d_englsh.h     m_bbox.c           p_saveg.c        r_things.c  \
+ d_englsh.h     i_joy.h            m_bbox.c         p_saveg.c   r_things.c  \
  d_event.h      i_net.h            m_bbox.h         p_saveg.h   r_things.h  \
  d_items.c      i_network.h        m_cheat.c        p_setup.c   s_sound.c   \
  d_items.h      i_sound.h          m_cheat.h        p_setup.h   s_sound.h   \
  d_main.c       i_system.h         m_fixed.h        p_sight.c   sounds.c    \
- d_main.h       i_video.h          p_spec.c    sounds.h    \
- i_joy.h        info.c             p_spec.h    st_lib.c    \
+ d_main.h       i_video.h          m_menu.c         p_spec.c    sounds.h    \
+                info.c             m_menu.h         p_spec.h    st_lib.c    \
  d_net.h        info.h             m_misc.c         p_switch.c  st_lib.h    \
- d_player.h     m_misc.h           p_telept.c       st_stuff.c  \
+ d_player.h                        m_misc.h         p_telept.c  st_stuff.c  \
  m_random.c     p_tick.c           st_stuff.h       i_main.c    i_main.h    \
- d_think.h      m_random.h         p_tick.h         tables.c    g_bind.c    \
- d_ticcmd.h     m_swap.h           p_user.c         tables.h    g_bind.h    \
+ d_think.h      m_random.h         p_tick.h         tables.c    \
+ d_ticcmd.h     m_swap.h           p_user.c         tables.h     \
  doomdata.h     p_ceilng.c         p_user.h         v_video.c   \
  doomdef.c      p_doors.c          protocol.h       v_video.h   \
  doomdef.h      p_enemy.c          r_bsp.c          version.c   \
@@ -50,16 +56,17 @@ COMMON_SRC = \
  f_finale.c     p_lights.c         r_draw.h         z_bmalloc.c \
  f_finale.h     p_map.c            r_main.c         z_bmalloc.h \
  f_wipe.c       p_map.h            r_main.h         z_zone.c    \
- c_cmd.c        c_io.c             c_io.h           c_runcmd.c  c_runcmd.h  \
- f_wipe.h       p_maputl.c         r_plane.c        z_zone.h    \
- p_chase.c      p_chase.h	\
- mn_engin.c	mn_engin.h	\
- mn_menus.c	mn_menus.h	\
- mn_misc.c	mn_misc.h	\
- g_cmd.c	\
- g_config.c	g_config.h
+ f_wipe.h       p_maputl.c         r_plane.c        z_zone.h
 
+if SDL_NET
 NET_CLIENT_SRC = d_client.c i_udp_sdl.c
+else
+if HAVE_NET
+NET_CLIENT_SRC = d_client.c i_udp.c i_network.c
+else
+NET_CLIENT_SRC = d_client.c
+endif
+endif
 
 GL_SRC = gl_intern.h  gl_main.c  gl_struct.h  gl_texture.c
 
@@ -69,23 +76,9 @@ else
 USE_GL_SRC = 
 endif
 
-DLL_SRC = gl_dll.h  gl_dll.c
-
-if BUILD_DLL
-USE_DLL_SRC = gl_dll.h  gl_dll.c
-else
-USE_DLL_SRC = 
-endif
-
-if WAD_MMAP
-WAD_SRC = w_mmap.c
-else
-WAD_SRC = w_memcache.c
-endif
-
-prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC) $(USE_DLL_SRC) $(WAD_SRC)
-prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @DLL_LIBS@ @MATH_LIB@
+prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC)
+prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @MATH_LIB@
 
 # Must remember to include 'optional' sources in the tarball
-EXTRA_prboom_SOURCES = $(GL_SRC) $(DLL_SRC)
+EXTRA_prboom_SOURCES = $(GL_SRC)
 

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: i_video.c,v 1.9 2002/01/07 15:56:20 proff_fs Exp $
+ * $Id: i_video.c,v 1.6 2000/11/22 21:46:48 proff_fs Exp $
  *
  *  X11 display code for LxDoom. Based on the original linuxdoom i_video.c
  *  Copyright (C) 1993-1996 by id Software
@@ -29,7 +29,7 @@
  */
 
 static const char
-rcsid[] = "$Id: i_video.c,v 1.9 2002/01/07 15:56:20 proff_fs Exp $";
+rcsid[] = "$Id: i_video.c,v 1.6 2000/11/22 21:46:48 proff_fs Exp $";
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -85,7 +85,7 @@ int XShmQueryExtension(Display* dpy); // CP added
 
 void M_QuitDOOM(int choice);
 
-int use_doublebuffer = 0; // Included not to break m_misc, but not relevant to X
+int use_vsync = 0; // Included not to break m_misc, but not relevant to X
 static Display*	X_display=NULL;
 static int      X_screen;
 static Window   X_mainWindow;
@@ -144,12 +144,12 @@ static event_t  event; // CPhipps - static because several subs need it
 static boolean  shmFinished = true; // Are we awaiting an MITShm completion?
 static int      vis_flag = VisibilityUnobscured; // Is lxdoom visible?
 
-int      X_opt = 0; // Options to change the way we use X
+extern int      X_opt; // Options to change the way we use X
 // it's a bitfield, currently 1 = no MitSHM, 2 = pretend 24bpp is 32bpp
 int             X_bpp; // bpp that we tell X
 
 // Mouse handling
-int     usemouse;        // config file var
+extern int     usemouse;        // config file var
 int            use_fullscreen;  /* cph - config file dummy */
 static boolean grabMouse;       // internal var
 static boolean grabbed = false; // Is the mouse currently grabbed
@@ -468,7 +468,7 @@ static void I_GetEvent(void)
     // CPhipps - allow WM quit
     if (X_event.xclient.data.l[0] == X_deletewin) {
       S_StartSound(NULL, sfx_swtchn);
-      C_RunTextCmd("quit");
+      M_QuitDOOM(0);
     }
     break;
   case Expose:
@@ -1285,9 +1285,4 @@ void I_InitGraphics(void)
   atexit(I_ShutdownGraphics);
 
   I_XInitInputs();
-}
-
-void I_UpdateVideoMode(void)
-{
-  lprintf(LO_INFO, "I_UpdateVideoMode: not yet implemented\n");
 }
