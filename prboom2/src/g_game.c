@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: g_game.c,v 1.33 2001/02/04 15:39:46 cph Exp $
+ * $Id: g_game.c,v 1.30.2.1 2001/02/03 10:59:43 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -35,7 +35,7 @@
  */
 
 static const char
-rcsid[] = "$Id: g_game.c,v 1.33 2001/02/04 15:39:46 cph Exp $";
+rcsid[] = "$Id: g_game.c,v 1.30.2.1 2001/02/03 10:59:43 cph Exp $";
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -212,7 +212,7 @@ int     joybspeed;
 #define TURBOTHRESHOLD  0x32
 #define SLOWTURNTICS  6
 #define QUICKREVERSE (short)32768 // 180 degree reverse                    // phares
-#define NUMKEYS   256
+#define NUMKEYS   512
 
 fixed_t forwardmove[2] = {0x19, 0x32};
 fixed_t sidemove[2]    = {0x18, 0x28};
@@ -661,6 +661,12 @@ boolean G_Responder (event_t* ev)
       return true;
     }
 
+  // killough 9/29/98: reformatted
+  if (gamestate == GS_LEVEL && (HU_Responder(ev) ||  // chat ate the event
+				ST_Responder(ev) ||  // status window ate it
+				AM_Responder(ev)))   // automap ate it
+    return true;
+
   // any other key pops up menu if in demos
   //
   // killough 8/2/98: enable automap in -timedemo demos
@@ -724,8 +730,8 @@ boolean G_Responder (event_t* ev)
        * Removed the mouseSensitivity "*4" to allow more low end
        * sensitivity resolution especially for lsdoom users.
        */
-      mousex += (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
-      mousey += (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
+      mousex = (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
+      mousey = (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
       return true;    // eat events
 
     case ev_joystick:
@@ -800,6 +806,10 @@ void G_Ticker (void)
           break;
         case ga_worlddone:
           G_DoWorldDone ();
+          break;
+        case ga_screenshot:
+          M_ScreenShot ();
+          gameaction = ga_nothing;
           break;
         case ga_nothing:
           break;
@@ -1168,6 +1178,11 @@ void G_DoReborn (int playernum)
         }
       P_SpawnPlayer (&playerstarts[playernum]);
     }
+}
+
+void G_ScreenShot (void)
+{
+  gameaction = ga_screenshot;
 }
 
 // DOOM Par Times

@@ -1,12 +1,5 @@
-This file shows a history of changes between PrBoom versions since v2.2.0.
-For historical reference, the changes since v2.1.0 and the complete LxDoom
-changelog follows it.
-
-Changes from v2.2.0 to v2.3.0
-- the OpenGL libs are loaded dynamically
-
------------------------------------------------------------------------------
 This file shows a history of changes between PrBoom versions since v2.1.0.
+For historical reference, the complete LxDoom changelog follows it.
 
 Changes from v2.1.2 to v2.2.0
 - fix compiling problem on alpha processors (size_t != unsigned long)
@@ -14,6 +7,9 @@ Changes from v2.1.2 to v2.2.0
 - fixed OpenGL menu drawing bug
 - hopefully fixed top sky line bug for some OpenGL drivers
 - added joystick support through SDL
+- made a (temporary) fix for the crash at 800x600 when timidity can't find cfg
+- fixed some key binding problems
+- fixed linking problems on some UNIX systems
 
 Changes from v2.1.1 to v2.1.2
 - fix problem with sound stereo

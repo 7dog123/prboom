@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: r_draw.c,v 1.14 2001/02/18 15:56:19 proff_fs Exp $
+ * $Id: r_draw.c,v 1.13.2.1 2001/02/18 17:19:50 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -33,7 +33,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: r_draw.c,v 1.14 2001/02/18 15:56:19 proff_fs Exp $";
+rcsid[] = "$Id: r_draw.c,v 1.13.2.1 2001/02/18 17:19:50 proff_fs Exp $";
 
 #include "doomstat.h"
 #include "w_wad.h"
@@ -756,5 +756,7 @@ void R_DrawViewBorder(void)
       R_VideoErase (ofs, side); 
       ofs += SCREENWIDTH; 
     } 
+
+  V_MarkRect (0,0,SCREENWIDTH, SCREENHEIGHT-ST_SCALED_HEIGHT); 
 #endif
 }

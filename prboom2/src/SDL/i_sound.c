@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: i_sound.c,v 1.17 2001/01/15 18:06:06 proff_fs Exp $
+ * $Id: i_sound.c,v 1.16.2.2 2001/03/29 13:37:09 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -32,7 +32,7 @@
  */
 
 static const char
-rcsid[] = "$Id: i_sound.c,v 1.17 2001/01/15 18:06:06 proff_fs Exp $";
+rcsid[] = "$Id: i_sound.c,v 1.16.2.2 2001/03/29 13:37:09 proff_fs Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -237,23 +237,18 @@ I_UpdateSoundParams
 {
     int         slot = handle & (NUM_CHANNELS-1);
     int		rightvol;
-	int leftvol;
-	int         step = steptable[pitch];
-  
-	// Set stepping
-	// MWM 2000-12-24: Calculates proportion of channel samplerate
-	// to global samplerate for mixing purposes.
-	// Patched to shift left *then* divide, to minimize roundoff errors
-	// as well as to use SAMPLERATE as defined above, not to assume 11025 Hz
-	if (pitched_sounds)
-		/* channelstep[slot] = step + (((channelsamplerate[slot]/11025)-1)<<16); */
-		channelstep[slot] = step + (((channelsamplerate[slot]<<16)/SAMPLERATE)-65536);
-	else
-		/* channelstep[slot] = ((channelsamplerate[slot]/11025)<<16); */
-		channelstep[slot] = ((channelsamplerate[slot]<<16)/SAMPLERATE);
-  
-	// Separation, that is, orientation/stereo.
-	//  range is: 1 - 256
+    int		leftvol;
+    int         step = steptable[pitch];
+
+    // Set stepping???
+    // Kinda getting the impression this is never used.
+    if (pitched_sounds)
+      channelstep[slot] = step + (((channelsamplerate[slot]/11025)-1)<<16);
+    else
+      channelstep[slot] = ((channelsamplerate[slot]/11025)<<16);
+
+    // Separation, that is, orientation/stereo.
+    //  range is: 1 - 256
     seperation += 1;
 
     // Per left/right channel.
@@ -653,10 +648,12 @@ void I_PauseSong (int handle)
 #ifdef HAVE_MIXER
   switch(mus_pause_opt) {
   case 0:
-    I_StopSong(handle);
+    if ( music[handle] )
+      I_StopSong(handle);
     break;
   case 1:
-    Mix_PauseMusic();
+    if ( music[handle] )
+      Mix_PauseMusic();
     break;
   }
 #endif
@@ -668,10 +665,12 @@ void I_ResumeSong (int handle)
 #ifdef HAVE_MIXER
   switch(mus_pause_opt) {
   case 0:
-    I_PlaySong(handle,1);
+    if ( music[handle] )
+      I_PlaySong(handle,1);
     break;
   case 1:
-    Mix_ResumeMusic();
+    if ( music[handle] )
+      Mix_ResumeMusic();
     break;
   }
 #endif
@@ -681,7 +680,8 @@ void I_ResumeSong (int handle)
 void I_StopSong(int handle)
 {
 #ifdef HAVE_MIXER
-  Mix_FadeOutMusic(500);
+  if ( music[handle] )
+    Mix_FadeOutMusic(500);
 #endif
 }
 
@@ -727,6 +727,8 @@ int I_RegisterSong(const void *data, size_t len)
   music[0] = Mix_LoadMUS(music_tmp);
   if ( music[0] == NULL ) {
     lprintf(LO_ERROR,"Couldn't load MIDI from %s: %s\n", music_tmp, Mix_GetError());
+    free(music_tmp);
+    music_tmp=NULL;
   }
 #endif
   return (0);

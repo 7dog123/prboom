@@ -11,24 +11,6 @@ It does work with the beta OpenGL driver, but with the normal drivers only at
 a very low framerate. Further testing needed.
 
 --------------------------------------------------------------------------
-6.  Import MBF m_menu.c and m_misc.c stuff
-
-Colin:
-m_menu.c done, m_misc.c I don't intend to import, at least not at this
-stage. It may be simpler to rewrite it. 
-
---------------------------------------------------------------------------
-13. Repackage editing docs; I suggest that with all of
-    the Boom and MBF stuff to go in, that we distribute
-    the editing docs separately.
-    (Could be done after a release though).
-
-2000/11/08 Colin: working on it. Using it as an excuse to learn SGML :-)
- Proff, perhaps you should make a new CVS directory for the editing 
- pack, since it's going to be a separate package?
-2001/02/18 Proff: New directory was added by Colin some time ago
-
---------------------------------------------------------------------------
 15. Hardware music synth support for SDL target. timidity is
     nice, but some of the music sounds no good (notably MAP01).
     I suggest a cheat code to toggle software vs hardware.
@@ -47,12 +29,6 @@ Proff:
 Works, but you have to press it twice to change running speed (why?).
 
 --------------------------------------------------------------------------
-24. (2000/10/04) Seperating segs and gl_segs etc.
-
-2000/10/08 Proff:
-That's not as easy as I thought.
-
---------------------------------------------------------------------------
 27. (2000/10/08) There is a memory leak in the OpenGL part.
 
 2000/10/08 Proff:
@@ -61,18 +37,9 @@ dependant on the size of level how much is allocated. I just can't find
 the leak.
 
 --------------------------------------------------------------------------
-29. (2000/11/08) Rewrite the networking (medium term todo)
-
-Colin: It's frankly a disaster area, which I can say with confidence
- because I wrote it. I had experimental builds of lxdoom which allowed 
- selection of game parameters in-game, asynchronous game joining (but 
- not in-game joining). We need a decent reliable-sequenced-packets-over-UDP 
- library (or just switch to TCP) too, rather than the current lash-up.
-
---------------------------------------------------------------------------
 30. (2000/11/13) Port joystick stuff to SDL
 
-2001/02/18 proff: Done, but this whole input crap should be redone.
+2001/02/18 proff: Done
 
 --------------------------------------------------------------------------
 33. (2000/12/24) Single key quit
@@ -81,10 +48,3 @@ Colin: opulent wants the old 'q quits demo recording' feature back.
  I suggest making it a configurable key setting, not bound to any 
  key by default.
 
---------------------------------------------------------------------------
-34. (2001/03/29) Dreamcast port
-
-Proff: I have to get off my ass and do the Dreamcast port of this.
-
---------------------------------------------------------------------------
-35. (2001/03/29) FraggleScript and DDF?

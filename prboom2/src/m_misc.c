@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: m_misc.c,v 1.30 2001/02/18 17:11:58 proff_fs Exp $
+ * $Id: m_misc.c,v 1.26 2000/12/27 18:42:34 cph Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -33,7 +33,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: m_misc.c,v 1.30 2001/02/18 17:11:58 proff_fs Exp $";
+rcsid[] = "$Id: m_misc.c,v 1.26 2000/12/27 18:42:34 cph Exp $";
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -63,6 +63,7 @@ rcsid[] = "$Id: m_misc.c,v 1.30 2001/02/18 17:11:58 proff_fs Exp $";
 #include "m_misc.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "i_joy.h"
 #include "lprintf.h"
 #include "d_main.h"
 
@@ -200,21 +201,6 @@ int X_opt;
  */
 int map_point_coordinates;
 
-/* cph - zone memory size
- * proff - OpenGL needs even more ram at least 16megs are allocated
- */
-#ifndef GL_DOOM
-#define MIN_RAM (8*1024)
-#else
-#define MIN_RAM (16*1024)
-#endif
-
-/* cph - stub joystick variables.
- * Replace once we add real SDL joystick support
- */
-
-int usejoystick, joybfire,joybstrafe,joybspeed,joybuse;
-
 default_t defaults[] =
 {
   {"Misc settings",{NULL},{0},UL,UL,def_none,ss_none},
@@ -233,8 +219,6 @@ default_t defaults[] =
    def_hex, ss_none}, // 0, +1 for colours, +2 for non-ascii chars, +4 for skip-last-line
   {"level_precache",{(int*)&precache},{0},0,1,
    def_bool,ss_none}, // precache level data?
-  {"zone_mem",{&zone_size},{MIN_RAM},MIN_RAM/2,UL,
-   def_int,ss_none}, /* z_zone heap size (in kb) */
   
   {"Files",{NULL},{0},UL,UL,def_none,ss_none},
   /* cph - MBF-like wad/deh/bex autoload code 
@@ -549,6 +533,10 @@ default_t defaults[] =
   {"Joystick settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"use_joystick",{&usejoystick},{0},0,2,
    def_int,ss_none}, // number of joystick to use (0 for none)
+  {"joy_left",{&joyleft},{0},  UL,UL,def_int,ss_none},
+  {"joy_right",{&joyright},{0},UL,UL,def_int,ss_none},
+  {"joy_up",  {&joyup},  {0},  UL,UL,def_int,ss_none},
+  {"joy_down",{&joydown},{0},  UL,UL,def_int,ss_none},
   {"joyb_fire",{&joybfire},{0},0,UL,
    def_int,ss_keys}, // joystick button number to use for fire
   {"joyb_strafe",{&joybstrafe},{1},0,UL,
@@ -797,15 +785,8 @@ void M_LoadDefaults (void)
   i = M_CheckParm ("-config");
   if (i && i < myargc-1)
     defaultfile = myargv[i+1];
-  else {
-    defaultfile = malloc(PATH_MAX+1);
-    /* get config file from same directory as executable */
-#ifdef GL_DOOM
-    snprintf((char *)defaultfile,PATH_MAX,"%s/glboom.cfg", D_DoomExeDir());
-#else
-    snprintf((char *)defaultfile,PATH_MAX,"%s/prboom.cfg", D_DoomExeDir());
-#endif
-  }
+  else
+    defaultfile = basedefault;
 
   lprintf (LO_CONFIRM, " default file: %s\n",defaultfile);
 

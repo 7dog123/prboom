@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.2 2001/02/18 18:34:10 proff_fs Exp $
+# $Id: Makefile.am,v 1.1.2.1 2001/02/18 18:33:43 proff_fs Exp $
 #
 # Copyright (C) 2000 by Colin Phipps (cph@lxdoom.linuxgames.com)
 # License: GPL

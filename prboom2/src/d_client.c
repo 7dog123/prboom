@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: d_client.c,v 1.13 2001/02/04 15:39:46 cph Exp $
+ * $Id: d_client.c,v 1.12 2000/12/28 11:28:00 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -307,6 +307,7 @@ void NetUpdate(void)
     lastmadetic += newtics;
     while (newtics--) {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
@@ -346,6 +347,7 @@ void D_BuildNewTiccmds()
     while (newtics--)
     {
       I_StartTic();
+      D_ProcessEvents();
       if (maketic - gametic > BACKUPTICS/2) break;
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: m_menu.c,v 1.23 2001/02/18 17:13:26 proff_fs Exp $
+ * $Id: m_menu.c,v 1.20.2.1 2001/02/18 17:19:50 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -35,7 +35,7 @@
  *-----------------------------------------------------------------------------*/
 
 static const char
-rcsid[] = "$Id: m_menu.c,v 1.23 2001/02/18 17:13:26 proff_fs Exp $";
+rcsid[] = "$Id: m_menu.c,v 1.20.2.1 2001/02/18 17:19:50 proff_fs Exp $";
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -58,7 +58,6 @@ rcsid[] = "$Id: m_menu.c,v 1.23 2001/02/18 17:13:26 proff_fs Exp $";
 #include "am_map.h"
 #include "i_main.h"
 #include "i_system.h"
-#include "i_video.h"
 
 extern patchnum_t hu_font[HU_FONTSIZE];
 extern boolean  message_dontfuckwithme;
@@ -333,7 +332,6 @@ void M_General(int);      // killough 10/98
 void M_DrawCompat(void);  // killough 10/98
 void M_DrawGeneral(void); // killough 10/98
 void M_Trans(void);       // killough 10/98
-void M_FullScreen(void);  // nathanh  01/01
 void M_ResetMenu(void);   // killough 10/98
 
 menu_t NewDef;                                              // phares 5/04/98
@@ -2891,7 +2889,6 @@ setup_menu_t* gen_settings[] =
 enum {
   general_trans,
   general_transpct,
-  general_fullscreen,
   general_pcx,
   general_diskicon,
   general_hom
@@ -2921,9 +2918,6 @@ setup_menu_t gen_settings1[] = { // General Settings screen1
 
   {"Translucency filter percentage", S_NUM, m_null, G_X,
    G_Y + general_transpct*8, {"tran_filter_pct"}, 0, 0, M_Trans},
-
-  {"Fullscreen Video mode", S_YESNO, m_null, G_X,
-   G_Y + general_fullscreen*8, {"use_fullscreen"}, 0, 0, M_FullScreen},
 
 #if 0
   {"PCX instead of BMP for screenshots", S_YESNO, m_null, G_X,
@@ -3024,12 +3018,6 @@ void M_Trans(void) // To reset translucency after setting it in menu
 {
   if (general_translucency)
     R_InitTranMap(0);
-}
-
-void M_FullScreen(void) // To (un)set fullscreen video after menu changes
-{
-  I_UpdateVideoMode();
-  V_SetPalette(0);
 }
 
 // Setting up for the General screen. Turn on flags, set pointers,
@@ -3745,7 +3733,7 @@ int M_GetKeyString(int c,int offset)
       case KEYD_END:        s = "END";  break;
       case KEYD_PAGEDOWN:   s = "PGDN"; break;
       case KEYD_INSERT:	    s = "INST"; break;
-      case KEYD_DEL:        s = "DEL";  break;
+      case KEYD_DEL:	      s = "DEL"; break;
       case KEYD_F10:        s = "F10";  break;
       case KEYD_F11:        s = "F11";  break;
       case KEYD_F12:        s = "F12";  break;
@@ -4160,12 +4148,11 @@ boolean M_Responder (event_t* ev) {
     return true;
   }
 
-  /* killough 2/22/98: add support for screenshot key:
-   * cph 2001/02/04: no need for this to be a gameaction, just do it
-   */
+  // killough 2/22/98: add support for screenshot key:
+
   if (ch == key_screenshot)
     {
-    M_ScreenShot ();
+    G_ScreenShot ();
     return true;
     }
 

@@ -1,7 +1,7 @@
 /* Emacs style mode select   -*- C++ -*- 
  *-----------------------------------------------------------------------------
  *
- * $Id: gl_texture.c,v 1.15 2001/02/11 16:35:34 proff_fs Exp $
+ * $Id: gl_texture.c,v 1.13.2.1 2001/02/11 17:36:19 proff_fs Exp $
  *
  *  PrBoom a Doom port merged with LxDoom and LSDLDoom
  *  based on BOOM, a modified and improved DOOM engine
@@ -362,18 +362,18 @@ void gld_BindTexture(GLTexture *gltexture)
     return;
   if (gltexture->textype!=GLDT_TEXTURE)
   {
-    p_glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_2D);
     return;
   }
   else
-    p_glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
   if (gltexture->glTexID[CR_DEFAULT]!=0)
   {
-   	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
-    p_glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
+   	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+    glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
-      lprintf(LO_INFO, "p_glGetTexParam: %i\n", i);
+      lprintf(LO_INFO, "glGetTexParam: %i\n", i);
 #endif
     if (i==GL_TRUE)
       return;
@@ -391,18 +391,18 @@ void gld_BindTexture(GLTexture *gltexture)
     W_UnlockLumpNum(texture->patches[i].patch);
   }
   if (gltexture->glTexID[CR_DEFAULT]==0)
-    p_glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
-	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+    glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
+	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
 #ifdef USE_GLU_MIPMAP
   if (gltexture->mipmap & use_mipmapping)
   {
-	  p_gluBuild2DMipmaps(GL_TEXTURE_2D, gl_tex_format,
+	  gluBuild2DMipmaps(GL_TEXTURE_2D, gl_tex_format,
 					            gltexture->buffer_width, gltexture->buffer_height,
 					            GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
   }
   else
 #endif /* USE_GLU_MIPMAP */
@@ -417,14 +417,14 @@ void gld_BindTexture(GLTexture *gltexture)
       scaledbuffer=(unsigned char*)Z_Malloc(gltexture->tex_width*gltexture->tex_height*4,PU_STATIC,0);
       if (scaledbuffer)
       {
-        p_gluScaleImage(GL_RGBA,
+        gluScaleImage(GL_RGBA,
                       gltexture->buffer_width, gltexture->buffer_height,
                       GL_UNSIGNED_BYTE,buffer,
                       gltexture->tex_width, gltexture->tex_height,
                       GL_UNSIGNED_BYTE,scaledbuffer);
         Z_Free(buffer);
         buffer=scaledbuffer;
-        p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
+        glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
                       gltexture->tex_width, gltexture->tex_height,
                       0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
       }
@@ -432,14 +432,14 @@ void gld_BindTexture(GLTexture *gltexture)
     else
 #endif /* USE_GLU_IMAGESCALE */
     {
-      p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
+      glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
                     gltexture->buffer_width, gltexture->buffer_height,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     }
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
   }
   Z_Free(buffer);
 }
@@ -501,18 +501,18 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
     return;
   if (gltexture->textype!=GLDT_PATCH)
   {
-    p_glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_2D);
     return;
   }
   else
-    p_glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
   if (gltexture->glTexID[cm]!=0)
   {
- 	  p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
-    p_glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
+ 	  glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+    glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
-      lprintf(LO_INFO, "p_glGetTexParam: %i\n", i);
+      lprintf(LO_INFO, "glGetTexParam: %i\n", i);
 #endif
     if (i==GL_TRUE)
       return;
@@ -522,8 +522,8 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
   memset(buffer,0,gltexture->buffer_size);
   gld_AddPatchToTexture(gltexture, buffer, patch, 0, 0, cm);
   if (gltexture->glTexID[cm]==0)
-	  p_glGenTextures(1,&gltexture->glTexID[cm]);
-	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+	  glGenTextures(1,&gltexture->glTexID[cm]);
+	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
 #ifdef USE_GLU_IMAGESCALE
   if ((gltexture->buffer_width>gltexture->tex_width) ||
       (gltexture->buffer_height>gltexture->tex_height)
@@ -534,14 +534,14 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
     scaledbuffer=(unsigned char*)Z_Malloc(gltexture->tex_width*gltexture->tex_height*4,PU_STATIC,0);
     if (scaledbuffer)
     {
-      p_gluScaleImage(GL_RGBA,
+      gluScaleImage(GL_RGBA,
                     gltexture->buffer_width, gltexture->buffer_height,
                     GL_UNSIGNED_BYTE,buffer,
                     gltexture->tex_width, gltexture->tex_height,
                     GL_UNSIGNED_BYTE,scaledbuffer);
       Z_Free(buffer);
       buffer=scaledbuffer;
-      p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
+      glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
                     gltexture->tex_width, gltexture->tex_height,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     }
@@ -549,14 +549,14 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
   else
 #endif /* USE_GLU_IMAGESCALE */
   {
-    p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
+    glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
                   gltexture->buffer_width, gltexture->buffer_height,
                   0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
   }
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-	p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
   Z_Free(buffer);
   W_UnlockLumpNum(gltexture->index);
 }
@@ -621,18 +621,18 @@ void gld_BindFlat(GLTexture *gltexture)
     return;
   if (gltexture->textype!=GLDT_FLAT)
   {
-    p_glDisable(GL_TEXTURE_2D);
+    glDisable(GL_TEXTURE_2D);
     return;
   }
   else
-    p_glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_2D);
   if (gltexture->glTexID[CR_DEFAULT]!=0)
   {
-   	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
-    p_glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
+   	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+    glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
-      lprintf(LO_INFO, "p_glGetTexParam: %i\n", i);
+      lprintf(LO_INFO, "glGetTexParam: %i\n", i);
 #endif
     if (i==GL_TRUE)
       return;
@@ -642,18 +642,18 @@ void gld_BindFlat(GLTexture *gltexture)
   memset(buffer,0,gltexture->buffer_size);
   gld_AddFlatToTexture(gltexture, buffer, flat);
   if (gltexture->glTexID[CR_DEFAULT]==0)
-  	p_glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
-	p_glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+  	glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
+	glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
 #ifdef USE_GLU_MIPMAP
   if (gltexture->mipmap & use_mipmapping)
   {
-	  p_gluBuild2DMipmaps(GL_TEXTURE_2D, gl_tex_format,
+	  gluBuild2DMipmaps(GL_TEXTURE_2D, gl_tex_format,
                       gltexture->buffer_width, gltexture->buffer_height,
 					            GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-    p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
   }
   else
 #endif /* USE_GLU_MIPMAP */
@@ -668,14 +668,14 @@ void gld_BindFlat(GLTexture *gltexture)
       scaledbuffer=(unsigned char*)Z_Malloc(gltexture->tex_width*gltexture->tex_height*4,PU_STATIC,0);
       if (scaledbuffer)
       {
-        p_gluScaleImage(GL_RGBA,
+        gluScaleImage(GL_RGBA,
                       gltexture->buffer_width, gltexture->buffer_height,
                       GL_UNSIGNED_BYTE,buffer,
                       gltexture->tex_width, gltexture->tex_height,
                       GL_UNSIGNED_BYTE,scaledbuffer);
         Z_Free(buffer);
         buffer=scaledbuffer;
-        p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
+        glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format,
                       gltexture->tex_width, gltexture->tex_height,
                       0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
       }
@@ -683,14 +683,14 @@ void gld_BindFlat(GLTexture *gltexture)
     else
 #endif /* USE_GLU_IMAGESCALE */
     {
-      p_glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
+      glTexImage2D( GL_TEXTURE_2D, 0, gl_tex_format, 
                     gltexture->buffer_width, gltexture->buffer_height,
                     0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     }
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
-	  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
+	  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
   }
   Z_Free(buffer);
   W_UnlockLumpNum(gltexture->index);
@@ -707,7 +707,7 @@ static void gld_CleanTextures(void)
     if (gld_GLTextures[i])
     {
       for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
-        p_glDeleteTextures(1,&(gld_GLTextures[i]->glTexID[j]));
+        glDeleteTextures(1,&(gld_GLTextures[i]->glTexID[j]));
       Z_Free(gld_GLTextures[i]);
     }
   }
@@ -725,7 +725,7 @@ static void gld_CleanPatchTextures(void)
     if (gld_GLPatchTextures[i])
     {
       for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
-        p_glDeleteTextures(1,&(gld_GLPatchTextures[i]->glTexID[j]));
+        glDeleteTextures(1,&(gld_GLPatchTextures[i]->glTexID[j]));
       Z_Free(gld_GLPatchTextures[i]);
     }
   }
