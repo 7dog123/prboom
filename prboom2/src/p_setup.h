@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -38,8 +38,7 @@
 #pragma interface
 #endif
 
-boolean P_CheckLevel(int lumpnum); // haleyjd: now used in d_main.c
-void P_SetupLevel(const char *, int playermask, skill_t skill);
+void P_SetupLevel(int episode, int map, int playermask, skill_t skill);
 void P_Init(void);               /* Called by startup code. */
 
 extern const byte *rejectmatrix;   /* for fast sight rejection -  cph - const* */
@@ -52,31 +51,5 @@ extern int      bmapheight;      /* in mapblocks */
 extern fixed_t  bmaporgx;
 extern fixed_t  bmaporgy;        /* origin of block map */
 extern mobj_t   **blocklinks;    /* for thing chains */
-
-extern int      newlevel;
-extern int      doom1level;
-extern char     *levelmapname;
-
-typedef struct                          // Standard OLO stuff, put in WADs
-{       
-  unsigned char header[3];                 // Header
-  unsigned char space1;
-  unsigned char extend;
-  unsigned char space2;
-  
-  // Standard
-  unsigned char levelwarp;
-  unsigned char lastlevel;
-  unsigned char deathmatch;
-  unsigned char skill_level;
-  unsigned char nomonsters;
-  unsigned char respawn;
-  unsigned char fast;
-
-  unsigned char levelname[32][32];
-} olo_t;
-
-extern olo_t olo;
-extern int olo_loaded;
 
 #endif

@@ -6,6 +6,6 @@ CFLAGS = @CFLAGS@ @SDL_CFLAGS@
 
 noinst_LIBRARIES = libsdldoom.a
 
-libsdldoom_a_SOURCES = i_video.c i_sound.c i_system.c i_axes.c
+libsdldoom_a_SOURCES = i_video.c i_sound.c i_system.c i_joy.c
 
 

@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -6,9 +6,9 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2002 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -39,12 +39,10 @@
 
 // We need globally shared data structures,
 //  for defining the global state variables.
-#include "doomdata.h"
 #include "d_net.h"
 
 // We need the playr data structure as well.
 #include "d_player.h"
-#include "p_chase.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -74,7 +72,7 @@ extern complevel_t compatibility_level, default_compatibility_level;
 
 // CPhipps - old compatibility testing flags aliased to new handling
 #define compatibility (compatibility_level<=boom_compatibility_compatibility)
-#define demo_compatibility (compatibility_level < boom_compatibility_compatibility)
+#define demo_compatibility (compatibility_level <= doom_demo_compatibility)
 #define mbf_features (compatibility_level>=mbf_compatibility)
 
 // v1.1-like pitched sounds
@@ -111,9 +109,6 @@ enum {
   comp_moveblock,
   comp_respawn,  /* cph - this is the inverse of comp_respawnfix from eternity */
   comp_sound,
-  comp_666,
-  comp_soul,
-  comp_maskedanim,
   COMP_NUM,      /* cph - should be last in sequence */
   COMP_TOTAL=32  // Some extra room for additional variables
 };
@@ -212,7 +207,6 @@ extern  int viewangleoffset;
 // Player taking events, and displaying.
 extern  int consoleplayer;
 extern  int displayplayer;
-extern camera_t* camera;
 
 // -------------------------------------
 // Scores, rating.
@@ -279,6 +273,10 @@ extern int maxammo[];
 // Internal parameters, used for engine.
 //
 
+// File handling stuff.
+extern  char    basedefault[];
+extern  FILE   *debugfile;
+
 // if true, load all graphics at level load
 extern  boolean precache;
 
@@ -309,6 +307,8 @@ extern  int        maketic;
 
 extern  ticcmd_t   netcmds[][BACKUPTICS];
 extern  int        ticdup;
+
+extern thinker_t thinkercap;  // Both the head and tail of the thinker list
 
 //-----------------------------------------------------------------------------
 
@@ -358,7 +358,5 @@ extern int doom_weapon_toggles;   // killough 10/98
 extern int monster_infighting, default_monster_infighting;
 
 extern int monkeys, default_monkeys;
-
-extern int HelperThing;          // type of thing to use for helper
 
 #endif

@@ -4,12 +4,12 @@ Name: %{doomname}
 Summary: Doom - classic 3D shoot-em-up game
 Version: @VERSION@
 Release: 1
-Source: ftp://download.sourceforge.net/pub/sourceforge/prboom/@PACKAGE@-@VERSION@.tar.gz
+Source: ftp://prdownloads.sourceforge.net/prboom/@PACKAGE@-@VERSION@.tar.gz
 URL: http://prboom.sourceforge.net/
 Group: Amusements/Games
 BuildRoot: /var/tmp/%{doomname}-buildroot
 Copyright: GPL
-Packager: Colin Phipps <cph@cph.demon.co.uk>
+Packager: Colin Phipps <doom@cph.demon.co.uk>
 Prefix: %{_prefix}
 Autoreq: 0
 Requires: libSDL-1.2.so.0, libSDL_mixer-1.2.so.0, libSDL_net-1.2.so.0, libm.so.6, libc.so.6
@@ -28,7 +28,20 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q
 
 %build
-%configure --disable-cpu-opt --program-prefix=''
+./configure --disable-cpu-opt \
+ 	--prefix=/usr \
+	--exec-prefix=/usr \
+	--bindir=/usr/bin \
+	--sbindir=/usr/sbin \
+	--sysconfdir=/etc \
+	--datadir=/usr/share \
+	--includedir=/usr/include \
+	--libdir=/usr/lib \
+	--libexecdir=/usr/lib \
+	--localstatedir=/var/lib \
+	--sharedstatedir=/usr/com \
+	--mandir=/usr/share/man \
+	--infodir=/usr/share/info
 make
 
 %install
@@ -38,8 +51,8 @@ make
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{_mandir}/man5/*
-%{_mandir}/man6/*
+%doc %{_mandir}/man5/*
+%doc %{_mandir}/man6/*
 %doc NEWS
 %doc AUTHORS
 %doc README

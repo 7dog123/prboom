@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -37,28 +37,17 @@
 // SoundFX struct.
 //
 
-struct sfxinfo_s;
+struct sfxinfo_struct;
 
-typedef struct sfxinfo_s sfxinfo_t;
-typedef struct musicinfo_s musicinfo_t;
+typedef struct sfxinfo_struct sfxinfo_t;
 
-struct sfxinfo_s
-{
+struct sfxinfo_struct {
 
   // up to 6-character name
   const char *name; // CPhipps - const
 
   // Sfx singularity (only one at a time)
-  // killough 12/98: implement separate classes of singularity
-  enum
-  {
-    sg_none,
-    sg_itemup,
-    sg_wpnup,
-    sg_oof,
-    sg_getpow
-  }
-  singularity;
+  int singularity;
 
   // Sfx priority
   int priority;
@@ -82,31 +71,25 @@ struct sfxinfo_s
 
   // lump number of sfx
   int lumpnum;
-
-  int length;   // lump length
-
-  sfxinfo_t *next;      // next in hash chain
 };
 
 //
 // MusicInfo struct.
 //
 
-struct musicinfo_s
-{
+typedef struct {
   // up to 6-character name
   const char *name; // CPhipps - const
 
   // lump number of music
   int lumpnum;
 
-  /* music data - cphipps 4/11 made const void* */ 
+  /* music data - cphipps 4/11 made const void* */
   const void *data;
 
-  // sf: for hashing
-  musicinfo_t *next;
-  
-};
+  // music handle once registered
+  int handle;
+} musicinfo_t;
 
 // the complete set of sound effects
 extern sfxinfo_t    S_sfx[];
@@ -316,7 +299,5 @@ typedef enum {
 
   NUMSFX
 } sfxenum_t;
-
-extern sfxinfo_t chgun;
 
 #endif

@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -35,10 +35,6 @@
 //#include "v_video.h"
 
 #include "doomdef.h"
-
-// intercam
-        // more than enough
-#define MAXCAMERAS 128
 
 // States for the intermission
 
@@ -59,13 +55,6 @@ void WI_Drawer (void);
 
 // Setup for an intermission screen.
 void WI_Start(wbstartstruct_t*   wbstartstruct);
-
-void WI_checkForAccelerate(void);      // killough 11/98
-
-void WI_DrawBackground(void);          // killough 11/98
-
-void WI_AddCamera(mapthing_t *mthing);
-void WI_StopCamera();
 
 // Release intermission screen memory
 void WI_End(void);

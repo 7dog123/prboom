@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,8 +31,6 @@
 
 #ifndef __S_SOUND__
 #define __S_SOUND__
-
-#include "sounds.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -44,7 +42,6 @@
 //  allocates channel buffer, sets S_sfx lookup.
 //
 void S_Init(int sfxVolume, int musicVolume);
-void S_InvalidateCache(void);
 
 //
 // Per level startup code.
@@ -57,41 +54,34 @@ void S_Start(void);
 // Start sound for thing at <origin>
 //  using <sound_id> from sounds.h
 //
-void S_StartSound(const mobj_t *origin, int sound_id);
-void S_StartSoundName(const mobj_t *origin, char *name);
-//void S_StartSfxInfo(const mobj_t *origin, sfxinfo_t *sfx);
+void S_StartSound(void *origin, int sound_id);
+
+// Will start a sound at a given volume.
+void S_StartSoundAtVolume(void *origin, int sound_id, int volume);
+
+// killough 4/25/98: mask used to indicate sound origin is player item pickup
+#define PICKUP_SOUND (0x8000)
 
 // Stop sound for thing at <origin>
-void S_StopSound(const mobj_t* origin);
+void S_StopSound(void* origin);
 
 // Start music using <music_id> from sounds.h
 void S_StartMusic(int music_id);
-void S_StartRandomMusic();
 
 // Start music using <music_id> from sounds.h, and set whether looping
-void S_ChangeMusicNum(int music_id, int looping);
-void S_ChangeMusicName(char *name, int looping);
-void S_ChangeMusic(musicinfo_t *music, int looping);
+void S_ChangeMusic(int music_id, int looping);
 
 // Stops the music fer sure.
 void S_StopMusic(void);
-void S_StopSounds(void);
 
 // Stop and resume music, during game PAUSE.
 void S_PauseSound(void);
 void S_ResumeSound(void);
 
-sfxinfo_t *S_SfxInfoForName(char *name);
-void S_UpdateSound(int lumpnum);
-void S_Chgun();
-
-musicinfo_t *S_MusicForName(char *name);
-void S_UpdateMusic(int lumpnum);
-
 //
 // Updates music & sounds
 //
-void S_UpdateSounds(const mobj_t* listener);
+void S_UpdateSounds(void* listener);
 void S_SetMusicVolume(int volume);
 void S_SetSfxVolume(int volume);
 

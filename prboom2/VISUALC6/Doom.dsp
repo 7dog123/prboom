@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=Doom - Win32 Release
+CFG=Doom - Win32 Debug OpenGL NOASM
 !MESSAGE Dies ist kein gültiges Makefile. Zum Erstellen dieses Projekts mit NMAKE
 !MESSAGE verwenden Sie den Befehl "Makefile exportieren" und führen Sie den Befehl
 !MESSAGE 
@@ -13,14 +13,18 @@ CFG=Doom - Win32 Release
 !MESSAGE Sie können beim Ausführen von NMAKE eine Konfiguration angeben
 !MESSAGE durch Definieren des Makros CFG in der Befehlszeile. Zum Beispiel:
 !MESSAGE 
-!MESSAGE NMAKE /f "Doom.mak" CFG="Doom - Win32 Release"
+!MESSAGE NMAKE /f "Doom.mak" CFG="Doom - Win32 Debug OpenGL NOASM"
 !MESSAGE 
 !MESSAGE Für die Konfiguration stehen zur Auswahl:
 !MESSAGE 
 !MESSAGE "Doom - Win32 Release" (basierend auf  "Win32 (x86) Application")
 !MESSAGE "Doom - Win32 Debug" (basierend auf  "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release OpenGL" (basierend auf  "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug OpenGL" (basierend auf  "Win32 (x86) Application")
 !MESSAGE "Doom - Win32 Release NOASM" (basierend auf  "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release OpenGL NOASM" (basierend auf  "Win32 (x86) Application")
 !MESSAGE "Doom - Win32 Debug NOASM" (basierend auf  "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug OpenGL NOASM" (basierend auf  "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -45,7 +49,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "I386_ASM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "..\src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
@@ -55,7 +59,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 user32.lib gdi32.lib kernel32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"Release/prboom.exe"
+# ADD LINK32 user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"Release/prboom.exe"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
@@ -72,7 +76,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MDd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "I386_ASM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /FR /YX /FD /c
+# ADD CPP /nologo /MDd /W3 /WX /Gm /GX /ZI /Od /I "..\src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
@@ -82,7 +86,63 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 user32.lib gdi32.lib kernel32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom.exe" /pdbtype:sept
+# ADD LINK32 user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom.exe" /pdbtype:sept
+# SUBTRACT LINK32 /profile
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ReleaseGL"
+# PROP BASE Intermediate_Dir "ReleaseGL"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ReleaseGL"
+# PROP Intermediate_Dir "ReleaseGL"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "USE_SDL" /D "HIGHRES" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "..\src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
+# ADD BASE RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x407 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib /nologo /subsystem:windows /machine:I386
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /profile /machine:I386 /out:"ReleaseGL/glboom.exe"
+# SUBTRACT LINK32 /debug
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "DebugGL"
+# PROP BASE Intermediate_Dir "DebugGL"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "DebugGL"
+# PROP Intermediate_Dir "DebugGL"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "USE_SDL" /D "HIGHRES" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /Gm /GX /ZI /Od /I "..\src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
+# ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
+# ADD BASE RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x407 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugGL/glboom.exe"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
@@ -100,7 +160,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "..\src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
@@ -110,8 +170,37 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 user32.lib gdi32.lib kernel32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASM/prboom.exe"
+# ADD LINK32 user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASM/prboom.exe"
 # SUBTRACT LINK32 /profile
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ReleaseNOASMGL"
+# PROP BASE Intermediate_Dir "ReleaseNOASMGL"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ReleaseNOASMGL"
+# PROP Intermediate_Dir "ReleaseNOASMGL"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /GX /O2 /I "..\src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
+# ADD BASE RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x407 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib opengl32.lib glu32.lib /nologo /subsystem:windows /machine:I386
+# SUBTRACT BASE LINK32 /profile /debug
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASMGL/glboom.exe"
+# SUBTRACT LINK32 /profile /debug
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
 
@@ -128,7 +217,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
-# ADD CPP /nologo /MDd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MDd /W3 /WX /Gm /GX /ZI /Od /I "..\src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
@@ -139,7 +228,36 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom.exe" /pdbtype:sept
 # SUBTRACT BASE LINK32 /profile
-# ADD LINK32 user32.lib gdi32.lib kernel32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASM/prboom.exe" /pdbtype:sept
+# ADD LINK32 user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASM/prboom.exe" /pdbtype:sept
+# SUBTRACT LINK32 /profile
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "Doom___Win32_Debug_OpenGL_NOASM"
+# PROP BASE Intermediate_Dir "Doom___Win32_Debug_OpenGL_NOASM"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "DebugNOASMGL"
+# PROP Intermediate_Dir "DebugNOASMGL"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MD /W3 /Gm /GX /ZI /Od /I "..\src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /WX /Gm /GX /ZI /Od /I "..\src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
+# ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
+# ADD BASE RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x407 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugGL/glboom.exe"
+# SUBTRACT BASE LINK32 /profile
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdlmain.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASMGL/glboom.exe"
 # SUBTRACT LINK32 /profile
 
 !ENDIF 
@@ -148,12 +266,13 @@ LINK32=link.exe
 
 # Name "Doom - Win32 Release"
 # Name "Doom - Win32 Debug"
+# Name "Doom - Win32 Release OpenGL"
+# Name "Doom - Win32 Debug OpenGL"
 # Name "Doom - Win32 Release NOASM"
+# Name "Doom - Win32 Release OpenGL NOASM"
 # Name "Doom - Win32 Debug NOASM"
+# Name "Doom - Win32 Debug OpenGL NOASM"
 # Begin Group "Source Files"
-
-# PROP Default_Filter ""
-# Begin Group "am_"
 
 # PROP Default_Filter ""
 # Begin Source File
@@ -164,42 +283,10 @@ SOURCE=..\src\am_map.c
 
 SOURCE=..\src\am_map.h
 # End Source File
-# End Group
-# Begin Group "c_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\c_cmd.c
+SOURCE=..\config.h
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\c_io.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\c_io.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\c_net.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\c_net.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\c_runcmd.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\c_runcmd.h
-# End Source File
-# End Group
-# Begin Group "d_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\src\d_client.c
@@ -252,10 +339,6 @@ SOURCE=..\src\d_think.h
 
 SOURCE=..\src\d_ticcmd.h
 # End Source File
-# End Group
-# Begin Group "doom"
-
-# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\src\doomdata.h
@@ -280,10 +363,18 @@ SOURCE=..\src\doomstat.h
 
 SOURCE=..\src\doomtype.h
 # End Source File
-# End Group
-# Begin Group "f_"
+# Begin Source File
 
-# PROP Default_Filter ""
+SOURCE=..\src\drawasm.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\dstrings.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\dstrings.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\f_finale.c
@@ -295,46 +386,66 @@ SOURCE=..\src\f_finale.h
 # Begin Source File
 
 SOURCE=..\src\f_wipe.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+# PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\f_wipe.h
-# End Source File
-# End Group
-# Begin Group "g_"
 
-# PROP Default_Filter ""
-# Begin Source File
+!IF  "$(CFG)" == "Doom - Win32 Release"
 
-SOURCE=..\src\g_bind.c
-# End Source File
-# Begin Source File
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
 
-SOURCE=..\src\g_bind.h
-# End Source File
-# Begin Source File
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
 
-SOURCE=..\src\g_bindaxes.c
-# End Source File
-# Begin Source File
+# PROP Exclude_From_Build 1
 
-SOURCE=..\src\g_bindaxes.h
-# End Source File
-# Begin Source File
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
-SOURCE=..\src\g_cmd.c
-# End Source File
-# Begin Source File
+# PROP Exclude_From_Build 1
 
-SOURCE=..\src\g_config.c
-# End Source File
-# Begin Source File
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
-SOURCE=..\src\g_config.h
-# End Source File
-# Begin Source File
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
 
-SOURCE=..\src\g_demo.c
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+# PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -344,25 +455,13 @@ SOURCE=..\src\g_game.c
 
 SOURCE=..\src\g_game.h
 # End Source File
-# End Group
-# Begin Group "hu_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\hu_frags.c
+SOURCE=..\src\hu_lib.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\hu_frags.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\hu_over.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\hu_over.h
+SOURCE=..\src\hu_lib.h
 # End Source File
 # Begin Source File
 
@@ -372,17 +471,13 @@ SOURCE=..\src\hu_stuff.c
 
 SOURCE=..\src\hu_stuff.h
 # End Source File
-# End Group
-# Begin Group "i_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\SDL\i_axes.c
+SOURCE=..\src\Sdl\i_joy.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\i_axes.h
+SOURCE=..\src\i_joy.h
 # End Source File
 # Begin Source File
 
@@ -428,10 +523,22 @@ SOURCE=..\src\sdl\i_video.c
 
 SOURCE=..\src\i_video.h
 # End Source File
-# End Group
-# Begin Group "m_"
+# Begin Source File
 
-# PROP Default_Filter ""
+SOURCE=..\src\info.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\info.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\lprintf.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\lprintf.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\m_argv.c
@@ -458,15 +565,15 @@ SOURCE=..\src\m_cheat.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\m_fcvt.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\m_fcvt.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\m_fixed.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\m_menu.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\m_menu.h
 # End Source File
 # Begin Source File
 
@@ -488,53 +595,17 @@ SOURCE=..\src\m_random.h
 
 SOURCE=..\src\m_swap.h
 # End Source File
-# End Group
-# Begin Group "mn_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\mn_engin.c
+SOURCE=..\src\Mmus2mid.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\mn_engin.h
+SOURCE=..\src\Mmus2mid.h
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\mn_menus.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\mn_menus.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\mn_misc.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\mn_misc.h
-# End Source File
-# End Group
-# Begin Group "p_"
-
-# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\src\p_ceilng.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_chase.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_chase.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_cmd.c
 # End Source File
 # Begin Source File
 
@@ -555,22 +626,6 @@ SOURCE=..\src\p_floor.c
 # Begin Source File
 
 SOURCE=..\src\p_genlin.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_hubs.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_hubs.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_info.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\p_info.h
 # End Source File
 # Begin Source File
 
@@ -672,10 +727,10 @@ SOURCE=..\src\p_user.c
 
 SOURCE=..\src\p_user.h
 # End Source File
-# End Group
-# Begin Group "r_"
+# Begin Source File
 
-# PROP Default_Filter ""
+SOURCE=..\src\protocol.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\r_bsp.c
@@ -706,35 +761,11 @@ SOURCE=..\src\r_draw.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\inl\r_drawcolumn.inl
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\inl\r_drawspan.inl
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\r_filter.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\r_filter.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\r_main.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\r_main.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\r_patch.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\r_patch.h
 # End Source File
 # Begin Source File
 
@@ -771,115 +802,6 @@ SOURCE=..\src\r_things.c
 # Begin Source File
 
 SOURCE=..\src\r_things.h
-# End Source File
-# End Group
-# Begin Group "t_"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\t_func.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_func.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_oper.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_oper.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_parse.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_parse.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_prepro.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_prepro.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_script.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_script.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_spec.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_spec.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_vari.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\t_vari.h
-# End Source File
-# End Group
-# Begin Source File
-
-SOURCE=.\config.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\dstrings.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\dstrings.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\info.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\info.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\lprintf.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\lprintf.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\Mmus2mid.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\Mmus2mid.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\protocol.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\psnprntf.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\psnprntf.h
 # End Source File
 # Begin Source File
 
@@ -923,14 +845,6 @@ SOURCE=..\src\tables.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\v_misc.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\v_misc.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\v_video.c
 # End Source File
 # Begin Source File
@@ -939,19 +853,11 @@ SOURCE=..\src\v_video.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\inl\v_video.inl
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\version.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\version.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\w_mmap.c
 # End Source File
 # Begin Source File
 
@@ -991,31 +897,33 @@ SOURCE=..\src\z_zone.h
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\gl_dyn.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\gl_dyn.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\gl_funcs.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\gl_intern.h
 
 !IF  "$(CFG)" == "Doom - Win32 Release"
 
+# PROP Exclude_From_Build 1
+
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
 
 !ENDIF 
 
@@ -1026,22 +934,32 @@ SOURCE=..\src\gl_main.c
 
 !IF  "$(CFG)" == "Doom - Win32 Release"
 
+# PROP Exclude_From_Build 1
+
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
 
 !ENDIF 
 
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\gl_preprocess.c
 # End Source File
 # Begin Source File
 
@@ -1049,15 +967,29 @@ SOURCE=..\src\gl_struct.h
 
 !IF  "$(CFG)" == "Doom - Win32 Release"
 
+# PROP Exclude_From_Build 1
+
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
 
 !ENDIF 
 
@@ -1068,15 +1000,29 @@ SOURCE=..\src\gl_texture.c
 
 !IF  "$(CFG)" == "Doom - Win32 Release"
 
+# PROP Exclude_From_Build 1
+
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
 
 # PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
 
 !ENDIF 
 
@@ -1112,46 +1058,6 @@ SOURCE=..\Icons\resource.h
 # Begin Source File
 
 SOURCE=..\Icons\skull.ico
-# End Source File
-# End Group
-# Begin Group "VIDD Source Files"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_menu.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_play.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_prop.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_prop.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_rec.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_util.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\vidd\vidd_util.h
 # End Source File
 # End Group
 # End Target

@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -36,7 +36,6 @@
 
 #include "r_defs.h"
 #include "r_state.h"
-#include "r_patch.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -48,7 +47,7 @@ typedef struct
 {
   int originx, originy;  // Block origin, which has already accounted
   int patch;             // for the internal origin of the patch.
-} texpatch_t __attribute__((packed));
+} texpatch_t;
 
 //
 // Texture definition.
@@ -62,6 +61,10 @@ typedef struct
   int   next, index;     // killough 1/31/98: used in hashing algorithm
   // CPhipps - moved arrays with per-texture entries to elements here
   unsigned  widthmask;
+  size_t    compositesize;
+  byte     *composite;
+  short    *columnlump;
+  unsigned *columnofs;
   // CPhipps - end of additions
   short width, height;
   short patchcount;      // All the patches[patchcount] are drawn
@@ -69,12 +72,14 @@ typedef struct
 } texture_t;
 
 // Retrieve column data for span blitting.
-const byte *R_GetTextureColumn(const TPatch *texpatch, int col);
+const byte*
+R_GetColumn
+( int           tex,
+  int           col );
 
 
 // I/O, setting up the stuff.
 void R_InitData (void);
-void R_FreeData(void);
 void R_PrecacheLevel (void);
 
 
@@ -87,19 +92,14 @@ int R_FlatNumForName (const char* name);   // killough -- const added
 // Called by P_Ticker for switches and animations,
 // returns the texture number for the texture name.
 int R_TextureNumForName (const char *name);    // killough -- const added
-int R_CheckTextureNumForName (const char *name); 
+int R_CheckTextureNumForName (const char *name);
 
 void R_InitTranMap(int);      // killough 3/6/98: translucency initialization
 int R_ColormapNumForName(const char *name);      // killough 4/4/98
-/* cph 2001/11/17 - new func to do lighting calcs and get suitable colour map */
-const lighttable_t* R_ColourMap(int lightlevel, fixed_t spryscale);
 
 extern const byte *main_tranmap, *tranmap;
 
 /* Proff - Added for OpenGL - cph - const char* param */
 void R_SetPatchNum(patchnum_t *patchnum, const char *name);
-
-extern int numtextures;
-extern texture_t **textures; // POPE
 
 #endif

@@ -1,72 +1,27 @@
-This file shows a history of changes between PrBoom versions since v2.2.0.
-For historical reference, the changes since v2.1.0 and the complete LxDoom
-changelog follows it.
+This file shows a history of changes between PrBoom versions since v2.1.0.
+For historical reference, the complete LxDoom changelog follows it.
 
-Changes from 2.3.2 to 2.4.0
-
-Changes from v2.3.1 to v2.3.2
-- fix Inferno intermission screens
-- don't play music when volume is 0
+Changes from v2.2.5 to v2.2.6
+- fix Inferno intermission screen crash
+- fix lockup for other netgame clients when one client quits
+- fix memory leak in netgame server
+- fix SDL_LockScreen crashes on Win32
 - fix fuzz drawing for hi-res
 - network games should survive temporary loss of connection
-- fixed patch drawing with VPT_FLIP (Doom2 cast drawing)
 - fix dehacked NOSECTOR/NOBLOCKMAP effects
 - fix player spawn sound
 
-Changes from v2.3.0 to v2.3.1
-- disabled vidd support, because currently it's broken
-- network console variables are exchanged now
-- waiting for network can be aborted on windows
-- several keys didn't work in demo playback
-- fixed levelname and other widgets on automap
-- load opengl library only once to prevent error on mode switching
-- fix savegame handling
-- unavailable IWADs are disabled in the load wad menu
-- several small fixes to the new software renderer
-- reimplemented multipatch textures on two sided lines
-- fixed buffer overflow on intermission texts
-- filenames with dots beside the one on the extension work better now
-- fixed texture pegging of upper textures in OpenGL
-- correctly search prboom.wad
-- removed hubs and fragglescript as they are too buggy
-- fixed savegame root directory
-- fixed several endian problems (for PowerPC and Sparc)
-- added more options to menus
-- fixed some default config values
-- load OpenGL libraries only when needed
-- autorun available in key bindings menu
-- live monster counter for HUD
+Changes from v2.2.4 to v2.2.5
+- fix crash caused by long messages in HUD
+- live monster counter on HUD
+- notify server if client quits during startup wait
+- improved response file parser
 - fast forward to given map # in demo playback
 - fixes for various sound bugs
 - fix doom2 demos at levels with >10 deathmatch starts
 - and more compatibility and demo fixes
 - support higher-turning-resolution demos from v1.91
-
-Changes from v2.2.4 to v2.3.0
-- the OpenGL libs are loaded dynamically
-- only one executable for software rendering and OpenGL
-- option for sound compatibility with original Doom
-- added more compatibility levels (check frontend configurations!)
-- in game switching between fullscreen and windowed mode
-- fix super-shotgun reload on last shot
-- intermission demo sync bug fixed
-- support for more and less then 8 channels
-- improved response file parser
-- replaced use_vsync with use_doublebuffer in cfg file and implemented
-  double buffering
-- removed old Doom v1.2 lumps from prboom.wad
-- windows also uses prboom.wad now
-- removed lumps and tables which are in prboom.wad from source
-- fix translucency map file handle leak
-- added a quake like console
-- new menu code and much more options available through it
-- reworked software renderer
-- bilinear filter for software rendering
-- AdvanceScale2x like filter, but working on individual lines not fullscreen
-- smooth edges on masked textures and sprites
-- 16bit and 32bit software rendering
-- sound and video settings changeable while running (Software <-> OpenGL)
-- VIDD (Version Independant Doom Demo) support
+- fix compilation with gcc 3.4.x
 
 Changes from v2.2.3 to v2.2.4
 - fixed sky-over-sky HOM
@@ -87,6 +42,7 @@ Changes from v2.2.3 to v2.2.4
 
 Changes from v2.2.2 to v2.2.3
 - improved mouse handling
+- intermission demo sync bug fixed
 - framebuffer update fixes (solves flicker on fbcon)
 - -forceoldbsp allowed in non-GL version, and saved in demos
 - fix player colours in multiplayer demos

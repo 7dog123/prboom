@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -43,7 +43,7 @@
 #endif
 
 // Init at program start...
-void I_InitSound(boolean first);
+void I_InitSound(void);
 
 // ... shut down and relase at program termination.
 void I_ShutdownSound(void);
@@ -59,7 +59,7 @@ void I_SetChannels(void);
 int I_GetSfxLumpNum (sfxinfo_t *sfxinfo);
 
 // Starts a sound in a particular sound channel.
-int I_StartSound(sfxinfo_t *sfx, int channel, int vol, int sep, int pitch, int priority);
+int I_StartSound(int id, int channel, int vol, int sep, int pitch, int priority);
 
 // Stops a sound channel.
 void I_StopSound(int handle);
@@ -83,11 +83,11 @@ void I_ShutdownMusic(void);
 void I_SetMusicVolume(int volume);
 
 // PAUSE game handling.
-void I_PauseSong(void);
-void I_ResumeSong(void);
+void I_PauseSong(int handle);
+void I_ResumeSong(int handle);
 
 // Registers a song handle to song data.
-void I_RegisterSong(const void *data, size_t len);
+int I_RegisterSong(const void *data, size_t len);
 
 // cournia - tries to load a music file
 int I_RegisterMusic( const char* filename, musicinfo_t *music );
@@ -96,13 +96,13 @@ int I_RegisterMusic( const char* filename, musicinfo_t *music );
 //  plays a song, and when the song is done,
 //  starts playing it again in an endless loop.
 // Horrible thing to do, considering.
-void I_PlaySong(int looping);
+void I_PlaySong(int handle, int looping);
 
 // Stops a song over 3 seconds.
-void I_StopSong(void);
+void I_StopSong(int handle);
 
 // See above (register), then think backwards
-void I_UnRegisterSong(void);
+void I_UnRegisterSong(int handle);
 
 // Allegro card support jff 1/18/98
 extern int snd_card;
@@ -110,7 +110,7 @@ extern int mus_card;
 // CPhipps - put these in config file
 extern const char* sndserver_filename;
 extern const char* snd_device;
-extern const char* musserver_filename; 
+extern const char* musserver_filename;
 extern int snd_samplerate;
 
 #endif
