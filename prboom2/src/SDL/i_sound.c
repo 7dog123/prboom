@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,7 +31,10 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
+#endif
+#ifdef HAVE_LIBSDL_MIXER
+#define HAVE_MIXER
 #endif
 #include <math.h>
 #ifdef HAVE_UNISTD_H
@@ -43,13 +46,11 @@
 #include "SDL_mutex.h"
 #include "SDL_byteorder.h"
 #include "SDL_version.h"
+#ifdef HAVE_MIXER
 #include "SDL_mixer.h"
+#endif
 
 #include "z_zone.h"
-
-#include "doomdef.h"
-#include "doomstat.h"
-#include "doomtype.h"
 
 #include "m_swap.h"
 #include "i_system.h"
@@ -60,6 +61,10 @@
 #include "lprintf.h"
 #include "s_sound.h"
 
+#include "doomdef.h"
+#include "doomstat.h"
+#include "doomtype.h"
+
 #include "d_main.h"
 
 // The number of internal mixing channels,
@@ -67,17 +72,16 @@
 //  the size of the 16bit, 2 hardware channel (stereo)
 //  mixing buffer, and the samplerate of the raw data.
 
+#define PIPE_CHECK(fh) if (broken_pipe) { fclose(fh); fh = NULL; broken_pipe = 0; }
+
 // Variables used by Boom from Allegro
 // created here to avoid changes to core Boom files
-int snd_card = -1;
-int mus_card = -1;
+int snd_card = 1;
+int mus_card = 1;
 int detect_voices = 0; // God knows
 
-static boolean sound_inited = false;
-static boolean first_sound_init = true;
-
 // Needed for calling the actual sound output.
-static int SAMPLECOUNT = 512;
+static int SAMPLECOUNT=   512;
 #define MAX_CHANNELS    32
 
 // MWM 2000-01-08: Sample rate in samples/second
@@ -87,20 +91,22 @@ int snd_samplerate=11025;
 int audio_fd;
 
 typedef struct {
-  int lumpnum;
-  // The channel step amount...
+  // SFX id of the playing sound effect.
+  // Used to catch duplicates (like chainsaw).
+  int id;
+// The channel step amount...
   unsigned int step;
-  // ... and a 0.16 bit remainder of last step.
+// ... and a 0.16 bit remainder of last step.
   unsigned int stepremainder;
   unsigned int samplerate;
-  // The channel data pointers, start and end.
+// The channel data pointers, start and end.
   const unsigned char* data;
   const unsigned char* enddata;
-  // Time/gametic that the channel started playing,
-  //  used to determine oldest, which automatically
-  //  has lowest priority.
-  // In case number of active sounds exceeds
-  //  available channels.
+// Time/gametic that the channel started playing,
+//  used to determine oldest, which automatically
+//  has lowest priority.
+// In case number of active sounds exceeds
+//  available channels.
   int starttime;
   // Hardware left and right channel volume lookup.
   int *leftvol_lookup;
@@ -110,14 +116,14 @@ typedef struct {
 channel_info_t channelinfo[MAX_CHANNELS];
 
 // Pitch to stepping lookup, unused.
-int steptable[256];
+int   steptable[256];
 
 // Volume lookups.
-int vol_lookup[128*256];
+int   vol_lookup[128*256];
 
-/* cph 
+/* cph
  * stopchan
- * Stops a sound, unlocks the data 
+ * Stops a sound, unlocks the data
  */
 
 static void stopchan(int i)
@@ -125,7 +131,7 @@ static void stopchan(int i)
   if (channelinfo[i].data) /* cph - prevent excess unlocks */
   {
     channelinfo[i].data=NULL;
-    W_UnlockLumpNum(channelinfo[i].lumpnum);
+    W_UnlockLumpNum(S_sfx[channelinfo[i].id].lumpnum);
   }
 }
 
@@ -136,30 +142,36 @@ static void stopchan(int i)
 //  (eight, usually) of internal channels.
 // Returns a handle.
 //
-int addsfx(sfxinfo_t *sfx, int channel)
+int addsfx(int sfxid, int channel)
 {
+    int   oldest = gametic;
+    int   oldestnum = 0;
+
   stopchan(channel);
 
   // We will handle the new SFX.
-  // Set pointer to raw data.
-  {
-    int lumpnum = sfx->lumpnum;
-    size_t len = W_LumpLength(lumpnum);
+    // Set pointer to raw data.
+    {
+      int lump = S_sfx[sfxid].lumpnum;
+      size_t len = W_LumpLength(lump);
 
-    /* Find padded length */
+      /* Find padded length */
     len -= 8;
-    channelinfo[channel].data = W_CacheLumpNum(lumpnum);
-      
-    /* Set pointer to end of raw data. */
+    channelinfo[channel].data = W_CacheLumpNum(lump);
+
+      /* Set pointer to end of raw data. */
     channelinfo[channel].enddata = channelinfo[channel].data + len - 1;
     channelinfo[channel].samplerate = (channelinfo[channel].data[3]<<8)+channelinfo[channel].data[2];
     channelinfo[channel].data += 8; /* Skip header */
-    channelinfo[channel].lumpnum = lumpnum;
-  }
+    }
 
   channelinfo[channel].stepremainder = 0;
-  // Should be gametic, I presume.
+    // Should be gametic, I presume.
   channelinfo[channel].starttime = gametic;
+
+    // Preserve sound SFX id,
+    //  e.g. for avoiding duplicates of chainsaw.
+  channelinfo[channel].id = sfxid;
 
   return channel;
 }
@@ -167,9 +179,9 @@ int addsfx(sfxinfo_t *sfx, int channel)
 static void updateSoundParams(int handle, int volume, int seperation, int pitch)
 {
   int slot = handle;
-  int rightvol;
-  int leftvol;
-  int step = steptable[pitch];
+    int   rightvol;
+    int   leftvol;
+    int         step = steptable[pitch];
 
 #ifdef RANGECHECK
   if (handle>=MAX_CHANNELS)
@@ -180,31 +192,31 @@ static void updateSoundParams(int handle, int volume, int seperation, int pitch)
   // to global samplerate for mixing purposes.
   // Patched to shift left *then* divide, to minimize roundoff errors
   // as well as to use SAMPLERATE as defined above, not to assume 11025 Hz
-  if (pitched_sounds)
+    if (pitched_sounds)
     channelinfo[slot].step = step + (((channelinfo[slot].samplerate<<16)/snd_samplerate)-65536);
-  else
+    else
     channelinfo[slot].step = ((channelinfo[slot].samplerate<<16)/snd_samplerate);
-  
-  // Separation, that is, orientation/stereo.
-  //  range is: 1 - 256
-  seperation += 1;
 
-  // Per left/right channel.
-  //  x^2 seperation,
-  //  adjust volume properly.
-  leftvol = volume - ((volume*seperation*seperation) >> 16);
-  seperation = seperation - 257;
-  rightvol= volume - ((volume*seperation*seperation) >> 16);  
+    // Separation, that is, orientation/stereo.
+    //  range is: 1 - 256
+    seperation += 1;
 
-  // Sanity check, clamp volume.
-  if (rightvol < 0 || rightvol > 127)
-    I_Error("rightvol out of bounds");
-    
-  if (leftvol < 0 || leftvol > 127)
-    I_Error("leftvol out of bounds");
-    
-  // Get the proper lookup table piece
-  //  for this volume level???
+    // Per left/right channel.
+    //  x^2 seperation,
+    //  adjust volume properly.
+    leftvol = volume - ((volume*seperation*seperation) >> 16);
+    seperation = seperation - 257;
+    rightvol= volume - ((volume*seperation*seperation) >> 16);
+
+    // Sanity check, clamp volume.
+    if (rightvol < 0 || rightvol > 127)
+  I_Error("rightvol out of bounds");
+
+    if (leftvol < 0 || leftvol > 127)
+  I_Error("leftvol out of bounds");
+
+    // Get the proper lookup table piece
+    //  for this volume level???
   channelinfo[slot].leftvol_lookup = &vol_lookup[leftvol*256];
   channelinfo[slot].rightvol_lookup = &vol_lookup[rightvol*256];
 }
@@ -229,12 +241,12 @@ void I_SetChannels()
 {
   // Init internal lookups (raw data, mixing buffer, channels).
   // This function sets up internal lookups used during
-  //  the mixing process. 
+  //  the mixing process.
   int   i;
   int   j;
-    
+
   int*  steptablemid = steptable + 128;
-  
+
   // Okay, reset internal mixing channels to zero.
   for (i=0; i<MAX_CHANNELS; i++)
   {
@@ -245,8 +257,8 @@ void I_SetChannels()
   // I fail to see that this is currently used.
   for (i=-128 ; i<128 ; i++)
     steptablemid[i] = (int)(pow(1.2, ((double)i/(64.0*snd_samplerate/11025)))*65536.0);
-  
-  
+
+
   // Generates volume lookup tables
   //  which also turn the unsigned samples
   //  into signed samples.
@@ -258,9 +270,9 @@ void I_SetChannels()
       vol_lookup[i*256+j] = (i*(j-128)*256)/191;
       //vol_lookup[i*256+j] = (i*(j-128)*256)/127;
     }
-} 
+}
 
- 
+
 void I_SetSfxVolume(int volume)
 {
   // Identical to DOS.
@@ -277,9 +289,9 @@ void I_SetSfxVolume(int volume)
 //
 int I_GetSfxLumpNum(sfxinfo_t* sfx)
 {
-  char namebuf[9];
-  sprintf(namebuf, "ds%s", sfx->name);
-  return W_GetNumForName(namebuf);
+    char namebuf[9];
+    sprintf(namebuf, "ds%s", sfx->name);
+    return W_GetNumForName(namebuf);
 }
 
 //
@@ -294,28 +306,28 @@ int I_GetSfxLumpNum(sfxinfo_t* sfx)
 // Pitching (that is, increased speed of playback)
 //  is set, but currently not used by mixing.
 //
-int I_StartSound(sfxinfo_t *sfx, int channel, int vol, int sep, int pitch, int priority)
+int I_StartSound(int id, int channel, int vol, int sep, int pitch, int priority)
 {
   int handle;
 
   // UNUSED
   priority = 0;
-  
-  // Debug.
-  //fprintf( stderr, "starting sound %d", id );
-    
-  SDL_LockAudio();
+
+    // Debug.
+    //fprintf( stderr, "starting sound %d", id );
+
+    SDL_LockAudio();
   // Returns a handle (not used).
-  handle = addsfx(sfx,channel);
+  handle = addsfx(id,channel);
 #ifdef RANGECHECK
   if (handle>=MAX_CHANNELS)
     I_Error("I_StartSound: handle out of range");
 #endif
   updateSoundParams(handle, vol, sep, pitch);
-  SDL_UnlockAudio();
+    SDL_UnlockAudio();
 
-  // fprintf( stderr, "/handle is %d\n", id );
-    
+    // fprintf( stderr, "/handle is %d\n", id );
+
   return handle;
 }
 
@@ -362,7 +374,7 @@ void I_UpdateSound(void *unused, Uint8 *stream, int len)
   register unsigned char sample;
   register int    dl;
   register int    dr;
-  
+
   // Pointers in audio stream, left, right, end.
   signed short*   leftout;
   signed short*   rightout;
@@ -372,136 +384,165 @@ void I_UpdateSound(void *unused, Uint8 *stream, int len)
 
   // Mixing channel index.
   int       chan;
-   
-  // Left and right channel
-  //  are in audio stream, alternating.
-  leftout = (signed short *)stream;
-  rightout = ((signed short *)stream)+1;
-  step = 2;
 
-  // Determine end, for left channel only
-  //  (right channel is implicit).
-  leftend = leftout + (len/4)*step;
+    // Left and right channel
+    //  are in audio stream, alternating.
+    leftout = (signed short *)stream;
+    rightout = ((signed short *)stream)+1;
+    step = 2;
 
-  // Mix sounds into the mixing buffer.
-  // Loop over step*SAMPLECOUNT,
-  //  that is 512 values for two channels.
-  while (leftout != leftend)
-  {
-    // Reset left/right value. 
-    //dl = 0;
-    //dr = 0;
-    dl = *leftout;
-    dr = *rightout;
+    // Determine end, for left channel only
+    //  (right channel is implicit).
+    leftend = leftout + (len/4)*step;
 
-    // Love thy L2 chache - made this a loop.
-    // Now more channels could be set at compile time
-    //  as well. Thus loop those  channels.
-    for ( chan = 0; chan < numChannels; chan++ )
+    // Mix sounds into the mixing buffer.
+    // Loop over step*SAMPLECOUNT,
+    //  that is 512 values for two channels.
+    while (leftout != leftend)
     {
+  // Reset left/right value.
+  //dl = 0;
+  //dr = 0;
+  dl = *leftout;
+  dr = *rightout;
+
+  // Love thy L2 chache - made this a loop.
+  // Now more channels could be set at compile time
+  //  as well. Thus loop those  channels.
+    for ( chan = 0; chan < numChannels; chan++ )
+  {
       // Check channel, if active.
       if (channelinfo[chan].data)
       {
-        // Get the raw data from the channel.
+    // Get the raw data from the channel.
         // no filtering
         // sample = *channelinfo[chan].data;
         // linear filtering
         sample = (((unsigned int)channelinfo[chan].data[0] * (0x10000 - channelinfo[chan].stepremainder))
                 + ((unsigned int)channelinfo[chan].data[1] * (channelinfo[chan].stepremainder))) >> 16;
 
-        // Add left and right part
-        //  for this channel (sound)
-        //  to the current data.
-        // Adjust volume accordingly.
+    // Add left and right part
+    //  for this channel (sound)
+    //  to the current data.
+    // Adjust volume accordingly.
         dl += channelinfo[chan].leftvol_lookup[sample];
         dr += channelinfo[chan].rightvol_lookup[sample];
-        // Increment index ???
+    // Increment index ???
         channelinfo[chan].stepremainder += channelinfo[chan].step;
-        // MSB is next sample???
+    // MSB is next sample???
         channelinfo[chan].data += channelinfo[chan].stepremainder >> 16;
-        // Limit to LSB???
+    // Limit to LSB???
         channelinfo[chan].stepremainder &= 0xffff;
 
-        // Check whether we are done.
+    // Check whether we are done.
         if (channelinfo[chan].data >= channelinfo[chan].enddata)
-          stopchan(chan);
+      stopchan(chan);
       }
-    }
-  
-    // Clamp to range. Left hardware channel.
-    // Has been char instead of short.
-    // if (dl > 127) *leftout = 127;
-    // else if (dl < -128) *leftout = -128;
-    // else *leftout = dl;
+  }
 
-    if (dl > SHRT_MAX)
+  // Clamp to range. Left hardware channel.
+  // Has been char instead of short.
+  // if (dl > 127) *leftout = 127;
+  // else if (dl < -128) *leftout = -128;
+  // else *leftout = dl;
+
+  if (dl > SHRT_MAX)
       *leftout = SHRT_MAX;
-    else if (dl < SHRT_MIN)
+  else if (dl < SHRT_MIN)
       *leftout = SHRT_MIN;
-    else
+  else
       *leftout = (signed short)dl;
 
-    // Same for right hardware channel.
-    if (dr > SHRT_MAX)
+  // Same for right hardware channel.
+  if (dr > SHRT_MAX)
       *rightout = SHRT_MAX;
-    else if (dr < SHRT_MIN)
+  else if (dr < SHRT_MIN)
       *rightout = SHRT_MIN;
-    else
+  else
       *rightout = (signed short)dr;
 
-    // Increment current pointers in stream
-    leftout += step;
-    rightout += step;
-  }
+  // Increment current pointers in stream
+  leftout += step;
+  rightout += step;
+    }
 }
 
 void I_ShutdownSound(void)
-{    
-  if (sound_inited) {
-    lprintf(LO_INFO, "I_ShutdownSound: ");
-    Mix_CloseAudio();
-    lprintf(LO_INFO, "\n");
-	sound_inited = false;
-  }
+{
+  lprintf(LO_INFO, "I_ShutdownSound: ");
+#ifdef HAVE_MIXER
+  Mix_CloseAudio();
+#else
+  SDL_CloseAudio();
+#endif
+  lprintf(LO_INFO, "\n");
 }
 
 //static SDL_AudioSpec audio;
 
 void
-I_InitSound(boolean first)
-{ 
+I_InitSound()
+{
+#ifdef HAVE_MIXER
+  int audio_rate;
+  Uint16 audio_format;
+  int audio_channels;
   int audio_buffers;
-
-  if (!first && !sound_inited) return;
-  if (sound_inited)
-	  I_ShutdownSound();
 
   // Secure and configure sound device first.
   lprintf(LO_INFO,"I_InitSound: ");
 
   /* Initialize variables */
-  SAMPLECOUNT = 512;
+  audio_rate = snd_samplerate;
+#if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
+  audio_format = AUDIO_S16MSB;
+#else
+  audio_format = AUDIO_S16LSB;
+#endif
+  audio_channels = 2;
   audio_buffers = SAMPLECOUNT*snd_samplerate/11025;
-  
-  if (Mix_OpenAudio(snd_samplerate, MIX_DEFAULT_FORMAT, 2, audio_buffers) < 0) {
+
+  if (Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers) < 0) {
     lprintf(LO_INFO,"couldn't open audio with desired format\n");
     return;
   }
-  sound_inited = true;
   SAMPLECOUNT = audio_buffers;
   Mix_SetPostMix(I_UpdateSound, NULL);
   lprintf(LO_INFO," configured audio device with %d samples/slice\n", SAMPLECOUNT);
-  
-  if (first_sound_init) {
-	atexit(I_ShutdownSound);
-	first_sound_init = false;
+#else
+  SDL_AudioSpec audio;
+
+  // Secure and configure sound device first.
+  lprintf(LO_INFO,"I_InitSound: ");
+
+  // Open the audio device
+  audio.freq = snd_samplerate;
+#if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
+  audio.format = AUDIO_S16MSB;
+#else
+  audio.format = AUDIO_S16LSB;
+#endif
+  audio.channels = 2;
+  audio.samples = SAMPLECOUNT*snd_samplerate/11025;
+  audio.callback = I_UpdateSound;
+  if ( SDL_OpenAudio(&audio, NULL) < 0 ) {
+    lprintf(LO_INFO,"couldn't open audio with desired format\n");
+    return;
   }
-  
+  SAMPLECOUNT = audio.samples;
+  lprintf(LO_INFO," configured audio device with %d samples/slice\n", SAMPLECOUNT);
+#endif
+
+  atexit(I_ShutdownSound);
+
   if (!nomusicparm)
     I_InitMusic();
-  
+
   // Finished initialization.
   lprintf(LO_INFO,"I_InitSound: sound module ready\n");
+#ifndef HAVE_MIXER
+  SDL_PauseAudio(0);
+#endif
 }
 
 
@@ -511,93 +552,108 @@ I_InitSound(boolean first)
 // MUSIC API.
 //
 
+#ifdef HAVE_MIXER
 #include "SDL_mixer.h"
 #include "mmus2mid.h"
 
 static Mix_Music *music[2] = { NULL, NULL };
 
-char* music_tmp = NULL; /* cph - name of music temporary file */
+char* music_tmp; /* cph - name of music temporary file */
 
-void I_ShutdownMusic(void) 
+#endif
+
+void I_ShutdownMusic(void)
 {
+#ifdef HAVE_MIXER
   if (music_tmp) {
     unlink(music_tmp);
     lprintf(LO_DEBUG, "I_ShutdownMusic: removing %s\n", music_tmp);
     free(music_tmp);
-	music_tmp = NULL;
   }
+#endif
 }
 
 void I_InitMusic(void)
 {
-  if (!music_tmp) {
+#ifdef HAVE_MIXER
 #ifndef _WIN32
-    music_tmp = strdup("/tmp/prboom-music-XXXXXX");
-	{
-      int fd = mkstemp(music_tmp);
-      if (fd<0) {
-        lprintf(LO_ERROR, "I_InitMusic: failed to create music temp file %s", music_tmp);
-        free(music_tmp); return;
-	  } else 
-        close(fd);
-	}
-#else /* !_WIN32 */
-    music_tmp = strdup("doom.tmp");
-#endif
-    atexit(I_ShutdownMusic);
+  music_tmp = strdup("/tmp/prboom-music-XXXXXX");
+  {
+    int fd = mkstemp(music_tmp);
+    if (fd<0) {
+      lprintf(LO_ERROR, "I_InitMusic: failed to create music temp file %s", music_tmp);
+      free(music_tmp); return;
+    } else
+      close(fd);
   }
+#else /* !_WIN32 */
+  music_tmp = strdup("doom.tmp");
+#endif
+#endif
+  atexit(I_ShutdownMusic);
 }
 
 void I_PlaySong(int handle, int looping)
 {
+#ifdef HAVE_MIXER
   if ( music[handle] ) {
     Mix_FadeInMusic(music[handle], looping ? -1 : 0, 500);
   }
+#endif
 }
 
-int mus_pause_opt = 2;
+extern int mus_pause_opt; // From m_misc.c
 
 void I_PauseSong (int handle)
 {
+#ifdef HAVE_MIXER
   switch(mus_pause_opt) {
   case 0:
-    I_StopSong(handle);
+      I_StopSong(handle);
     break;
   case 1:
-    Mix_PauseMusic();
+      Mix_PauseMusic();
     break;
   }
+#endif
   // Default - let music continue
 }
 
 void I_ResumeSong (int handle)
 {
+#ifdef HAVE_MIXER
   switch(mus_pause_opt) {
   case 0:
-    I_PlaySong(handle,1);
+      I_PlaySong(handle,1);
     break;
   case 1:
-    Mix_ResumeMusic();
+      Mix_ResumeMusic();
     break;
   }
+#endif
   /* Otherwise, music wasn't stopped */
 }
 
 void I_StopSong(int handle)
 {
-  Mix_FadeOutMusic(500);
+#ifdef HAVE_MIXER
+    Mix_FadeOutMusic(500);
+#endif
 }
 
 void I_UnRegisterSong(int handle)
 {
+#ifdef HAVE_MIXER
   if ( music[handle] ) {
     Mix_FreeMusic(music[handle]);
     music[handle] = NULL;
   }
+#endif
 }
 
 int I_RegisterSong(const void *data, size_t len)
 {
+#ifdef HAVE_MIXER
   MIDI *mididata;
   FILE *midfile;
 
@@ -630,6 +686,7 @@ int I_RegisterSong(const void *data, size_t len)
   if ( music[0] == NULL ) {
     lprintf(LO_ERROR,"Couldn't load MIDI from %s: %s\n", music_tmp, Mix_GetError());
   }
+#endif
   return (0);
 }
 
@@ -660,6 +717,8 @@ int I_RegisterMusic( const char* filename, musicinfo_t *song )
 
 void I_SetMusicVolume(int volume)
 {
+#ifdef HAVE_MIXER
   Mix_VolumeMusic(volume*8);
+#endif
 }
 

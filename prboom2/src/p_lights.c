@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -31,7 +31,6 @@
  *
  *-----------------------------------------------------------------------------*/
 
-#include "z_zone.h"
 #include "doomstat.h" //jff 5/18/98
 #include "doomdef.h"
 #include "m_random.h"
@@ -56,7 +55,7 @@
 void T_FireFlicker (fireflicker_t* flick)
 {
   int amount;
-  
+
   if (--flick->count)
     return;
 
@@ -156,50 +155,6 @@ void T_Glow(glow_t* g)
   }
 }
 
-// sf 13/10/99:
-//
-// T_LightFade()
-//
-// Just fade the light level in a sector to a new level
-//
-
-void T_LightFade(lightlevel_t *ll)
-{
-  if(ll->sector->lightlevel < ll->destlevel)
-  {
-      // increase the lightlevel
-    if(ll->sector->lightlevel + ll->speed >= ll->destlevel)
-    {
-          // stop changing light level
-       ll->sector->lightlevel = ll->destlevel;    // set to dest lightlevel
-
-       ll->sector->lightingdata = NULL;          // clear lightingdata
-       P_RemoveThinker(&ll->thinker);    // remove thinker       
-    }
-    else
-    {
-        ll->sector->lightlevel += ll->speed; // move lightlevel
-    }
-  }
-  else
-  {
-        // decrease lightlevel
-    if(ll->sector->lightlevel - ll->speed <= ll->destlevel)
-    {
-          // stop changing light level
-       ll->sector->lightlevel = ll->destlevel;    // set to dest lightlevel
-
-       ll->sector->lightingdata = NULL;          // clear lightingdata
-       P_RemoveThinker(&ll->thinker);            // remove thinker       
-    }
-    else
-    {
-        ll->sector->lightlevel -= ll->speed;      // move lightlevel
-    }
-  }
-}
-
-
 //////////////////////////////////////////////////////////
 //
 // Sector lighting type spawners
@@ -292,7 +247,7 @@ void P_SpawnStrobeFlash
   flash->thinker.function = T_StrobeFlash;
   flash->maxlight = sector->lightlevel;
   flash->minlight = P_FindMinSurroundingLight(sector, sector->lightlevel);
-  
+
   if (flash->minlight == flash->maxlight)
     flash->minlight = 0;
 
@@ -328,35 +283,6 @@ void P_SpawnGlowingLight(sector_t*  sector)
   g->direction = -1;
 
   sector->special &= ~31; //jff 3/14/98 clear non-generalized sector type
-}
-
-// sf 13/10/99:
-//
-// P_FadeLight()
-//
-// Fade all the lights in sectors with a particular tag to a new value
-//
-
-void P_FadeLight(int tag, int destvalue, int speed)
-{
-  int i;
-  lightlevel_t *ll;
-
-  // search all sectors for ones with tag
-  for (i = -1; (i = P_FindSectorFromTag(tag,i)) >= 0;)
-  {
-      sector_t *sector = &sectors[i];
-      sector->lightingdata = sector;    // just set it to something
-
-      ll = Z_Malloc(sizeof(*ll), PU_LEVSPEC, 0);
-      ll->thinker.function = T_LightFade;
-
-      P_AddThinker(&ll->thinker);       // add thinker
-
-      ll->sector = sector;
-      ll->destlevel = destvalue;
-      ll->speed = speed;
-  }
 }
 
 //////////////////////////////////////////////////////////
@@ -407,7 +333,7 @@ int EV_StartLightStrobing(line_t* line)
 int EV_TurnTagLightsOff(line_t* line)
 {
   int j;
-  
+
   // search sectors for those with same tag as activating line
 
   // killough 10/98: replaced inefficient search with fast search
@@ -417,9 +343,9 @@ int EV_TurnTagLightsOff(line_t* line)
       int i, min = sector->lightlevel;
       // find min neighbor light level
       for (i = 0;i < sector->linecount; i++)
-	if ((tsec = getNextSector(sector->lines[i], sector)) &&
-	    tsec->lightlevel < min)
-	  min = tsec->lightlevel;
+  if ((tsec = getNextSector(sector->lines[i], sector)) &&
+      tsec->lightlevel < min)
+    min = tsec->lightlevel;
       sector->lightlevel = min;
     }
   return 1;
@@ -451,17 +377,17 @@ int EV_LightTurnOn(line_t *line, int bright)
       // bright = 0 means to search for highest light level surrounding sector
 
       if (!bright)
-	for (j = 0;j < sector->linecount; j++)
-	  if ((temp = getNextSector(sector->lines[j],sector)) &&
-	      temp->lightlevel > tbright)
-	    tbright = temp->lightlevel;
+  for (j = 0;j < sector->linecount; j++)
+    if ((temp = getNextSector(sector->lines[j],sector)) &&
+        temp->lightlevel > tbright)
+      tbright = temp->lightlevel;
 
       sector->lightlevel = tbright;
-      
-      //jff 5/17/98 unless compatibility optioned 
+
+      //jff 5/17/98 unless compatibility optioned
       //then maximum near ANY tagged sector
       if (comp[comp_model])
-	bright = tbright;
+  bright = tbright;
     }
   return 1;
 }
@@ -483,7 +409,7 @@ int EV_LightTurnOnPartway(line_t *line, fixed_t level)
 {
   int i;
 
-  if (level < 0)          // clip at extremes 
+  if (level < 0)          // clip at extremes
     level = 0;
   if (level > FRACUNIT)
     level = FRACUNIT;
@@ -495,16 +421,16 @@ int EV_LightTurnOnPartway(line_t *line, fixed_t level)
       int j, bright = 0, min = sector->lightlevel;
 
       for (j = 0; j < sector->linecount; j++)
-	if ((temp = getNextSector(sector->lines[j],sector)))
-	  {
-	    if (temp->lightlevel > bright)
-	      bright = temp->lightlevel;
-	    if (temp->lightlevel < min)
-	      min = temp->lightlevel;
-	  }
+  if ((temp = getNextSector(sector->lines[j],sector)))
+    {
+      if (temp->lightlevel > bright)
+        bright = temp->lightlevel;
+      if (temp->lightlevel < min)
+        min = temp->lightlevel;
+    }
 
       sector->lightlevel =   // Set level in-between extremes
-	(level * bright + (FRACUNIT-level) * min) >> FRACBITS;
+  (level * bright + (FRACUNIT-level) * min) >> FRACBITS;
     }
   return 1;
 }

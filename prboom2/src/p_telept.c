@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -6,9 +6,9 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2002 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -40,21 +40,6 @@
 #include "sounds.h"
 #include "p_user.h"
 
-static mobj_t* P_TeleportDestination(line_t* line)
-{
-  int i;
-  for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;) {
-    register thinker_t* th = NULL;
-    while ((th = P_NextThinker(th,th_misc)) != NULL)
-      if (th->function == P_MobjThinker) {
-        register mobj_t* m = (mobj_t*)th;
-        if (m->type == MT_TELEPORTMAN  &&
-            m->subsector->sector-sectors == i)
-            return m;
-      }
-  }
-  return NULL;
-}
 //
 // TELEPORTATION
 //
@@ -62,7 +47,9 @@ static mobj_t* P_TeleportDestination(line_t* line)
 
 int EV_Teleport(line_t *line, int side, mobj_t *thing)
 {
+  thinker_t *thinker;
   mobj_t    *m;
+  int       i;
 
   // don't teleport missiles
   // Don't teleport if hit back of line,
@@ -73,7 +60,11 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
   // killough 1/31/98: improve performance by using
   // P_FindSectorFromLineTag instead of simple linear search.
 
-  if ((m = P_TeleportDestination(line)) != NULL)
+  for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+    for (thinker=thinkercap.next; thinker!=&thinkercap; thinker=thinker->next)
+      if (thinker->function == P_MobjThinker &&
+          (m = (mobj_t *) thinker)->type == MT_TELEPORTMAN  &&
+            m->subsector->sector-sectors == i)
         {
           fixed_t oldx = thing->x, oldy = thing->y, oldz = thing->z;
           player_t *player = thing->player;
@@ -85,28 +76,11 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
           if (!P_TeleportMove(thing, m->x, m->y, false)) /* killough 8/9/98 */
             return 0;
 
-          /* cph 2001/07/21 - fixed final doom demo sync bug
-           * The original source release contained the comment
-           *       fixme: not needed?
-           * on this line. The original source release was of a branch that
-           * preceded the development of Final Doom. I was tipped off to
-           * teleports being a possible cause of the sync problems on Final
-           * Doom, and quickly spotted this comment. From my testing with
-           * pl27-051.lmp it seems certain that this line was removed from Final
-           * Doom, hence the major demo sync problems with Final Doom that we've
-           * been lumbered with ever since.
-           */
-          if (compatibility_level != finaldoom_compatibility)
+          if (!(demo_compatibility && gamemission >= pack_tnt))
             thing->z = thing->floorz;
 
           if (player)
             player->viewz = thing->z + player->viewheight;
-
-                // sf: reset the chasecam at its new position.
-                //     this needs to be done before startsound so we hear
-                //     the teleport sound when using the chasecam
-          if(thing->player==players+displayplayer)
-                P_ResetChasecam();
 
           // spawn teleport fog and emit sound at source
           S_StartSound(P_SpawnMobj(oldx, oldy, oldz, MT_TFOG), sfx_telept);
@@ -119,8 +93,8 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
                                    thing->z, MT_TFOG),
                        sfx_telept);
 
-	  /* don't move for a bit
-	   * cph - DEMOSYNC - BOOM had (player) here? */
+    /* don't move for a bit
+     * cph - DEMOSYNC - BOOM had (player) here? */
           if (thing->player)
             thing->reactiontime = 18;
 
@@ -128,9 +102,9 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
 
           thing->momx = thing->momy = thing->momz = 0;
 
-	  /* killough 10/98: kill all bobbing momentum too */
-	  if (player)
-	    player->momx = player->momy = 0;
+    /* killough 10/98: kill all bobbing momentum too */
+    if (player)
+      player->momx = player->momy = 0;
 
           return 1;
         }
@@ -144,7 +118,9 @@ int EV_Teleport(line_t *line, int side, mobj_t *thing)
 
 int EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
 {
+  int       i;
   mobj_t    *m;
+  thinker_t *th;
 
   // don't teleport missiles
   // Don't teleport if hit back of line,
@@ -153,7 +129,11 @@ int EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
   if (side || thing->flags & MF_MISSILE)
     return 0;
 
-  if ((m = P_TeleportDestination(line)) != NULL)
+  for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+    for (th = thinkercap.next; th != &thinkercap; th = th->next)
+      if (th->function == P_MobjThinker &&
+          (m = (mobj_t *) th)->type == MT_TELEPORTMAN  &&
+          m->subsector->sector-sectors == i)
         {
           // Height of thing above ground, in case of mid-air teleports:
           fixed_t z = thing->z - thing->floorz;
@@ -205,9 +185,6 @@ int EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
 
               // Reset the delta to have the same dynamics as before
               player->deltaviewheight = deltaviewheight;
-
-              if(player == players+displayplayer)
-                  P_ResetChasecam();
             }
           return 1;
         }
@@ -299,9 +276,9 @@ int EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing,
         // Make sure we are on correct side of exit linedef.
         while (P_PointOnLineSide(x, y, l) != side && --fudge>=0)
           if (D_abs(l->dx) > D_abs(l->dy))
-            y -= (l->dx < 0) != side ? -1 : 1;
+            y -= l->dx < 0 != side ? -1 : 1;
           else
-            x += (l->dy < 0) != side ? -1 : 1;
+            x += l->dy < 0 != side ? -1 : 1;
 
         // Attempt to teleport, aborting if blocked
         if (!P_TeleportMove(thing, x, y, false)) /* killough 8/9/98 */
@@ -337,9 +314,6 @@ int EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing,
 
             // Reset the delta to have the same dynamics as before
             player->deltaviewheight = deltaviewheight;
-
-            if(player == players+displayplayer)
-                P_ResetChasecam();
           }
 
         return 1;

@@ -37,7 +37,6 @@
  *
  *-----------------------------------------------------------------------------*/
 
-#include "z_zone.h"
 #include "doomstat.h"
 #include "p_spec.h"
 #include "p_tick.h"
@@ -57,9 +56,6 @@
 #include "d_deh.h"
 #include "r_plane.h"
 #include "lprintf.h"
-#ifdef FRAGGLE_SCRIPT
-#include "t_script.h"
-#endif
 
 //
 // Animating textures and planes
@@ -78,14 +74,7 @@ typedef struct
 //
 //      source animation definition
 //
-#ifdef _MSC_VER
-#define GCC_PACKED
-#else //_MSC_VER
-/* we might want to make this sensitive to whether configure has detected
-   a build with GCC */
-#define GCC_PACKED __attribute__((packed))
-#endif //_MSC_VER
-
+//
 #ifdef _MSC_VER // proff: This is the same as __attribute__ ((packed)) in GNUC
 #pragma pack(push)
 #pragma pack(1)
@@ -97,11 +86,11 @@ typedef struct
 
 typedef struct
 {
-  signed char istexture GCC_PACKED; //jff 3/23/98 make char for comparison // cph - make signed
-  char        endname[9] GCC_PACKED;           //  if false, it is a flat
-  char        startname[9] GCC_PACKED;
-  int         speed GCC_PACKED;
-} GCC_PACKED animdef_t; //jff 3/23/98 pack to read from memory
+  signed char istexture; //jff 3/23/98 make char for comparison // cph - make signed
+  char        endname[9];           //  if false, it is a flat
+  char        startname[9];
+  int         speed;
+} PACKEDATTR animdef_t; //jff 3/23/98 pack to read from memory
 
 #if defined(__MWERKS__)
 #pragma options align=reset
@@ -217,8 +206,10 @@ void P_InitPicAnims (void)
 //
 // Note: if side=1 is specified, it must exist or results undefined
 //
-
-side_t *getSide(int currentSector, int line, int side)
+side_t* getSide
+( int           currentSector,
+  int           line,
+  int           side )
 {
   return &sides[ (sectors[currentSector].lines[line])->sidenum[side] ];
 }
@@ -233,8 +224,10 @@ side_t *getSide(int currentSector, int line, int side)
 //
 // Note: if side=1 is specified, it must exist or results undefined
 //
-
-sector_t *getSector(int currentSector, int line, int side)
+sector_t* getSector
+( int           currentSector,
+  int           line,
+  int           side )
 {
   return sides[ (sectors[currentSector].lines[line])->sidenum[side] ].sector;
 }
@@ -249,8 +242,9 @@ sector_t *getSector(int currentSector, int line, int side)
 // modified to return actual two-sidedness rather than presence
 // of 2S flag unless compatibility optioned
 //
-
-int twoSided(int sector, int line)
+int twoSided
+( int   sector,
+  int   line )
 {
   //jff 1/26/98 return what is actually needed, whether the line
   //has two sidedefs, rather than whether the 2S flag is set
@@ -269,8 +263,9 @@ int twoSided(int sector, int line)
 //
 // Note: returns NULL if not two-sided line, or both sides refer to sector
 //
-
-sector_t *getNextSector(line_t *line, sector_t *sec)
+sector_t* getNextSector
+( line_t*       line,
+  sector_t*     sec )
 {
   //jff 1/26/98 check unneeded since line->backsector already
   //returns NULL if the line is not two sided, and does so from
@@ -739,17 +734,6 @@ int P_FindLineFromLineTag(const line_t *line, int start)
   return start;
 }
 
-// sf: same thing but from just a number
-
-int P_FindSectorFromTag(const int tag, int start)
-{
-  start = start >= 0 ? sectors[start].nexttag :
-    sectors[(unsigned) tag % (unsigned) numsectors].firsttag;
-  while (start >= 0 && sectors[start].tag != tag)
-    start = sectors[start].nexttag;
-  return start;
-}
-
 // Hash the sector tags across the sectors and linedefs.
 static void P_InitTagLists(void)
 {
@@ -783,8 +767,9 @@ static void P_InitTagLists(void)
 // in a surrounding sector less than that passed. If no smaller light
 // level exists, the light level passed is returned.
 //
-
-int P_FindMinSurroundingLight(sector_t *sector, int max)
+int P_FindMinSurroundingLight
+( sector_t*     sector,
+  int           max )
 {
   int         i;
   int         min;
@@ -819,8 +804,9 @@ int P_FindMinSurroundingLight(sector_t *sector, int max)
 // jff 02/05/98 routine added to test for unlockability of
 //  generalized locked doors
 //
-
-boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
+boolean P_CanUnlockGenDoor
+( line_t* line,
+  player_t* player)
 {
   // does this line special distinguish between skulls and keys?
   int skulliscard = (line->special & LockedNKeys)>>LockedNKeysShift;
@@ -839,7 +825,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         !player->cards[it_yellowskull]
       )
       {
-          player_printf(player, s_PD_ANY);
+        player->message = s_PD_ANY; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -851,7 +837,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_redskull])
       )
       {
-          player_printf(player, skulliscard? s_PD_REDK : s_PD_REDC);
+        player->message = skulliscard? s_PD_REDK : s_PD_REDC; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -863,7 +849,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_blueskull])
       )
       {
-          player_printf(player, skulliscard ? s_PD_BLUEK : s_PD_BLUEC);
+        player->message = skulliscard? s_PD_BLUEK : s_PD_BLUEC; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -875,7 +861,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_yellowskull])
       )
       {
-          player_printf(player, skulliscard? s_PD_YELLOWK : s_PD_YELLOWC);
+        player->message = skulliscard? s_PD_YELLOWK : s_PD_YELLOWC; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -887,7 +873,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_redcard])
       )
       {
-          player_printf(player, skulliscard? s_PD_REDK : s_PD_REDS);
+        player->message = skulliscard? s_PD_REDK : s_PD_REDS; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -899,7 +885,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_bluecard])
       )
       {
-          player_printf(player, skulliscard? s_PD_BLUEK : s_PD_BLUES);
+        player->message = skulliscard? s_PD_BLUEK : s_PD_BLUES; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -911,7 +897,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         (!skulliscard || !player->cards[it_yellowcard])
       )
       {
-          player_printf(player, skulliscard? s_PD_YELLOWK : s_PD_YELLOWS);
+        player->message = skulliscard? s_PD_YELLOWK : s_PD_YELLOWS; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -930,7 +916,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         )
       )
       {
-          player_printf(player, s_PD_ALL6);
+        player->message = s_PD_ALL6; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -947,7 +933,7 @@ boolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         )
       )
       {
-          player_printf(player, s_PD_ALL3);
+        player->message = s_PD_ALL3; // Ty 03/27/98 - externalized
         S_StartSound(player->mo,sfx_oof);             // killough 3/20/98
         return false;
       }
@@ -1059,18 +1045,7 @@ int P_CheckTag(line_t *line)
 
     case 48:                // Scrolling walls
     case 85:
-#ifdef FRAGGLE_SCRIPT
-        // sf: scripting
-    case 272:   // WR
-    case 273:
-    case 274:   // W1
-    case 275:
-    case 276:   // SR
-    case 277:   // S1
-    case 278:   // GR
-    case 279:   // G1
-#endif
-      return 1;
+      return 1;   // zero tag allowed
 
     default:
       break;
@@ -1161,7 +1136,11 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
     int (*linefunc)(line_t *line)=NULL;
 
     // check each range of generalized linedefs
-    if ((unsigned)line->special >= GenFloorBase)
+    if ((unsigned)line->special >= GenEnd)
+    {
+      // Out of range for GenFloors
+    }
+    else if ((unsigned)line->special >= GenFloorBase)
     {
       if (!thing->player)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
@@ -1425,7 +1404,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       // EXIT!
       // killough 10/98: prevent zombies from exiting levels
       if (!(thing->player && thing->player->health <= 0 && !comp[comp_zombie]))
-	G_ExitLevel ();
+  G_ExitLevel ();
       break;
 
     case 53:
@@ -1511,7 +1490,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       // killough 10/98: prevent zombies from exiting levels
       // CPhipps - change for lxdoom's compatibility handling
       if (!(thing->player && thing->player->health <= 0 && !comp[comp_zombie]))
-	G_SecretExitLevel ();
+  G_SecretExitLevel ();
       break;
 
     case 125:
@@ -1697,31 +1676,6 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       // Raise Floor Turbo
       EV_DoFloor(line,raiseFloorTurbo);
       break;
-
-#ifdef FRAGGLE_SCRIPT
-        // scripting ld types
-
-        // repeatable
-
-    case 273:  // console command (1sided)
-      if(side) break;
-
-    case 272:  // console command (2sided)
-      t_trigger = thing;
-      T_RunScript(line->tag);
-      break;
-
-        // once-only triggers
-
-    case 275:  // console command (1sided)
-      if(side) break;
-
-    case 274:  // console command (2sided)
-      t_trigger = thing;
-      T_RunScript(line->tag);
-      line->special = 0;        // clear trigger
-      break;
-#endif
 
       // Extended walk triggers
 
@@ -2043,7 +1997,9 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 // of the line, should the sector already be in motion when the line is
 // impacted. Change is qualified by demo_compatibility.
 //
-void P_ShootSpecialLine(mobj_t *thing, line_t *line)
+void P_ShootSpecialLine
+( mobj_t*       thing,
+  line_t*       line )
 {
   //jff 02/04/98 add check here for generalized linedef
   if (!demo_compatibility)
@@ -2053,7 +2009,11 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     int (*linefunc)(line_t *line)=NULL;
 
     // check each range of generalized linedefs
-    if ((unsigned)line->special >= GenFloorBase)
+    if ((unsigned)line->special >= GenEnd)
+    {
+      // Out of range for GenFloors
+    }
+    else if ((unsigned)line->special >= GenFloorBase)
     {
       if (!thing->player)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
@@ -2184,16 +2144,6 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     //jff 1/30/98 added new gun linedefs here
     // killough 1/31/98: added demo_compatibility check, added inner switch
 
-#ifdef FRAGGLE_SCRIPT
-        // sf: scripting
-    case 278:
-    case 279:
-      t_trigger = thing;
-      T_RunScript(line->tag);
-      if(line->special == 279) line->special = 0;       // clear if G1
-      break;
-#endif
-
     default:
       if (!demo_compatibility)
         switch (line->special)
@@ -2232,7 +2182,9 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
 //
 void P_PlayerInSpecialSector (player_t* player)
 {
-  sector_t *sector = player->mo->subsector->sector;
+  sector_t*   sector;
+
+  sector = player->mo->subsector->sector;
 
   // Falling, not all the way down yet?
   // Sector specials don't apply in mid-air
@@ -3308,5 +3260,3 @@ static void P_SpawnPushers(void)
 // phares 3/20/98: End of Pusher effects
 //
 ////////////////////////////////////////////////////////////////////////////
-
-

@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,22 +21,21 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
- * DESCRIPTION:  
+ * DESCRIPTION:
  *   the automap code
  *
  *-----------------------------------------------------------------------------
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include "doomstat.h"
 #include "st_stuff.h"
-#include "d_main.h"
 #include "r_main.h"
 #include "p_setup.h"
 #include "p_maputl.h"
@@ -48,127 +47,40 @@
 #include "d_deh.h"    // Ty 03/27/98 - externalizations
 #include "lprintf.h"  // jff 08/03/98 - declaration of lprintf
 #include "g_game.h"
-#include "c_io.h"
-#include "c_runcmd.h"
 
 //jff 1/7/98 default automap colors added
-int mapcolor_back = 247;    // map background
-CONSOLE_INT(mapcolor_back, mapcolor_back, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_grid = 104;    // grid lines color
-CONSOLE_INT(mapcolor_grid, mapcolor_grid, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_wall = 23;    // normal 1s wall color
-CONSOLE_INT(mapcolor_wall, mapcolor_wall, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_fchg = 55;    // line at floor height change color
-CONSOLE_INT(mapcolor_fchg, mapcolor_fchg, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_cchg = 215;    // line at ceiling height change color
-CONSOLE_INT(mapcolor_cchg, mapcolor_cchg, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_clsd = 208;    // line at sector with floor=ceiling color
-CONSOLE_INT(mapcolor_clsd, mapcolor_clsd, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_rkey = 175;    // red key color
-CONSOLE_INT(mapcolor_rkey, mapcolor_rkey, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_bkey = 204;    // blue key color
-CONSOLE_INT(mapcolor_bkey, mapcolor_bkey, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_ykey = 231;    // yellow key color
-CONSOLE_INT(mapcolor_ykey, mapcolor_ykey, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_rdor = 175;    // red door color  (diff from keys to allow option)
-CONSOLE_INT(mapcolor_rdor, mapcolor_rdor, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_bdor = 204;    // blue door color (of enabling one but not other )
-CONSOLE_INT(mapcolor_bdor, mapcolor_bdor, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_ydor = 231;    // yellow door color
-CONSOLE_INT(mapcolor_ydor, mapcolor_ydor, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_tele = 119;    // teleporter line color
-CONSOLE_INT(mapcolor_tele, mapcolor_tele, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_secr = 252;    // secret sector boundary color
-CONSOLE_INT(mapcolor_secr, mapcolor_secr, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_exit = 0;    // jff 4/23/98 add exit line color
-CONSOLE_INT(mapcolor_exit, mapcolor_exit, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_unsn = 104;    // computer map unseen line color
-CONSOLE_INT(mapcolor_unsn, mapcolor_unsn, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_flat = 88;    // line with no floor/ceiling changes
-CONSOLE_INT(mapcolor_flat, mapcolor_flat, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_sprt = 112;    // general sprite color
-CONSOLE_INT(mapcolor_sprt, mapcolor_sprt, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_hair = 208;    // crosshair color
-CONSOLE_INT(mapcolor_hair, mapcolor_hair, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_sngl = 208;    // single player arrow color
-CONSOLE_INT(mapcolor_sngl, mapcolor_sngl, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_frnd = 112;    // colors for friends of player
-CONSOLE_INT(mapcolor_frnd, mapcolor_frnd, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_me = 112;    // cph
-CONSOLE_INT(mapcolor_me, mapcolor_me, NULL, 0, 255, NULL, 0) {}
-
-int mapcolor_plyr[4];  // colors for players in multiplayer
-
-void AM_AddColors()
-{
-  C_AddCommand(mapcolor_back);
-  C_AddCommand(mapcolor_wall);
-  C_AddCommand(mapcolor_fchg);
-  C_AddCommand(mapcolor_grid);
-  C_AddCommand(mapcolor_cchg);
-  C_AddCommand(mapcolor_clsd);
-  C_AddCommand(mapcolor_rkey);
-  C_AddCommand(mapcolor_ykey);
-  C_AddCommand(mapcolor_bkey);
-  C_AddCommand(mapcolor_rdor);
-  C_AddCommand(mapcolor_ydor);
-  C_AddCommand(mapcolor_bdor);
-  C_AddCommand(mapcolor_tele);
-  C_AddCommand(mapcolor_secr);
-  C_AddCommand(mapcolor_exit);
-  C_AddCommand(mapcolor_unsn);
-  C_AddCommand(mapcolor_sprt);
-  C_AddCommand(mapcolor_hair);
-  C_AddCommand(mapcolor_sngl);
-  C_AddCommand(mapcolor_frnd);
-  C_AddCommand(mapcolor_me);
-}
+int mapcolor_back;    // map background
+int mapcolor_grid;    // grid lines color
+int mapcolor_wall;    // normal 1s wall color
+int mapcolor_fchg;    // line at floor height change color
+int mapcolor_cchg;    // line at ceiling height change color
+int mapcolor_clsd;    // line at sector with floor=ceiling color
+int mapcolor_rkey;    // red key color
+int mapcolor_bkey;    // blue key color
+int mapcolor_ykey;    // yellow key color
+int mapcolor_rdor;    // red door color  (diff from keys to allow option)
+int mapcolor_bdor;    // blue door color (of enabling one but not other )
+int mapcolor_ydor;    // yellow door color
+int mapcolor_tele;    // teleporter line color
+int mapcolor_secr;    // secret sector boundary color
+int mapcolor_exit;    // jff 4/23/98 add exit line color
+int mapcolor_unsn;    // computer map unseen line color
+int mapcolor_flat;    // line with no floor/ceiling changes
+int mapcolor_sprt;    // general sprite color
+int mapcolor_item;    // item sprite color
+int mapcolor_frnd;    // friendly sprite color
+int mapcolor_hair;    // crosshair color
+int mapcolor_sngl;    // single player arrow color
+int mapcolor_plyr[4] = { 112, 88, 64, 176 }; // colors for player arrows in multiplayer
 
 //jff 3/9/98 add option to not show secret sectors until entered
-int map_secret_after = 0;
+int map_secret_after;
 //jff 4/3/98 add symbols for "no-color" for disable and "black color" for black
 #define NC 0
 #define BC 247
 
 // drawing stuff
 #define FB    0
-
-// automap key binding
-int key_map_right = KEYD_RIGHTARROW;
-int key_map_left = KEYD_LEFTARROW;
-int key_map_up = KEYD_UPARROW;
-int key_map_down = KEYD_DOWNARROW;
-int key_map_zoomin = '=';
-int key_map_zoomout = '-';
-int key_map = KEYD_TAB;
-int key_map_gobig = '0';
-int key_map_follow = 'f';
-int key_map_mark = 'm';
-int key_map_clear = 'c';
-int key_map_grid = 'g';
-int key_map_overlay = 'o'; // cph - map overlay
-int key_map_rotate = 'r';  // cph - map rotation
 
 // scale on entry
 #define INITSCALEMTOF (.2*FRACUNIT)
@@ -188,6 +100,16 @@ int key_map_rotate = 'r';  // cph - map rotation
 // translates between frame-buffer and map coordinates
 #define CXMTOF(x)  (f_x + MTOF((x)-m_x))
 #define CYMTOF(y)  (f_y + (f_h - MTOF((y)-m_y)))
+
+typedef struct
+{
+    int x, y;
+} fpoint_t;
+
+typedef struct
+{
+    fpoint_t a, b;
+} fline_t;
 
 typedef struct
 {
@@ -274,7 +196,7 @@ int ddt_cheating = 0;         // killough 2/7/98: make global, rename to ddt_*
 
 static int leveljuststarted = 1;       // kluge until AM_LevelInit() is called
 
-enum automapmode_e automapmode = 0; // Mode that the automap is in
+enum automapmode_e automapmode; // Mode that the automap is in
 
 // location of window on screen
 static int  f_x;
@@ -299,7 +221,7 @@ static fixed_t  m_h;
 
 // based on level size
 static fixed_t  min_x;
-static fixed_t  min_y; 
+static fixed_t  min_y;
 static fixed_t  max_x;
 static fixed_t  max_y;
 
@@ -445,7 +367,7 @@ void AM_addMark(void)
 
   if (markpointnum >= markpointnum_max)
     markpoints = realloc(markpoints,
-                        (markpointnum_max = markpointnum_max ? 
+                        (markpointnum_max = markpointnum_max ?
                          markpointnum_max*2 : 16) * sizeof(*markpoints));
 
   markpoints[markpointnum].x = m_x + m_w/2;
@@ -577,7 +499,7 @@ void AM_initVariables(void)
 
 //
 // AM_loadPics()
-// 
+//
 void AM_loadPics(void)
 {
   // cph - mark numbers no longer needed cached
@@ -644,13 +566,12 @@ void AM_Stop (void)
   automapmode &= ~am_active;
   ST_Responder(&st_notify);
   stopped = true;
-  redrawsbar = redrawborder = true;  // sf: need redraw
 }
 
 //
 // AM_Start()
-// 
-// Start up automap operations, 
+//
+// Start up automap operations,
 //  if a new level, or game start, (re)initialize level variables
 //  init map variables
 //  load mark patches
@@ -663,7 +584,6 @@ void AM_Start()
 
   if (!stopped)
     AM_Stop();
-  redrawsbar = redrawborder = true;  // sf: redraw needed
   stopped = false;
   if (lastlevel != gamemap || lastepisode != gameepisode)
   {
@@ -710,11 +630,13 @@ void AM_maxOutWindowScale(void)
 //
 // Passed an input event, returns true if its handled
 //
-boolean AM_Responder(event_t* ev)
+boolean AM_Responder
+( event_t*  ev )
 {
   int rc;
   static int cheatstate=0;
   static int bigstate=0;
+  static char buffer[20];
   int ch;                                                       // phares
 
   rc = false;
@@ -782,33 +704,37 @@ boolean AM_Responder(event_t* ev)
       automapmode ^= am_follow;     // CPhipps - put all automap mode stuff into one enum
       f_oldloc.x = INT_MAX;
       // Ty 03/27/98 - externalized
-      doom_printf((automapmode & am_follow) ? s_AMSTR_FOLLOWON : s_AMSTR_FOLLOWOFF);
+      plr->message = (automapmode & am_follow) ? s_AMSTR_FOLLOWON : s_AMSTR_FOLLOWOFF;
     }
     else if (ch == key_map_grid)
     {
       automapmode ^= am_grid;      // CPhipps
       // Ty 03/27/98 - *not* externalized
-      doom_printf((automapmode & am_grid) ? s_AMSTR_GRIDON : s_AMSTR_GRIDOFF);
+      plr->message = (automapmode & am_grid) ? s_AMSTR_GRIDON : s_AMSTR_GRIDOFF;
     }
     else if (ch == key_map_mark)
     {
-      /* Ty 03/27/98 - *not* externalized     
-       * cph 2001/11/20 - use doom_printf so we don't have our own buffer */
-      doom_printf("%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+      // Ty 03/27/98 - *not* externalized
+#ifdef HAVE_SNPRINTF
+      snprintf(buffer, sizeof(buffer), "%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+#else
+      sprintf(buffer, "%s %d", s_AMSTR_MARKEDSPOT, markpointnum);
+#endif
+      plr->message = buffer;
       AM_addMark();
     }
     else if (ch == key_map_clear)
     {
       AM_clearMarks();  // Ty 03/27/98 - *not* externalized
-      doom_printf(s_AMSTR_MARKSCLEARED);                        //    ^
+      plr->message = s_AMSTR_MARKSCLEARED;                      //    ^
     }                                                           //    |
     else if (ch == key_map_rotate) {
       automapmode ^= am_rotate;
-      doom_printf((automapmode & am_rotate) ? s_AMSTR_ROTATEON : s_AMSTR_ROTATEOFF);
+      plr->message = (automapmode & am_rotate) ? s_AMSTR_ROTATEON : s_AMSTR_ROTATEOFF;
     }
     else if (ch == key_map_overlay) {
       automapmode ^= am_overlay;
-      doom_printf((automapmode & am_overlay) ? s_AMSTR_OVERLAYON : s_AMSTR_OVERLAYOFF);
+      plr->message = (automapmode & am_overlay) ? s_AMSTR_OVERLAYON : s_AMSTR_OVERLAYOFF;
     }
     else                                                        // phares
     {
@@ -868,7 +794,7 @@ static void AM_rotate(fixed_t* x,  fixed_t* y, angle_t a, fixed_t xorig, fixed_t
     FixedMul(*x - xorig,finecosine[a>>ANGLETOFINESHIFT])
       - FixedMul(*y - yorig,finesine[a>>ANGLETOFINESHIFT]);
 
-  *y   = yorig + 
+  *y   = yorig +
     FixedMul(*x - xorig,finesine[a>>ANGLETOFINESHIFT])
       + FixedMul(*y - yorig,finecosine[a>>ANGLETOFINESHIFT]);
 
@@ -973,7 +899,7 @@ boolean AM_clipMline
   int   dx;
   int   dy;
 
-    
+
 #define DOOUTCODE(oc, mx, my) \
   (oc) = 0; \
   if ((my) < 0) (oc) |= TOP; \
@@ -981,7 +907,7 @@ boolean AM_clipMline
   if ((mx) < 0) (oc) |= LEFT; \
   else if ((mx) >= f_w) (oc) |= RIGHT;
 
-    
+
   // do trivial rejects and outcodes
   if (ml->a.y > m_y2)
   outcode1 = TOP;
@@ -1080,6 +1006,96 @@ boolean AM_clipMline
 #undef DOOUTCODE
 
 //
+// AM_drawFline()
+//
+// Draw a line in the frame buffer.
+// Classic Bresenham w/ whatever optimizations needed for speed
+//
+// Passed the frame coordinates of line, and the color to be drawn
+// Returns nothing
+//
+#ifndef GL_DOOM
+void AM_drawFline
+( fline_t*  fl,
+  int   color )
+{
+  register int x;
+  register int y;
+  register int dx;
+  register int dy;
+  register int sx;
+  register int sy;
+  register int ax;
+  register int ay;
+  register int d;
+
+#ifdef RANGECHECK         // killough 2/22/98
+  static int fuck = 0;
+
+  // For debugging only
+  if
+  (
+       fl->a.x < 0 || fl->a.x >= f_w
+    || fl->a.y < 0 || fl->a.y >= f_h
+    || fl->b.x < 0 || fl->b.x >= f_w
+    || fl->b.y < 0 || fl->b.y >= f_h
+  )
+  {
+    //jff 8/3/98 use logical output routine
+    lprintf(LO_DEBUG, "fuck %d \r", fuck++);
+    return;
+  }
+#endif
+
+#define PUTDOT(xx,yy,cc) V_PlotPixel(FB,xx,yy,(byte)cc)
+
+  dx = fl->b.x - fl->a.x;
+  ax = 2 * (dx<0 ? -dx : dx);
+  sx = dx<0 ? -1 : 1;
+
+  dy = fl->b.y - fl->a.y;
+  ay = 2 * (dy<0 ? -dy : dy);
+  sy = dy<0 ? -1 : 1;
+
+  x = fl->a.x;
+  y = fl->a.y;
+
+  if (ax > ay)
+  {
+    d = ay - ax/2;
+    while (1)
+    {
+      PUTDOT(x,y,color);
+      if (x == fl->b.x) return;
+      if (d>=0)
+      {
+        y += sy;
+        d -= ax;
+      }
+      x += sx;
+      d += ay;
+    }
+  }
+  else
+  {
+    d = ax - ay/2;
+    while (1)
+    {
+      PUTDOT(x, y, color);
+      if (y == fl->b.y) return;
+      if (d >= 0)
+      {
+        x += sx;
+        d -= ay;
+      }
+      y += sy;
+      d += ax;
+    }
+  }
+}
+#endif
+
+//
 // AM_drawMline()
 //
 // Clip lines, draw visible parts of lines.
@@ -1102,7 +1118,11 @@ void AM_drawMline
     color=0;
 
   if (AM_clipMline(ml, &fl))
-    V_DrawLine(&fl, color); // draws it on frame buffer using fb coords
+#ifdef GL_DOOM
+    gld_DrawLine(fl.a.x, fl.a.y, fl.b.x, fl.b.y, (byte)color);
+#else
+    AM_drawFline(&fl, color); // draws it on frame buffer using fb coords
+#endif
 }
 
 //
@@ -1311,7 +1331,7 @@ void AM_drawWalls(void)
         // jff 1/10/98 add color change for all teleporter types
         if
         (
-            mapcolor_tele && !(lines[i].flags & ML_SECRET) && 
+            mapcolor_tele && !(lines[i].flags & ML_SECRET) &&
             (lines[i].special == 39 || lines[i].special == 97 ||
             lines[i].special == 125 || lines[i].special == 126)
         )
@@ -1324,7 +1344,7 @@ void AM_drawWalls(void)
         }
         else if
         (
-            mapcolor_clsd &&  
+            mapcolor_clsd &&
             !(lines[i].flags & ML_SECRET) &&    // non-secret closed door
             ((lines[i].backsector->floorheight==lines[i].backsector->ceilingheight) ||
             (lines[i].frontsector->floorheight==lines[i].frontsector->ceilingheight))
@@ -1339,7 +1359,7 @@ void AM_drawWalls(void)
               (map_secret_after &&
                (
                 (P_WasSecret(lines[i].frontsector)
-                 && !P_IsSecret(lines[i].frontsector)) || 
+                 && !P_IsSecret(lines[i].frontsector)) ||
                 (P_WasSecret(lines[i].backsector)
                  && !P_IsSecret(lines[i].backsector))
                )
@@ -1366,8 +1386,8 @@ void AM_drawWalls(void)
           AM_drawMline(&l, mapcolor_cchg); // ceiling level change
         }
         else if (mapcolor_flat && ddt_cheating)
-        { 
-          AM_drawMline(&l, mapcolor_flat); //2S lines that appear only in IDDT  
+        {
+          AM_drawMline(&l, mapcolor_flat); //2S lines that appear only in IDDT
         }
       }
     } // now draw the lines only visible because the player has computermap
@@ -1456,7 +1476,7 @@ void AM_drawLineCharacter
 //
 // AM_drawPlayers()
 //
-// Draws the player arrow in single player, 
+// Draws the player arrow in single player,
 // or all the player arrows in a netgame.
 //
 // Passed nothing, returns nothing
@@ -1477,7 +1497,7 @@ void AM_drawPlayers(void)
         mapcolor_sngl,      //jff color
         plr->mo->x,
         plr->mo->y
-      ); 
+      );
     else
       AM_drawLineCharacter
       (
@@ -1487,25 +1507,25 @@ void AM_drawPlayers(void)
         plr->mo->angle,
         mapcolor_sngl,      //jff color
         plr->mo->x,
-        plr->mo->y);        
+        plr->mo->y);
     return;
   }
 
   for (i=0;i<MAXPLAYERS;i++) {
     player_t* p = &players[i];
-    
+
     if ( (deathmatch && !singledemo) && p != plr)
       continue;
 
     if (playeringame[i]) {
       fixed_t x = p->mo->x, y = p->mo->y;
       if (automapmode & am_rotate)
-	AM_rotate(&x, &y, ANG90-plr->mo->angle, plr->mo->x, plr->mo->y);
+  AM_rotate(&x, &y, ANG90-plr->mo->angle, plr->mo->x, plr->mo->y);
 
       AM_drawLineCharacter (player_arrow, NUMPLYRLINES, 0, p->mo->angle,
-			    p->powers[pw_invisibility] ? 246 /* *close* to black */ 
-			    : mapcolor_plyr[i], //jff 1/6/98 use default color
-			    x, y);
+          p->powers[pw_invisibility] ? 246 /* *close* to black */
+          : mapcolor_plyr[i], //jff 1/6/98 use default color
+          x, y);
     }
   }
 }
@@ -1534,7 +1554,7 @@ void AM_drawThings
       fixed_t x = t->x, y = t->y;
 
       if (automapmode & am_rotate)
-	AM_rotate(&x, &y, ANG90-plr->mo->angle, plr->mo->x, plr->mo->y);
+  AM_rotate(&x, &y, ANG90-plr->mo->angle, plr->mo->x, plr->mo->y);
 
       //jff 1/5/98 case over doomednum of thing being drawn
       if (mapcolor_rkey || mapcolor_ykey || mapcolor_bkey)
@@ -1590,7 +1610,9 @@ void AM_drawThings
         NUMTHINTRIANGLEGUYLINES,
         16<<FRACBITS,
         t->angle,
-        t->flags & MF_FRIEND && !t->player ? mapcolor_frnd : mapcolor_sprt,
+	t->flags & MF_FRIEND && !t->player ? mapcolor_frnd : 
+        /* bbm 2/28/03 Show countable items in yellow. */
+          t->flags & MF_COUNTITEM ? mapcolor_item : mapcolor_sprt,
         x, y
       );
       t = t->snext;
@@ -1632,11 +1654,11 @@ void AM_drawMarks(void)
           fx++;
 
         if (fx >= f_x && fx < f_w - w && fy >= f_y && fy < f_h - h) {
-	  // cph - construct patch name and draw marker
-	  char namebuf[] = { 'A', 'M', 'M', 'N', 'U', 'M', '0'+d, 0 };
-	  
+    // cph - construct patch name and draw marker
+    char namebuf[] = { 'A', 'M', 'M', 'N', 'U', 'M', '0'+d, 0 };
+
           V_DrawNamePatch(fx, fy, FB, namebuf, CR_DEFAULT, VPT_NONE);
-	}
+  }
         fx -= w-1;          // killough 2/22/98: 1 space backwards
         j /= 10;
       }
@@ -1657,7 +1679,12 @@ void AM_drawMarks(void)
 inline static void AM_drawCrosshair(int color)
 {
   // single point for now
+#ifdef GL_DOOM
+  gld_DrawLine((f_w/2)-1, (f_h/2), (f_w/2)+1, (f_h/2), (byte)color);
+  gld_DrawLine((f_w/2), (f_h/2)-1, (f_w/2), (f_h/2)+1, (byte)color);
+#else
   V_PlotPixel(FB, f_w/2, f_h/2, (byte)color);
+#endif
 }
 
 //
@@ -1683,26 +1710,6 @@ void AM_Drawer (void)
   AM_drawCrosshair(mapcolor_hair);   //jff 1/7/98 default crosshair color
 
   AM_drawMarks();
+
+  V_MarkRect(f_x, f_y, f_w, f_h);
 }
-
-//============================================================================
-//
-// Console Commands
-//
-//============================================================================
-
-CONSOLE_COMMAND(togglemap, 0)
-{
-  if(automapmode & am_active)
-    AM_Stop();
-  else
-    AM_Start();
-}
-
-void AM_AddCommands()
-{
-  C_AddCommand(togglemap);
-
-  AM_AddColors();
-}
-

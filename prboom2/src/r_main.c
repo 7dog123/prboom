@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -6,9 +6,9 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2001 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -45,15 +45,15 @@
 #include "lprintf.h"
 #include "st_stuff.h"
 #include "i_main.h"
-#include "c_runcmd.h"
-#include "hu_over.h"
-#include "g_game.h"
+#ifdef GL_DOOM
+#include "gl_struct.h"
+#endif
 
 
 void R_LoadTrigTables(void);
 
 // Fineangles in the SCREENWIDTH wide window.
-#define FIELDOFVIEW 2048    
+#define FIELDOFVIEW 2048
 
 // killough: viewangleoffset is a legacy from the pre-v1.2 days, when Doom
 // had Left/Mid/Right viewing. +/-ANG90 offsets were placed here on each
@@ -72,8 +72,6 @@ angle_t  viewangle;
 fixed_t  viewcos, viewsin;
 player_t *viewplayer;
 extern lighttable_t **walllights;
-camera_t* viewcamera;
-int viewheightsec;
 
 //
 // precalculated math tables
@@ -84,7 +82,7 @@ angle_t clipangle;
 // The viewangletox[viewangle + FINEANGLES/4] lookup
 // maps the visible view angles to screen X coordinates,
 // flattening the arc to a flat projection plane.
-// There will be many angles mapped to the same X. 
+// There will be many angles mapped to the same X.
 
 int viewangletox[FINEANGLES/2];
 
@@ -98,7 +96,9 @@ angle_t xtoviewangle[MAX_SCREENWIDTH+1];   // killough 2/8/98
 // killough 4/4/98: support dynamic number of them as well
 
 int numcolormaps;
+lighttable_t *(*c_scalelight)[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
+lighttable_t *(*scalelight)[MAXLIGHTSCALE];
 lighttable_t *(*zlight)[MAXLIGHTZ];
 lighttable_t *fullcolormap;
 lighttable_t **colormaps;
@@ -107,7 +107,7 @@ lighttable_t **colormaps;
 
 int extralight;                           // bumped light from gun blasts
 
-void (*colfunc)(); // Removed void parameter - POPE
+void (*colfunc)(void);
 
 //
 // R_PointOnSide
@@ -125,10 +125,10 @@ const int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 
   if (!node->dy)
     return y <= node->y ? node->dx < 0 : node->dx > 0;
-        
+
   x -= node->x;
   y -= node->y;
-  
+
   // Try to quickly decide by looking at sign bits.
   if ((node->dy ^ node->dx ^ x ^ y) < 0)
     return (node->dy ^ x) < 0;  // (left is negative)
@@ -149,10 +149,10 @@ const int R_PointOnSegSide(fixed_t x, fixed_t y, const seg_t *line)
 
   if (!ldy)
     return y <= ly ? ldx < 0 : ldx > 0;
-  
+
   x -= lx;
   y -= ly;
-        
+
   // Try to quickly decide by looking at sign bits.
   if ((ldy ^ ldx ^ x ^ y) < 0)
     return (ldy ^ x) < 0;          // (left is negative)
@@ -173,11 +173,11 @@ const int R_PointOnSegSide(fixed_t x, fixed_t y, const seg_t *line)
 // killough 5/2/98: reformatted, cleaned up
 
 angle_t R_PointToAngle(fixed_t x, fixed_t y)
-{       
+{
   return (y -= viewy, (x -= viewx) || y) ?
     x >= 0 ?
-      y >= 0 ? 
-        (x > y) ? tantoangle[SlopeDiv(y,x)] :                      // octant 0 
+      y >= 0 ?
+        (x > y) ? tantoangle[SlopeDiv(y,x)] :                      // octant 0
                 ANG90-1-tantoangle[SlopeDiv(x,y)] :                // octant 1
         x > (y = -y) ? 0-tantoangle[SlopeDiv(y,x)] :                // octant 8
                        ANG270+tantoangle[SlopeDiv(x,y)] :          // octant 7
@@ -189,11 +189,11 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y)
 }
 
 angle_t R_PointToAngle2(fixed_t viewx, fixed_t viewy, fixed_t x, fixed_t y)
-{       
+{
   return (y -= viewy, (x -= viewx) || y) ?
     x >= 0 ?
-      y >= 0 ? 
-        (x > y) ? tantoangle[SlopeDiv(y,x)] :                      // octant 0 
+      y >= 0 ?
+        (x > y) ? tantoangle[SlopeDiv(y,x)] :                      // octant 0
                 ANG90-1-tantoangle[SlopeDiv(x,y)] :                // octant 1
         x > (y = -y) ? 0-tantoangle[SlopeDiv(y,x)] :                // octant 8
                        ANG270+tantoangle[SlopeDiv(x,y)] :          // octant 7
@@ -213,7 +213,7 @@ static void R_InitTextureMapping (void)
 {
   register int i,x;
   fixed_t focallength;
-    
+
   // Use tangent table to generate viewangletox:
   //  viewangletox will give the next greatest x
   //  after the view angle.
@@ -222,7 +222,7 @@ static void R_InitTextureMapping (void)
   //  so FIELDOFVIEW angles covers SCREENWIDTH.
 
   focallength = FixedDiv(centerxfrac, finetangent[FINEANGLES/4+FIELDOFVIEW/2]);
-        
+
   for (i=0 ; i<FINEANGLES/2 ; i++)
     {
       int t;
@@ -243,7 +243,7 @@ static void R_InitTextureMapping (void)
         }
       viewangletox[i] = t;
     }
-    
+
   // Scan viewangletox[] to generate xtoviewangle[]:
   //  xtoviewangle will give the smallest view angle
   //  that maps to x.
@@ -254,20 +254,22 @@ static void R_InitTextureMapping (void)
         ;
       xtoviewangle[x] = (i<<ANGLETOFINESHIFT)-ANG90;
     }
-    
+
   // Take out the fencepost cases from viewangletox.
   for (i=0; i<FINEANGLES/2; i++)
     if (viewangletox[i] == -1)
       viewangletox[i] = 0;
-    else 
+    else
       if (viewangletox[i] == viewwidth+1)
         viewangletox[i] = viewwidth;
-        
+
   clipangle = xtoviewangle[0];
 }
 
 //
 // R_InitLightTables
+// Only inits the zlight table,
+//  because the scalelight table changes with view size.
 //
 
 #define DISTMAP 2
@@ -275,9 +277,10 @@ static void R_InitTextureMapping (void)
 void R_InitLightTables (void)
 {
   int i;
-    
+
   // killough 4/4/98: dynamic colormaps
   c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
+  c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
 
   // Calculate the light levels to use
   //  for each level / distance combination.
@@ -286,8 +289,8 @@ void R_InitLightTables (void)
       int j, startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
       for (j=0; j<MAXLIGHTZ; j++)
         {
-	  // CPhipps - use 320 here instead of SCREENWIDTH, otherwise hires is  
-	  //           brighter than normal res
+    // CPhipps - use 320 here instead of SCREENWIDTH, otherwise hires is
+    //           brighter than normal res
           int scale = FixedDiv ((320/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
           int t, level = startmap - (scale >>= LIGHTSCALESHIFT)/DISTMAP;
 
@@ -348,9 +351,9 @@ void R_ExecuteSetViewSize (void)
       scaledviewwidth = setblocks*SCREENWIDTH/10;
       viewheight = (setblocks*(SCREENHEIGHT-ST_SCALED_HEIGHT)/10) & ~7;
     }
-    
+
   viewwidth = scaledviewwidth;
-        
+
   centery = viewheight/2;
   centerx = viewwidth/2;
   centerxfrac = centerx<<FRACBITS;
@@ -360,20 +363,20 @@ void R_ExecuteSetViewSize (void)
   projectiony = ((SCREENHEIGHT * centerx * 320) / 200) / SCREENWIDTH * FRACUNIT;
 
   R_InitBuffer (scaledviewwidth, viewheight);
-        
+
   R_InitTextureMapping();
-    
+
   // psprite scales
 // proff 08/17/98: Changed for high-res
   pspritescale = FRACUNIT*viewwidth/320;
   pspriteiscale = FRACUNIT*320/viewwidth;
 // proff 11/06/98: Added for high-res
-  pspriteyscale = (((SCREENHEIGHT*viewwidth)/SCREENWIDTH) << FRACBITS) / 200;    
-  
+  pspriteyscale = (((SCREENHEIGHT*viewwidth)/SCREENWIDTH) << FRACBITS) / 200;
+
   // thing clipping
   for (i=0 ; i<viewwidth ; i++)
     screenheightarray[i] = viewheight;
-    
+
   // planes
   for (i=0 ; i<viewheight ; i++)
     {   // killough 5/2/98: reformatted
@@ -381,11 +384,34 @@ void R_ExecuteSetViewSize (void)
 // proff 08/17/98: Changed for high-res
       yslope[i] = FixedDiv(projectiony, dy);
     }
-        
+
   for (i=0 ; i<viewwidth ; i++)
     {
       fixed_t cosadj = D_abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
       distscale[i] = FixedDiv(FRACUNIT,cosadj);
+    }
+
+  // Calculate the light levels to use
+  //  for each level / scale combination.
+  for (i=0; i<LIGHTLEVELS; i++)
+    {
+      int j, startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+      for (j=0 ; j<MAXLIGHTSCALE ; j++)
+        {
+          int t, level = startmap - j*320/viewwidth/DISTMAP;
+
+          if (level < 0)
+            level = 0;
+
+          if (level >= NUMCOLORMAPS)
+            level = NUMCOLORMAPS-1;
+
+          // killough 3/20/98: initialize multiple colormaps
+          level *= 256;
+
+          for (t=0; t<numcolormaps; t++)     // killough 4/4/98
+            c_scalelight[t][i][j] = colormaps[t] + level;
+        }
     }
 }
 
@@ -393,20 +419,19 @@ void R_ExecuteSetViewSize (void)
 // R_Init
 //
 
-void R_InitColFunc()
-{
-  colfunc = R_GetDrawFunc(RDRAW_PIPELINE_COL_STANDARD); // POPE
-}
+extern int screenblocks;
 
 void R_Init (void)
 {
-  // CPhipps - R_DrawColumn isn't constant anymore, so must 
+  // CPhipps - R_DrawColumn isn't constant anymore, so must
   //  initialise in code
-  R_InitColFunc();
+  colfunc = R_DrawColumn;     // current column draw function
   if (SCREENWIDTH<320)
     I_Error("R_Init: Screenwidth(%d) < 320",SCREENWIDTH);
+#if defined TABLES_AS_LUMPS && defined NO_PREDEFINED_LUMPS
   lprintf(LO_INFO, "\nR_LoadTrigTables: ");
   R_LoadTrigTables();
+#endif
   lprintf(LO_INFO, "\nR_InitData: ");
   R_InitData();
   R_SetViewSize(screenblocks);
@@ -418,8 +443,6 @@ void R_Init (void)
   R_InitSkyMap();
   lprintf(LO_INFO, "R_InitTranslationsTables ");
   R_InitTranslationTables();
-  lprintf(LO_INFO, "R_InitPatches ");
-  R_InitPatches();  
 }
 
 //
@@ -439,39 +462,26 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 // R_SetupFrame
 //
 
-void R_SetupFrame (player_t *player, camera_t* camera)
-{               
-  int cm;
-    
-  viewplayer = player;
-  viewcamera = camera;
-  if(!camera)
-  {
-    viewx = player->mo->x;
-    viewy = player->mo->y;
-    viewz = player->viewz;
-    viewangle = player->mo->angle;
-    viewheightsec = player->mo->subsector->sector->heightsec;
-  }
-  else
-  {
-    viewx = camera->x;
-    viewy = camera->y;
-    viewz = camera->z;
-    viewangle = camera->angle;
-    viewheightsec = R_PointInSubsector(viewx, viewy)->sector->heightsec;
-  }
+void R_SetupFrame (player_t *player)
+{
+  int i, cm;
 
+  viewplayer = player;
+  viewx = player->mo->x;
+  viewy = player->mo->y;
+  viewangle = player->mo->angle + viewangleoffset;
   extralight = player->extralight;
+
+  viewz = player->viewz;
 
   viewsin = finesine[viewangle>>ANGLETOFINESHIFT];
   viewcos = finecosine[viewangle>>ANGLETOFINESHIFT];
 
   // killough 3/20/98, 4/4/98: select colormap based on player status
 
-  if (viewheightsec != -1)
+  if (player->mo->subsector->sector->heightsec != -1)
     {
-      const sector_t *s = viewheightsec + sectors;
+      const sector_t *s = player->mo->subsector->sector->heightsec + sectors;
       cm = viewz < s->floorheight ? s->bottommap : viewz > s->ceilingheight ?
         s->topmap : s->midmap;
       if (cm < 0 || cm > numcolormaps)
@@ -482,11 +492,20 @@ void R_SetupFrame (player_t *player, camera_t* camera)
 
   fullcolormap = colormaps[cm];
   zlight = c_zlight[cm];
+  scalelight = c_scalelight[cm];
 
   if (player->fixedcolormap)
     {
+      // killough 3/20/98: localize scalelightfixed (readability/optimization)
+      static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
+
       fixedcolormap = fullcolormap   // killough 3/20/98: use fullcolormap
         + player->fixedcolormap*256*sizeof(lighttable_t);
+
+      walllights = scalelightfixed;
+
+      for (i=0 ; i<MAXLIGHTSCALE ; i++)
+        scalelightfixed[i] = fixedcolormap;
     }
   else
     fixedcolormap = 0;
@@ -509,174 +528,150 @@ static void R_ShowStats(void)
   int now = I_GetTime();
 
   if (now - showtime > 35) {
-    doom_printf((V_GetMode() == VID_MODEGL)
-                ?"Frame rate %d fps\nWalls %d, Flats %d, Sprites %d"
-                :"Frame rate %d fps\nSegs %d, Visplanes %d, Sprites %d",
-		(35*KEEPTIMES)/(now - keeptime[0]), rendered_segs, 
-		rendered_visplanes, rendered_vissprites);
+#ifdef GL_DOOM
+    doom_printf("Frame rate %d fps\nWalls %d, Flats %d, Sprites %d",
+#else
+    doom_printf("Frame rate %d fps\nSegs %d, Visplanes %d, Sprites %d",
+#endif
+    (35*KEEPTIMES)/(now - keeptime[0]), rendered_segs,
+    rendered_visplanes, rendered_vissprites);
     showtime = now;
   }
   memmove(keeptime, keeptime+1, sizeof(keeptime[0]) * (KEEPTIMES-1));
   keeptime[KEEPTIMES-1] = now;
 }
 
-angle_t R_WadToAngle(int wadangle)
-{
-  // maintain compatibility
-  
-  //if(demo_version < 302) FIXME
-    return (wadangle / 45) * ANG45;
-
-  // allows wads to specify angles to
-  // the nearest degree, not nearest 45  
-
-  //return wadangle * (ANG45 / 45);
-}
-
 //
 // R_RenderView
 //
-
-void R_RenderPlayerView (player_t* player, camera_t* viewcamera)
-{       
-  R_SetupFrame (player, viewcamera);
+void R_RenderPlayerView (player_t* player)
+{
+  R_SetupFrame (player);
 
   // Clear buffers.
   R_ClearClipSegs ();
   R_ClearDrawSegs ();
   R_ClearPlanes ();
   R_ClearSprites ();
-    
+
   rendered_segs = rendered_visplanes = 0;
 #ifdef GL_DOOM
-  if (V_GetMode() == VID_MODEGL)
-  {
-    // proff 11/99: clear buffers
-    gld_InitDrawScene();
-
-    // proff 11/99: switch to perspective mode
-    gld_StartDrawScene();
-  }
-  else
-#endif
+  // proff 11/99: clear buffers
+  gld_InitDrawScene();
+#else /* not GL_DOOM */
   if (autodetect_hom)
     { // killough 2/10/98: add flashing red HOM indicators
-      int color=(gametic % 20) < 9 ? 0xb0 : 0;
-      //memset(screens[0].data+viewwindowy*SCREENWIDTH,color,viewheight*SCREENWIDTH);
+      char c[47*47];
+      extern int lastshottic;
+      int i,color=(gametic % 20) < 9 ? 0xb0 : 0;
+      memset(*screens+viewwindowy*SCREENWIDTH,color,viewheight*SCREENWIDTH);
+      for (i=0;i<47*47;i++)
+        {
+          char t =
+"/////////////////////////////////////////////////////////////////////////////"
+"/////////////////////////////////////////////////////////////////////////////"
+"///////jkkkkklk////////////////////////////////////hkllklklkklkj/////////////"
+"///////////////////jkkkkklklklkkkll//////////////////////////////kkkkkklklklk"
+"lkkkklk//////////////////////////jllkkkkklklklklklkkklk//////////////////////"
+"//klkkllklklklkllklklkkklh//////////////////////kkkkkjkjjkkj\3\205\214\3lllkk"
+"lkllh////////////////////kllkige\211\210\207\206\205\204\203\203\203\205`\206"
+"\234\234\234\234kkllg//////////////////klkkjhfe\210\206\203\203\203\202\202"
+"\202\202\202\202\203\205`\207\211eikkk//////////////////kkkk\3g\211\207\206"
+"\204\203\202\201\201\200\200\200\200\200\201\201\202\204b\210\211\3lkh///////"
+"//////////lklki\213\210b\206\203\201\201\200\200\200\200\200Z\200\200\200\202"
+"\203\204\205\210\211jll/////////////////lkkk\3\212\210b\205\202\201\200\200"
+"\200XW\200\200\200\200\200\200\202\203\204\206\207eklj////////////////lkkjg"
+"\211b\206\204\202\200\200\200YWWX\200Z\200\200\200\202\203\203\205bdjkk//////"
+"//////////llkig\211a\205\203\202\200\200\200YXWX\200\200\200\200\200\201\202"
+"\203\203\206\207ekk////////////////lkki\3\211\206\204\202\201\200\200XXWWWXX"
+"\200\200\200\200\202\202\204\206\207ekk////////////////lkkj\3e\206\206\204\\"
+"\200\200XWVVWWWXX\200\200\200\\\203\205\207\231kk////////////////lkkjjgcccfd"
+"\207\203WVUVW\200\200\202\202\204\204\205\204\206\210gkk////////////////kkkkj"
+"e``\210hjjgb\200W\200\205\206fhghcbdcdfkk////////////////jkkj\3\207ab\211e"
+"\213j\3g\204XX\207\213jii\212\207\203\204\210gfkj///////////////j\211lkjf\210"
+"\214\3\3kj\213\213\211\205X\200\205\212\210\213\213\213\211\210\203\205gelj//"
+"////////////hf\211\213kh\212\212i\212gkh\202\203\210\210\202\201\206\207\206"
+"\\kkhf\210aabkk//////////////je\210\210\3g\210\207\210e\210c\205\204\202\210"
+"\207\203\202\210\205\203\203fjbe\213\210bbieW/////////////ke\207\206ie\206"
+"\203\203\203\205\205\204\203\210\211\207\202\202\206\210\203\204\206\207\210"
+"\211\231\206\206`\206\206]/////////////kf\\\202ig\204\203\202\201\\\202\202"
+"\205\207\210\207\203\202\206\206\206\205\203\203\203\202\202\203\204b\206\204"
+"Z/////////////i\3\\\204j\212\204\202\201\200\202\202\202\203\206\211\210\203"
+"\203c\205\202\201\201\201\200\200\201\202\204a\204\201W/////////////j\3\207"
+"\210jh\206\202\200\200\200\200\200\202\206\211\205\202\202bb\201\200\200\200"
+"\200\200\200\202\203b\\WW/////////////jke\206jic\203\201\200\200\200\200\202"
+"\211\211\201\200\200\204\210\201\200\200W\200\200\200\201\204c\\\200]////////"
+"//////kd\210\3\3e\205\202\200\200W\200\202\211\210\210\201\202\207\210\203"
+"\200WWW\200\200\202\205d\\\202///////////////kkdhigb\203\201\200\200\200\202"
+"\206\210\210\205\210\211\206\203\200WWW\200\201\203ce\203\205////////////////"
+"ijkig\211\203\201\200\200\202\206\207\207\205\206\207\210\206\203\200\200WW"
+"\200\203\206ce\202_//////////////////jig\210\203\202\200\201\206\210\210\205"
+"\204\204\205\206\206\204\202\200\200\200\200\203bcd////////////////////hjgc"
+"\205\202\201\203\206\210\206\204\204\202\202\204\205\206\204\200\200\200\201"
+"\206\207c//////////////////////j\3\207\204\203\202\202\211c\204\201W\200\200"
+"\203\205\206\203\200\200\200\203\206b///////////////////////ihd\204\203\202"
+"\201\207f\205VTVTW\202\210\206Z\200\200\203aa////////////////////////jg\204"
+"\204\203\201\202\210\211\211c\206\205\210d\210\200\200\200\202\204ac/////////"
+"///////////////j\3b\203\203\202\202\205\207\206\205\207\207\206\206\202\200"
+"\201\202\203ac/////////////////////////iid\206\204\203\202\204\205\377\205"
+"\204\205\204\203\201\200\202\203\203bc//////////////////////////ej\207\205"
+"\203\201\202\202\203\207\204\203\202\202\201\201\203\203bd///////////////////"
+"////////ee\3a\204\201\200\201\202\205\203\201\200\200\201\202\204\205cc//////"
+"//////////////////////c\3ec\203\201\200\200\201\202\201\200\200\202\203\206cc"
+"//////////////////////////////c\3f\206\203\201\200\200\200\200\200\201\203bdc"
+"////////////////////////////////g\3\211\206\202\\\201\200\201\202\203dde/////"
+"/////////////////////////////\234\3db\203\203\203\203adec////////////////////"
+"/////////////////hffed\211de////////////////////"[i];
+          c[i] = t=='/' ? color : t;
+        }
+      if (gametic-lastshottic < TICRATE*2 && gametic-lastshottic > TICRATE/8)
+        V_DrawBlock(viewwindowx +  viewwidth/2 - 24,
+                    viewwindowy + viewheight/2 - 24, 0, 47, 47, c, VPT_NONE);
       R_DrawViewBorder();
     }
+#endif /* not GL_DOOM */
+
+#ifdef GL_DOOM
+  // proff 11/99: switch to perspective mode
+  gld_StartDrawScene();
+#endif
 
   // check for new console commands.
-#ifdef HAVE_NET  
+#ifdef HAVE_NET
   NetUpdate ();
 #endif
 
   // The head node is the last node output.
   R_RenderBSPNode (numnodes-1);
-    
+
   // Check for new console commands.
-#ifdef HAVE_NET  
-  NetUpdate ();
-#endif
-    
-  if (V_GetMode() != VID_MODEGL)
-    R_DrawPlanes ();
-    
-  // Check for new console commands.
-#ifdef HAVE_NET  
+#ifdef HAVE_NET
   NetUpdate ();
 #endif
 
-  if (V_GetMode() != VID_MODEGL)
-    R_DrawMasked ();
+#ifndef GL_DOOM
+  R_DrawPlanes ();
+#endif
 
   // Check for new console commands.
-#ifdef HAVE_NET  
+#ifdef HAVE_NET
+  NetUpdate ();
+#endif
+
+#ifndef GL_DOOM
+  R_DrawMasked ();
+#endif
+
+  // Check for new console commands.
+#ifdef HAVE_NET
   NetUpdate ();
 #endif
 
 #ifdef GL_DOOM
-  if (V_GetMode() == VID_MODEGL)
-  {
-    // proff 11/99: draw the scene
-    gld_DrawScene(player);
-    // proff 11/99: finishing off
-    gld_EndDrawScene();
-  }
+  // proff 11/99: draw the scene
+  gld_DrawScene(player);
+  // proff 11/99: finishing off
+  gld_EndDrawScene();
 #endif
   if (rendering_stats) R_ShowStats();
 }
-
-void R_ResetTrans()
-{
-  if (default_translucency)
-    R_InitTranMap(0);
-}
-
-//
-//  Console Commands
-//
-
-extern int tran_filter_pct;
-
-CONSOLE_BOOLEAN(r_trans, default_translucency, NULL, onoff, 0)
-{
-  general_translucency = default_translucency;
-  R_ResetTrans();
-}
-
-CONSOLE_INT(r_tranpct, tran_filter_pct, NULL, 0, 100, NULL, 0)
-{
-  R_ResetTrans();
-}
-
-CONSOLE_BOOLEAN(r_homflash, autodetect_hom, NULL, onoff, 0) {}
-
-CONSOLE_INT(gamma, usegamma, NULL, 0, 4, NULL, 0)
-{
-        // change to new gamma val
-    V_SetPalette(0);
-}
-
-CONSOLE_INT(screensize, screenblocks, NULL, 3, 11, NULL, 0)
-{
-  if(gamestate == GS_LEVEL) // not in intercam
-  {
-    R_SetViewSize (screenblocks);
-  }
-
-  if(screenblocks == 11)        // fullscreen
-    HU_ToggleHUD();
-}
-
-static char *str_filter[] =
-{
-  "point",
-  "linear",
-  "rounded"
-};
-
-CONSOLE_INT(r_filterwall, rdrawvars.filterwall, NULL, 0, 2, str_filter, 0) {}
-CONSOLE_INT(r_filterfloor, rdrawvars.filterfloor, NULL, 0, 1, str_filter, 0) {}
-CONSOLE_INT(r_filterz, rdrawvars.filterz, NULL, 0, 1, str_filter, 0) {}
-CONSOLE_INT(r_columnslope, rdrawvars.maskedColumnEdgeType, NULL, 0, 1, onoff, 0) {}
-CONSOLE_INT(r_filterthreshold, rdrawvars.magThresh, NULL, 10000, 200000, NULL, 0) {}
-CONSOLE_INT(r_patchfilter, vid_drawPatchFilterType, NULL, 0, 2, str_filter, 0) {}
-CONSOLE_INT(r_patchslope, vid_drawPatchSlopeType, NULL, 0, 1, onoff, 0) {}
-
-void R_AddCommands()
-{
-  C_AddCommand(r_trans);
-  C_AddCommand(r_tranpct);
-  C_AddCommand(r_homflash);
-  C_AddCommand(gamma);
-  C_AddCommand(screensize);
-  C_AddCommand(r_filterwall);
-  C_AddCommand(r_filterfloor);
-  C_AddCommand(r_filterz);
-  C_AddCommand(r_columnslope);
-  C_AddCommand(r_filterthreshold);
-  C_AddCommand(r_patchfilter);
-  C_AddCommand(r_patchslope);
-}
-

@@ -44,7 +44,7 @@
 // Include system definitions so that prototypes become
 // active before macro replacements below are in effect.
 
-#include "config.h"
+#include "../config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -126,6 +126,11 @@ char *strdup(const char *s);
 
 #endif
 
+// Doom-style printf
+void doom_printf(const char *, ...) __attribute__((format(printf,1,2)));
+
 void Z_ZoneHistory(char *);
+
+extern size_t zone_size;
 
 #endif

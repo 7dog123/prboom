@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -62,7 +62,7 @@ weaponinfo_t    weaponinfo[NUMWEAPONS] =
     S_PUNCH,
     S_PUNCH1,
     S_NULL
-  },  
+  },
   {
     // pistol
     am_clip,
@@ -71,7 +71,7 @@ weaponinfo_t    weaponinfo[NUMWEAPONS] =
     S_PISTOL,
     S_PISTOL1,
     S_PISTOLFLASH
-  },  
+  },
   {
     // shotgun
     am_shell,
@@ -134,5 +134,5 @@ weaponinfo_t    weaponinfo[NUMWEAPONS] =
     S_DSGUN,
     S_DSGUN1,
     S_DSGUNFLASH1
-  },  
+  },
 };

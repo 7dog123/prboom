@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:  Head up display
@@ -32,51 +32,56 @@
 #define __HU_STUFF_H__
 
 #include "d_event.h"
-#include "v_video.h"
 
-#define MAXHUDMESSAGES 16
+/*
+ * Globally visible constants.
+ */
+#define HU_FONTSTART    '!'     /* the first font characters */
+#define HU_FONTEND      (0x7f) /*jff 2/16/98 '_' the last font characters */
 
-#define MAXWIDGETS 16
+/* Calculate # of glyphs in font. */
+#define HU_FONTSIZE     (HU_FONTEND - HU_FONTSTART + 1)
 
-typedef struct textwidget_s textwidget_t;
+#define HU_BROADCAST    5
 
-// haleyjd: architecture alteration:
-// made handler take a pointer to its widget for 
-// self-referencing purposes -- seems silly at first but it
-// creates an interface-style functionality allowing several
-// widgets to be handled by the same code (less explosion)
+/*#define HU_MSGREFRESH   KEYD_ENTER                                phares */
+#define HU_MSGX         0
+#define HU_MSGY         0
+#define HU_MSGWIDTH     64      /* in characters */
+#define HU_MSGHEIGHT    1       /* in lines */
 
-struct textwidget_s
-{
-  int x, y;       // co-ords on screen
-  int font;       // 0 = normal red text 1 = heads up font
-  int fontcolour;
-  char *message;
-  void (*handler)(textwidget_t *widget);      // controller function
-  int cleartic;   // gametic in which to clear the widget (0=never)
-};
+#define HU_MSGTIMEOUT   (4*TICRATE)
 
-extern int show_vpo;
-
-extern boolean chat_on;
-extern int obituaries;
-extern int obcolour;       // the colour of death messages
-extern int showMessages;   // Show messages has default, 0 = off, 1 = on
-extern int mess_colour;    // the colour of normal messages
-extern char *chat_macros[10];
-
+/*
+ * Heads up text
+ */
 void HU_Init(void);
-void HU_Drawer(void);
-void HU_Ticker(void);
-boolean HU_Responder(event_t* ev);
-void HU_NewLevel(void);
-char HU_dequeueChatChar(void);
-
 void HU_Start(void);
-void HU_End(void);
 
-void HU_PlayerMsg(char *s);
-void HU_CentreMsg(char *s);
+boolean HU_Responder(event_t* ev);
+
+void HU_Ticker(void);
+void HU_Drawer(void);
+char HU_dequeueChatChar(void);
 void HU_Erase(void);
+
+/* killough 5/2/98: moved from m_misc.c: */
+
+/* jff 2/16/98 hud supported automap colors added */
+extern int hudcolor_titl;   /* color range of automap level title   */
+extern int hudcolor_xyco;   /* color range of new coords on automap */
+/* jff 2/16/98 hud text colors, controls added */
+extern int hudcolor_mesg;   /* color range of scrolling messages    */
+extern int hudcolor_chat;   /* color range of chat lines            */
+/* jff 2/26/98 hud message list color and background enable */
+extern int hudcolor_list;   /* color of list of past messages                  */
+extern int hud_list_bgon;   /* solid window background for list of messages    */
+extern int hud_msg_lines;   /* number of message lines in window up to 16      */
+extern int hud_distributed; /* whether hud is all in lower left or distributed */
+/* jff 2/23/98 hud is currently displayed */
+extern int hud_displayed;   /* hud is displayed */
+/* jff 2/18/98 hud/status control */
+extern int hud_active;      /* hud mode 0=off, 1=small, 2=full          */
+extern int hud_nosecrets;   /* status does not list secrets/items/kills */
 
 #endif

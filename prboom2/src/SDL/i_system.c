@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -50,35 +50,24 @@
 
 #include "SDL.h"
 
-#include "psnprntf.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef _MSC_VER
-#include <io.h>
-#endif
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <errno.h>
-
 #include "i_system.h"
-#include "doomtype.h"
-#include "doomdef.h"
 #include "m_argv.h"
 #include "lprintf.h"
+#include "doomtype.h"
+#include "doomdef.h"
 
 #ifdef __GNUG__
 #pragma implementation "i_system.h"
 #endif
 #include "i_system.h"
 
+#ifdef HAVE_CONFIG_H
+#include "../config.h"
+#endif
+
 void I_uSleep(unsigned long usecs)
 {
-	  SDL_Delay(usecs/1000);
+    SDL_Delay(usecs/1000);
 }
 
 int I_GetTime_RealTime (void)
@@ -92,17 +81,21 @@ int I_GetTime_RealTime (void)
  * CPhipps - extracted from G_ReloadDefaults because it is O/S based
  */
 unsigned long I_GetRandomTimeSeed(void)
-{                            
+{
 /* This isnt very random */
   return(SDL_GetTicks());
 }
 
 /* cphipps - I_GetVersionString
- * Returns a version string in the given buffer 
+ * Returns a version string in the given buffer
  */
 const char* I_GetVersionString(char* buf, size_t sz)
 {
-  psnprintf(buf,sz,"%s v%s (http://prboom.sourceforge.net/)",PACKAGE,VERSION);
+#ifdef HAVE_SNPRINTF
+  snprintf(buf,sz,"%s v%s (http://prboom.sourceforge.net/)",PACKAGE,VERSION);
+#else
+  sprintf(buf,"%s v%s (http://prboom.sourceforge.net/)",PACKAGE,VERSION);
+#endif
   return buf;
 }
 
@@ -120,44 +113,14 @@ const char* I_SigString(char* buf, size_t sz, int signum)
   return buf;
 }
 
-/* 
- * I_Read
- *
- * cph 2001/11/18 - wrapper for read(2) which handles partial reads and aborts
- * on error.
- */
-void I_Read(int fd, void* buf, size_t sz)
-{
-  while (sz) {
-    int rc = read(fd,buf,sz);
-    if (rc <= 0) {
-      I_Error("I_Read: read failed: %s", rc ? strerror(errno) : "EOF");
-    }
-    sz -= rc; (unsigned char *)buf += rc;
-  }
-}
-
-/*
- * I_Filelength
- *
- * Return length of an open file.
- */
-
-int I_Filelength(int handle)
-{
-  struct stat   fileinfo;
-  if (fstat(handle,&fileinfo) == -1)
-    I_Error("I_Filelength: %s",strerror(errno));
-  return fileinfo.st_size;
-}
-
 #ifndef PRBOOM_SERVER
 
 // Return the path where the executable lies -- Lee Killough
+// proff_fs 2002-07-04 - moved to i_system
 #ifdef _WIN32
 char *I_DoomExeDir(void)
 {
-  static const char current_dir_dummy[] = {"./"};
+  static const char current_dir_dummy[] = {"."}; // proff - rem extra slash 8/21/03
   static char *base;
   if (!base)        // cache multiple requests
     {
@@ -178,23 +141,10 @@ char *I_DoomExeDir(void)
     }
   return base;
 }
-#elif (defined DREAMCAST)
-static const char prboom_dir[] = {"/pc/doom"};
-
-char *I_DoomExeDir(void)
-{
-  static char *base;
-  if (!base)        // cache multiple requests
-    {
-      base = malloc(strlen(prboom_dir) + 1);
-      strcpy(base, prboom_dir);
-    }
-  return base;
-}
 #else
 // cph - V.Aguilar (5/30/99) suggested return ~/.lxdoom/, creating
 //  if non-existant
-static const char prboom_dir[] = {"/.prboom/"};
+static const char prboom_dir[] = {"/.prboom"}; // Mead rem extra slash 8/21/03
 
 char *I_DoomExeDir(void)
 {
@@ -215,7 +165,7 @@ char *I_DoomExeDir(void)
 }
 #endif
 
-/* 
+/*
  * HasTrailingSlash
  *
  * cphipps - simple test for trailing slash on dir names
@@ -226,41 +176,38 @@ static boolean HasTrailingSlash(const char* dn)
   return (dn[strlen(dn)-1] == '/');
 }
 
-/* 
+/*
  * I_FindFile
  *
- * cphipps 19/1999 - writen to unify the logic in FindIWADFile and the WAD 
- * 			autoloading code.
+ * proff_fs 2002-07-04 - moved to i_system
+ *
+ * cphipps 19/1999 - writen to unify the logic in FindIWADFile and the WAD
+ *      autoloading code.
  * Searches the standard dirs for a named WAD file
- * The dirs are: 
- * . 
- * DOOMWADDIR 
- * ~/doom 
- * /usr/share/games/doom 
+ * The dirs are:
+ * .
+ * DOOMWADDIR
+ * ~/doom
+ * /usr/share/games/doom
  * /usr/local/share/games/doom
  * ~
  */
 
-char *I_FindFile(const char* wfname, const char* ext)
+char* I_FindFile(const char* wfname, const char* ext)
 {
-  int		i;
+  int   i;
   /* Precalculate a length we will need in the loop */
-  size_t	pl = strlen(wfname) + strlen(ext) + 4;
+  size_t  pl = strlen(wfname) + strlen(ext) + 4;
 
   for (i=0; i<8; i++) {
-    char	*	p;
-    const char	*	d = NULL;
-    const char	*	s = NULL;
-    /* Each entry in the switch sets d to the directory to look in, 
+    char  * p;
+    const char  * d = NULL;
+    const char  * s = NULL;
+    /* Each entry in the switch sets d to the directory to look in,
      * and optionally s to a subdirectory of d */
     switch(i) {
-#ifndef DREAMCAST    	
     case 1:
       if (!(d = getenv("DOOMWADDIR"))) continue;
-#else // DREAMCAST
-    case 1:
-      d = "/pc/doom";
-#endif // DREAMCAST
     case 0:
       break;
     case 2:
@@ -274,20 +221,15 @@ char *I_FindFile(const char* wfname, const char* ext)
       break;
     case 6:
       d = I_DoomExeDir();
+      break;
     case 3:
       s = "doom";
-#ifndef DREAMCAST    	
     case 7:
       if (!(d = getenv("HOME"))) continue;
       break;
-#else // DREAMCAST
-    case 7:
-      d = "/pc/doom";
-      break;
-#endif // DREAMCAST
 #ifdef SIMPLECHECKS
     default:
-      I_Error("I_FindFile: Internal failure");
+      I_Error("FindWADFile: Internal failure");
 #endif
     }
 

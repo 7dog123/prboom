@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -30,8 +30,10 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
+
+#include <memory.h>
 
 #include "doomtype.h"
 #include "z_zone.h"
@@ -71,12 +73,12 @@ void* Z_BMalloc(struct block_memory_alloc_s *pzone)
     if (p) {
       int n = p - (*pool)->used;
 #ifdef SIMPLECHECKS
-      if ((n<0) || ((size_t)n>=(*pool)->blocks)) 
-	I_Error("Z_BMalloc: memchr returned pointer outside of array");
+      if ((n<0) || ((size_t)n>=(*pool)->blocks))
+  I_Error("Z_BMalloc: memchr returned pointer outside of array");
 #endif
       (*pool)->used[n] = used_block;
       return getelem(*pool, pzone->size, n);
-    } else 
+    } else
       pool = &((*pool)->nextpool);
   }
   {
@@ -85,8 +87,8 @@ void* Z_BMalloc(struct block_memory_alloc_s *pzone)
 
     // CPhipps: Allocate new memory, initialised to 0
 
-    *pool = newpool = Z_Calloc(sizeof(*newpool) + (sizeof(byte) + pzone->size)*(pzone->perpool), 
-			       1,  pzone->tag, NULL);
+    *pool = newpool = Z_Calloc(sizeof(*newpool) + (sizeof(byte) + pzone->size)*(pzone->perpool),
+             1,  pzone->tag, NULL);
     newpool->nextpool = NULL; // NULL = (void*)0 so this is redundant
 
     // Return element 0 from this pool to satisfy the request
@@ -105,14 +107,14 @@ void Z_BFree(struct block_memory_alloc_s *pzone, void* p)
     if (n >= 0) {
 #ifdef SIMPLECHECKS
       if ((*pool)->used[n] == unused_block)
-	I_Error("Z_BFree: Refree in zone %s", pzone->desc);
+  I_Error("Z_BFree: Refree in zone %s", pzone->desc);
 #endif
       (*pool)->used[n] = unused_block;
       if (memchr(((*pool)->used), used_block, (*pool)->blocks) == NULL) {
-	// Block is all unused, can be freed
-	bmalpool_t *oldpool = *pool;
-	*pool = (*pool)->nextpool;
-	Z_Free(oldpool);
+  // Block is all unused, can be freed
+  bmalpool_t *oldpool = *pool;
+  *pool = (*pool)->nextpool;
+  Z_Free(oldpool);
       }
       return;
     } else pool = &((*pool)->nextpool);

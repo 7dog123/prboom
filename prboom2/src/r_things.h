@@ -1,4 +1,4 @@
-/* Emacs style mode select   -*- C++ -*- 
+/* Emacs style mode select   -*- C++ -*-
  *-----------------------------------------------------------------------------
  *
  *
@@ -8,7 +8,7 @@
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
  *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
- *  
+ *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
  *  as published by the Free Software Foundation; either version 2
@@ -21,7 +21,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  *  02111-1307, USA.
  *
  * DESCRIPTION:
@@ -52,7 +52,7 @@ extern fixed_t pspriteiscale;
 /* proff 11/06/98: Added for high-res */
 extern fixed_t pspriteyscale;
 
-void R_DrawMaskedColumn(const TPatch *patch, const TPatchColumn *column, const TPatchColumn *prevColumn, const TPatchColumn *nextColumn);
+void R_DrawMaskedColumn(const column_t *column);
 void R_SortVisSprites(void);
 void R_AddSprites(subsector_t* subsec, int lightlevel);
 void R_AddPSprites(void);
