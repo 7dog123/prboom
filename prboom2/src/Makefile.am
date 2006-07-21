@@ -1,16 +1,18 @@
 #
-# automake Makefile.am for the PrBoom source directory
+# automake Makefile.am for the LxDoom source directory
 #
 #
 # Process this file with automake to produce Makefile.in
 #
 #
 
-SUBDIRS = SDL POSIX MAC
+EXTRA_SUBDIRS = Posix SDL
+
+SUBDIRS = SDL POSIX
 
 gamesdir=$(prefix)/games
-EXTRA_PROGRAMS = prboom
-games_PROGRAMS = @BUILD_DOOM@ prboom-game-server
+EXTRA_PROGRAMS = prboom-game-server
+games_PROGRAMS = prboom @BUILD_SERVER@
 
 CFLAGS = @CFLAGS@ @SDL_CFLAGS@
 
@@ -47,7 +49,9 @@ COMMON_SRC = \
  f_finale.c     p_lights.c         r_draw.h         z_bmalloc.c \
  f_finale.h     p_map.c            r_main.c         z_bmalloc.h \
  f_wipe.c       p_map.h            r_main.h         z_zone.c    \
- f_wipe.h       p_maputl.c         r_plane.c        z_zone.h
+ f_wipe.h       p_maputl.c         r_plane.c        z_zone.h \
+ e6y.c e6y.h
+#e6y
 
 NET_CLIENT_SRC = d_client.c i_udp_sdl.c
 
@@ -56,18 +60,11 @@ GL_SRC = gl_intern.h  gl_main.c  gl_struct.h  gl_texture.c
 if BUILD_GL
 USE_GL_SRC = gl_intern.h  gl_main.c  gl_struct.h  gl_texture.c
 else
-USE_GL_SRC = 
+USE_GL_SRC =
 endif
 
-if WAD_MMAP
-WAD_SRC = w_mmap.c
-else
-WAD_SRC = w_memcache.c
-endif
-
-prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC) $(WAD_SRC)
+prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC)
 prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @MATH_LIB@
 
 # Must remember to include 'optional' sources in the tarball
 EXTRA_prboom_SOURCES = $(GL_SRC)
-

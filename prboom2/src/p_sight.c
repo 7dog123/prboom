@@ -63,10 +63,25 @@ inline static int P_DivlineSide(fixed_t x, fixed_t y, const divline_t *node)
   fixed_t left, right;
   return
     !node->dx ? x == node->x ? 2 : x <= node->x ? node->dy > 0 : node->dy < 0 :
-    !node->dy ? ( compatibility_level < prboom_4_compatibility ? x : y) == node->y ? 2 : y <= node->y ? node->dx < 0 : node->dx > 0 :
+    !node->dy ? x == node->y ? 2 : y <= node->y ? node->dx < 0 : node->dx > 0 :
     (right = ((y - node->y) >> FRACBITS) * (node->dx >> FRACBITS)) <
     (left  = ((x - node->x) >> FRACBITS) * (node->dy >> FRACBITS)) ? 0 :
     right == left ? 2 : 1;
+}
+
+//
+// P_InterceptVector2
+// Returns the fractional intercept point
+// along the first divline.
+//
+// killough 4/19/98: made static, cleaned up
+
+static fixed_t P_InterceptVector2(const divline_t *v2, const divline_t *v1)
+{
+  fixed_t den;
+  return (den = FixedMul(v1->dy>>8, v2->dx) - FixedMul(v1->dx>>8, v2->dy)) ?
+    FixedDiv(FixedMul((v1->x - v2->x)>>8, v1->dy) +
+             FixedMul((v2->y - v1->y)>>8, v1->dx), den) : 0;
 }
 
 //
@@ -161,17 +176,14 @@ static boolean P_CrossSubsector(int num)
   return false;
 
     { // crosses a two sided line
-      /* cph 2006/07/15 - oops, we missed this in 2.4.0 & .1;
-       *  use P_InterceptVector2 for those compat levels only. */ 
-      fixed_t frac = (compatibility_level == prboom_5_compatibility || compatibility_level == prboom_6_compatibility) ?
-		      P_InterceptVector2(&los.strace, &divl) : 
-		      P_InterceptVector(&los.strace, &divl);
+      fixed_t frac = P_InterceptVector2(&los.strace, &divl);
 
-      if (front->floorheight != back->floorheight) {
-        fixed_t slope = FixedDiv(openbottom - los.sightzstart , frac);
-        if (slope > los.bottomslope)
+      if (front->floorheight != back->floorheight)
+  {
+    fixed_t slope = FixedDiv(openbottom - los.sightzstart , frac);
+    if (slope > los.bottomslope)
             los.bottomslope = slope;
-      }
+  }
 
       if (front->ceilingheight != back->ceilingheight)
         {

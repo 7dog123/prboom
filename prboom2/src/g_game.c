@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -47,7 +47,7 @@
 #include <fcntl.h>
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include "doomstat.h"
@@ -80,6 +80,7 @@
 #include "lprintf.h"
 #include "i_main.h"
 #include "i_system.h"
+#include "e6y.h" //e6y
 
 #define SAVEGAMESIZE  0x20000
 #define SAVESTRINGSIZE  24
@@ -88,7 +89,8 @@ static size_t   savegamesize = SAVEGAMESIZE; // killough
 static boolean  netdemo;
 static const byte *demobuffer;   /* cph - only used for playback */
 static FILE    *demofp; /* cph - record straight to file */
-static const byte *demo_p;
+//e6y static 
+const byte *demo_p;
 static short    consistancy[MAXPLAYERS][BACKUPTICS];
 
 gameaction_t    gameaction;
@@ -126,7 +128,7 @@ boolean         haswolflevels = false;// jff 4/18/98 wolf levels present
 static byte     *savebuffer;          // CPhipps - static
 int             autorun = false;      // always running?          // phares
 int             totalleveltimes;      // CPhipps - total time for all completed levels
-int		longtics;
+int             longtics;
 
 //
 // controls (have defaults)
@@ -255,7 +257,8 @@ mobj_t **bodyque = 0;                   // phares 8/10/98
 void   *statcopy;       // for statistics driver
 
 static void G_DoSaveGame (boolean menu);
-static const byte* G_ReadDemoHeader(const byte* demo_p);
+//e6y static
+const byte* G_ReadDemoHeader(const byte* demo_p);
 
 //
 // G_BuildTiccmd
@@ -268,14 +271,14 @@ static inline signed char fudgef(signed char b)
   static int c;
   if (!b || !demo_compatibility || longtics) return b;
   if (++c & 0x1f) return b;
-  b |= 1; if (b>2) b-=2;
+//e6y  b |= 1; if (b>2) b-=2;
   return b;
 }
 
 static inline signed short fudgea(signed short b)
 {
   if (!b || !demo_compatibility || !longtics) return b;
-  b |= 1; if (b>2) b-=2;
+//e6y   b |= 1; if (b>2) b-=2;
   return b;
 }
 
@@ -295,10 +298,36 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 
   strafe = gamekeydown[key_strafe] || mousebuttons[mousebstrafe]
     || joybuttons[joybstrafe];
-  speed = autorun || gamekeydown[key_speed] || joybuttons[joybspeed]; // phares
+//e6y  speed = autorun || gamekeydown[key_speed] || joybuttons[joybspeed]; // phares
+  speed = (gamekeydown[key_speed] || joybuttons[joybspeed] ? !autorun : autorun); //e6y
 
   forward = side = 0;
 
+  if ((doSkip) &&
+     ((demo_skiptics>0 && gametic>demo_skiptics) ||
+     (demo_warp && gametic-levelstarttic>demo_skiptics)))
+    G_SkipDemoStop();
+  if (_demofp && !feof(_demofp))
+  {
+    char buf[4];
+    int readed = fread(&buf[0], sizeof(char), sizeof(buf), _demofp);
+    if (readed == sizeof(buf))
+    {
+      cmd->forwardmove = buf[0];
+      cmd->sidemove = buf[1];
+      cmd->angleturn = buf[2]<<8;
+      cmd->buttons = buf[3];
+    }
+
+    if (readed != sizeof(buf) || gamekeydown[key_demo_jointogame] || joybuttons[joybuse])
+    {
+      _demofp = 0;
+    }
+
+    mousex = mousey = 0;
+  }
+  else
+  {
     // use two stage accelerative turning
     // on the keyboard and joystick
   if (joyxmove < 0 || joyxmove > 0 ||
@@ -397,7 +426,8 @@ void G_BuildTiccmd(ticcmd_t* cmd)
         gamekeydown[key_weapon6] && gamemode != shareware ? wp_plasma :
         gamekeydown[key_weapon7] && gamemode != shareware ? wp_bfg :
         gamekeydown[key_weapon8] ? wp_chainsaw :
-        (!demo_compatibility && gamekeydown[key_weapon9] && gamemode == commercial) ? wp_supershotgun :
+        !demo_compatibility &&//e6y
+        gamekeydown[key_weapon9] && gamemode == commercial ? wp_supershotgun :
         wp_nochange;
 
       // killough 3/22/98: For network and demo consistency with the
@@ -496,13 +526,14 @@ void G_BuildTiccmd(ticcmd_t* cmd)
         dclicks2 = 0;
         dclickstate2 = 0;
       }
+
   forward += mousey;
   if (strafe)
     side += mousex / 4;       /* mead  Don't want to strafe as fast as turns.*/
   else
     cmd->angleturn -= mousex; /* mead now have enough dynamic range 2-10-00 */
 
-  mousex = mousey = 0;
+//e6y  mousex = mousey = 0;
 
   if (forward > MAXPLMOVE)
     forward = MAXPLMOVE;
@@ -513,6 +544,16 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   else if (side < -MAXPLMOVE)
     side = -MAXPLMOVE;
 
+  //e6y
+  if (movement_strafe50 && !movement_strafe50onturns)
+    if(!strafe && cmd->angleturn != 0)
+    {
+      if (side > sidemove_normal[1])
+        side = sidemove_normal[1];
+      else if (side < -sidemove_normal[1])
+        side = -sidemove_normal[1];
+    }
+
   cmd->forwardmove += fudgef((signed char)forward);
   cmd->sidemove += side;
   cmd->angleturn = fudgea(cmd->angleturn);
@@ -521,6 +562,10 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   if (special_event & BT_SPECIAL) {
     cmd->buttons = special_event;
     special_event = 0;
+  }
+//e6y
+  if (!demoplayback)
+    mousex = mousey = 0;
   }
 }
 
@@ -620,6 +665,7 @@ static void G_DoLoadLevel (void)
   memset (gamekeydown, 0, sizeof(gamekeydown));
   joyxmove = joyymove = 0;
   mousex = mousey = 0;
+  mlooky = 0;//e6y
   special_event = 0; paused = false;
   memset (mousebuttons, 0, sizeof(mousebuttons));
   memset (joybuttons, 0, sizeof(joybuttons));
@@ -671,6 +717,7 @@ boolean G_Responder (event_t* ev)
     ST_Start();    // killough 3/7/98: switch status bar views too
     HU_Start();
     S_UpdateSounds(players[displayplayer].mo);
+    ClearSmoothViewAngels(NULL);//e6y
   }
       return true;
     }
@@ -699,12 +746,15 @@ boolean G_Responder (event_t* ev)
       // of demo playback, or if automap active.
       // Don't suck up keys, which may be cheats
 
+//e6y
+  /*
       return gamestate == GS_DEMOSCREEN &&
   !(paused & 2) && !(automapmode & am_active) &&
   ((ev->type == ev_keydown) ||
    (ev->type == ev_mouse && ev->data1) ||
    (ev->type == ev_joystick && ev->data1)) ?
   M_StartControlPanel(), true : false;
+    */
     }
 
   if (gamestate == GS_FINALE && F_Responder(ev))
@@ -738,8 +788,19 @@ boolean G_Responder (event_t* ev)
        * Removed the mouseSensitivity "*4" to allow more low end
        * sensitivity resolution especially for lsdoom users.
        */
-      mousex += (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
-      mousey += (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
+      //e6y mousex += (ev->data2*(mouseSensitivity_horiz))/10;  /* killough */
+      //e6y mousey += (ev->data3*(mouseSensitivity_vert))/10;  /*Mead rm *4 */
+
+      //e6y
+      mousex += (AccelerateMouse(ev->data2)*(mouseSensitivity_horiz))/10;  /* killough */
+      if(GetMouseLook())
+        if (movement_mouseinvert)
+          mlooky += (AccelerateMouse(ev->data3)*(mouseSensitivity_mlook))/10;
+        else
+          mlooky -= (AccelerateMouse(ev->data3)*(mouseSensitivity_mlook))/10;
+      else
+        mousey += (AccelerateMouse(ev->data3)*(mouseSensitivity_vert))/40;
+
       return true;    // eat events
 
     case ev_joystick:
@@ -914,15 +975,6 @@ void G_Ticker (void)
   // cph - if the gamestate changed, we may need to clean up the old gamestate
   if (gamestate != prevgamestate) {
     switch (prevgamestate) {
-    case GS_LEVEL:
-      // This causes crashes at level end - Neil Stevens
-      // The crash is because the sounds aren't stopped before freeing them
-      // the following is a possible fix
-      // This fix does avoid the crash wowever, with this fix in, the exit
-      // switch sound is cut off
-      // S_Stop();
-      // Z_FreeTags(PU_LEVEL, PU_PURGELEVEL-1);
-      break;
     case GS_INTERMISSION:
       WI_End();
     default:
@@ -936,13 +988,15 @@ void G_Ticker (void)
     {
     case GS_LEVEL:
       P_Ticker ();
+      P_WalkTicker();//e6y
+      mlooky = 0;//e6y
       ST_Ticker ();
       AM_Ticker ();
       HU_Ticker ();
       break;
 
     case GS_INTERMISSION:
-      WI_Ticker ();
+       WI_Ticker ();
       break;
 
     case GS_FINALE:
@@ -1018,11 +1072,13 @@ void G_PlayerReborn (int player)
   int killcount;
   int itemcount;
   int secretcount;
+  int resurectedkillcount; //e6y
 
   memcpy (frags, players[player].frags, sizeof frags);
   killcount = players[player].killcount;
   itemcount = players[player].itemcount;
   secretcount = players[player].secretcount;
+  resurectedkillcount = players[player].resurectedkillcount; //e6y
 
   p = &players[player];
 
@@ -1037,6 +1093,7 @@ void G_PlayerReborn (int player)
   players[player].killcount = killcount;
   players[player].itemcount = itemcount;
   players[player].secretcount = secretcount;
+  players[player].resurectedkillcount = resurectedkillcount; //e6y
 
   p->usedown = p->attackdown = true;  // don't do anything immediately
   p->playerstate = PST_LIVE;
@@ -1056,6 +1113,8 @@ void G_PlayerReborn (int player)
 // at the given mapthing_t spot
 // because something is occupying it
 //
+
+void P_SpawnPlayer(mapthing_t *mthing);
 
 boolean G_CheckSpot(int playernum, mapthing_t *mthing)
 {
@@ -1123,30 +1182,29 @@ boolean G_CheckSpot(int playernum, mapthing_t *mthing)
  * We have to emulate original Doom's behaviour, deferencing past the start
  * of the array, into the previous array (finetangent) */
     an = ( ANG45 * ((signed)mthing->angle/45) ) >> ANGLETOFINESHIFT;
-    xa = finecosine[an];
-    ya = finesine[an];
+    switch (an) {
+    case -4096: xa = finetangent[2048];   // finecosine[-4096]
+		ya = finetangent[0];      // finesine[-4096]
+		break;
+    case -3072: xa = finetangent[3072];   // finecosine[-3072]
+		ya = finetangent[1024];   // finesine[-3072]
+		break;
+    case -2048: xa = finesine[0];   // finecosine[-2048]
+		ya = finetangent[2048];   // finesine[-2048]
+		break;
+    case -1024:	xa = finesine[1024];     // finecosine[-1024]
+		ya = finetangent[3072];  // finesine[-1024]
+		break;
+    case 1024:
+    case 2048:
+    case 3072:
+    case 4096:
+    case 0:	xa = finecosine[an];
+		ya = finesine[an];
+		break;
+    default: I_Error("G_CheckSpot: unexpected angle %d\n",an);
+    }
 
-    if (compatibility_level <= finaldoom_compatibility || compatibility_level == prboom_4_compatibility)
-      switch (an) {
-      case -4096: xa = finetangent[2048];   // finecosine[-4096]
-          	ya = finetangent[0];      // finesine[-4096]
-          	break;
-      case -3072: xa = finetangent[3072];   // finecosine[-3072]
-          	ya = finetangent[1024];   // finesine[-3072]
-          	break;
-      case -2048: xa = finesine[0];   // finecosine[-2048]
-          	ya = finetangent[2048];   // finesine[-2048]
-          	break;
-      case -1024:	xa = finesine[1024];     // finecosine[-1024]
-          	ya = finetangent[3072];  // finesine[-1024]
-          	break;
-      case 1024:
-      case 2048:
-      case 3072:
-      case 4096:
-      case 0:	break; /* correct angles set above */
-      default:	I_Error("G_CheckSpot: unexpected angle %d\n",an);
-      }
 
     mo = P_SpawnMobj(x+20*xa, y+20*ya, ss->sector->floorheight, MT_TFOG);
 
@@ -1176,13 +1234,13 @@ void G_DeathMatchSpawnPlayer (int playernum)
       if (G_CheckSpot (playernum, &deathmatchstarts[i]) )
         {
           deathmatchstarts[i].type = playernum+1;
-          P_SpawnPlayer (playernum, &deathmatchstarts[i]);
+          P_SpawnPlayer (&deathmatchstarts[i]);
           return;
         }
     }
 
   // no good spot, so the player will probably get stuck
-  P_SpawnPlayer (playernum, &playerstarts[playernum]);
+  P_SpawnPlayer (&playerstarts[playernum]);
 }
 
 //
@@ -1209,7 +1267,7 @@ void G_DoReborn (int playernum)
 
       if (G_CheckSpot (playernum, &playerstarts[playernum]) )
         {
-          P_SpawnPlayer (playernum, &playerstarts[playernum]);
+          P_SpawnPlayer (&playerstarts[playernum]);
           return;
         }
 
@@ -1218,12 +1276,14 @@ void G_DoReborn (int playernum)
         {
           if (G_CheckSpot (playernum, &playerstarts[i]) )
             {
-              P_SpawnPlayer (playernum, &playerstarts[i]);
+              playerstarts[i].type = playernum+1; // fake as other player
+              P_SpawnPlayer (&playerstarts[i]);
+              playerstarts[i].type = i+1;   // restore
               return;
             }
           // he's going to be inside something.  Too bad.
         }
-      P_SpawnPlayer (playernum, &playerstarts[playernum]);
+      P_SpawnPlayer (&playerstarts[playernum]);
     }
 }
 
@@ -1379,6 +1439,8 @@ void G_DoCompleted (void)
   if (statcopy)
     memcpy (statcopy, &wminfo, sizeof(wminfo));
 
+  e6y_G_DoCompleted();//e6y
+
   WI_Start (&wminfo);
 }
 
@@ -1421,6 +1483,7 @@ void G_DoWorldDone (void)
   G_DoLoadLevel();
   gameaction = ga_nothing;
   AM_clearMarks();           //jff 4/12/98 clear any marks on the automap
+  e6y_G_DoWorldDone();//e6y
 }
 
 // killough 2/28/98: A ridiculously large number
@@ -1509,6 +1572,7 @@ void G_LoadGame(int slot, boolean command)
     demoplayback = false;
   }
   command_loadgame = command;
+  ClearSmoothViewAngels(NULL);//e6y
 }
 
 // killough 5/15/98:
@@ -1528,33 +1592,44 @@ static void G_LoadGameErr(const char *msg)
 // CPhipps - size of version header
 #define VERSIONSIZE   16
 
+//e6y
+/*
 const char * comp_lev_str[MAX_COMPATIBILITY_LEVEL] =
-{ "doom v1.2", "doom v1.666", "doom/doom2 v1.9", "ultimate doom", "final doom",
-  "dosdoom compatibility", "tasdoom compatibility", "\"boom compatibility\"", "boom v2.01", "boom v2.02", "lxdoom v1.3.2+",
-  "MBF", "PrBoom 2.03beta", "PrBoom v2.1.0-2.1.1", "PrBoom v2.1.2-v2.2.6",
-  "PrBoom v2.3.x", "PrBoom 2.4.0", "Current PrBoom"  };
-
-static byte comp_options_by_version[] =
-{ 0,0,0,0,0, /* Original Doom's don't have comp[] */
-  0,0,0,0,0,0, /* Nor did DosDoom, TAS, Boom (x3), LxDoom */
-  19,19, /* MBF and early PrBoom had 19 */
-  21,22, /* PrBoom v2.1-v2.2 have 21 */
-  23,23,23 /* PrBoom v2.3 has 23 and counting... */
-};
-
-static byte map_old_comp_levels[] =
-{ 0, 1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+{ "doom v1.2", "demo", "doom", "\"boom compatibility\"", "boom v2.01", "boom v2.02", "lxdoom v1.3.2+",
+  "MBF", "PrBoom 2.03beta", "PrBoom v2.1.0-2.1.1",
+  "Current PrBoom"  };
+  */
+const char * comp_lev_str[MAX_COMPATIBILITY_LEVEL] = 
+{ "doom v1.2", "doom v1.666", "doom2 v1.9",
+  "ultimate doom v1.9", "final doom/doom95", 
+  "early DosDoom", "TASDoom",
+  "\"boom compatibility\"", "boom v2.01", "boom v2.02", "lxdoom v1.3.2+", 
+  "MBF", "PrBoom 2.03beta", "PrBoom v2.1.0-2.1.1", //"PrBoom v2.1.2-v2.2.3",
+  "Current PrBoom"  };
 
 static const struct {
   int comp_level;
   const char* ver_printf;
   int version;
 } version_headers[] = {
+  { prboom_1_compatibility, "PrBoom %d", 260},
   /* cph - we don't need a new version_header for prboom_3_comp/v2.1.1, since
    *  the file format is unchanged. */
-  { prboom_3_compatibility, "PrBoom %d", 210},
-  { prboom_5_compatibility, "PrBoom %d", 211},
-  { prboom_6_compatibility, "PrBoom %d", 212}
+  { prboom_3_compatibility, "PrBoom %d", 210}
+  //e6y
+  ,{ doom_12_compatibility,  "PrBoom %d", 100}
+  ,{ doom_1666_compatibility,"PrBoom %d", 101}
+  ,{ doom2_19_compatibility, "PrBoom %d", 102}
+  ,{ ultdoom_compatibility,  "PrBoom %d", 103}
+  ,{ finaldoom_compatibility,"PrBoom %d", 104}
+  ,{ dosdoom_compatibility,  "PrBoom %d", 105}
+  ,{ tasdoom_compatibility,  "PrBoom %d", 106}
+  ,{ boom_compatibility_compatibility, "PrBoom %d", 107}
+  ,{ boom_201_compatibility, "PrBoom %d", 108}
+  ,{ boom_202_compatibility, "PrBoom %d", 109}
+  ,{ lxdoom_1_compatibility, "PrBoom %d", 110}
+  ,{ mbf_compatibility, "PrBoom %d", 111}
+  ,{ prboom_2_compatibility, "PrBoom %d", 113}
 };
 
 static const size_t num_version_headers = sizeof(version_headers) / sizeof(version_headers[0]);
@@ -1620,9 +1695,8 @@ void G_DoLoadGame(void)
 
   save_p += strlen(save_p)+1;
 
-  compatibility_level = (savegame_compatibility >= prboom_4_compatibility) ? *save_p : savegame_compatibility;
-  if (savegame_compatibility < prboom_6_compatibility)
-    compatibility_level = map_old_comp_levels[compatibility_level];
+  /* cph - FIXME - compatibility flag? */
+  compatibility_level = savegame_compatibility;
   save_p++;
 
   gameskill = *save_p++;
@@ -1665,6 +1739,8 @@ void G_DoLoadGame(void)
   P_UnArchiveSpecials ();
   P_UnArchiveRNG ();    // killough 1/18/98: load RNG information
   P_UnArchiveMap ();    // killough 1/22/98: load automap information
+  P_ActivateAllInterpolations();//e6y
+  ClearSmoothViewAngels(NULL);//e6y
 
   if (*save_p != 0xe6)
     I_Error ("G_DoLoadGame: Bad savegame");
@@ -1762,12 +1838,20 @@ static void G_DoSaveGame (boolean menu)
 
   // CPhipps - scan for the version header
   for (i=0; (size_t)i<num_version_headers; i++)
-    if (version_headers[i].comp_level == best_compatibility) {
+    if (version_headers[i].comp_level == compatibility_level) {
       // killough 2/22/98: "proprietary" version string :-)
       sprintf (name2,version_headers[i].ver_printf,version_headers[i].version);
       memcpy (save_p, name2, VERSIONSIZE);
       i = num_version_headers+1;
     }
+
+  if ((size_t)i == num_version_headers) {
+    doom_printf("No savegame signature known for\nthis compatibility level\n"
+    "%d/%d, %u registered", compatibility_level,
+    MAX_COMPATIBILITY_LEVEL, num_version_headers);
+    free(savebuffer); // cph - free data
+    return;
+  }
 
   save_p += VERSIONSIZE;
 
@@ -1792,7 +1876,8 @@ static void G_DoSaveGame (boolean menu)
 
   CheckSaveGame(GAME_OPTION_SIZE+MIN_MAXPLAYERS+10);
 
-  *save_p++ = compatibility_level;
+  /* cph - FIXME? - Save compatibility level */
+  *save_p++ = 0;
 
   *save_p++ = gameskill;
   *save_p++ = gameepisode;
@@ -1901,6 +1986,15 @@ extern int monsters_remember, default_monsters_remember;
  *  introduced.
  */
 
+//e6y
+static byte comp_options_by_version[] =
+ { 0,0,0,0,0, /* Original Doom's don't have comp[] */
+   0,0,0,0,0,0, /* Nor did DosDoom, Boom, LxDoom */
+   19,19, /* MBF and early PrBoom had 19 */
+   21,//21, /* PrBoom v2.1-v2.2 have 21 */
+   26 /* PrBoom v2.2.6.x still counting... */
+ };
+
 void G_Compatibility(void)
 {
   static const complevel_t fix_levels[COMP_NUM] = {
@@ -1916,9 +2010,7 @@ void G_Compatibility(void)
       * through walls by Pain Elementals */
     boom_compatibility,/* comp_blazing - original Doom duplicated
       * blazing door sound */
-    // e6y: "Tagged doors don't trigger special lighting" handled wrong
-    // http://sourceforge.net/tracker/index.php?func=detail&aid=1411400&group_id=148658&atid=772943
-    boom_compatibility, /* comp_doorlight - MBF made door lighting changes
+    boom_compatibility, /* comp_doorlight - MBF made door lighting changes //e6y
       * more gradual */
     boom_compatibility,/* comp_model - improvements to the game physics */
     boom_compatibility,/* comp_god - fixes to God mode */
@@ -1941,31 +2033,22 @@ void G_Compatibility(void)
     prboom_2_compatibility, /* comp_respawn - objects which aren't on the map
                              * at game start respawn at (0,0) */
     boom_compatibility_compatibility,  /* comp_sound - see s_sound.c */
+    //e6y
     ultdoom_compatibility, /* comp_666 - enables tag 666 in non-E1Mx levels */
-    prboom_4_compatibility, /* comp_soul - enables lost souls bouncing (see P_ZMovement */
+//    prboom_4_compatibility, /* comp_soul - enables lost souls bouncing (see P_ZMovement */
     doom_1666_compatibility, /* comp_maskedanim - 2s mid textures don't animate */
+    boom_compatibility_compatibility, //comp_maxhealth 
+    boom_compatibility_compatibility, //comp_translucency
   };
   int i;
+  //e6y
   if (sizeof(comp_options_by_version) != MAX_COMPATIBILITY_LEVEL)
     I_Error("G_Compatibility: consistency error");
-  for (i=comp_options_by_version[compatibility_level]; i<COMP_NUM; i++)
+
+  for (i=comp_options_by_version[compatibility_level]; i<COMP_NUM; i++)//e6y
     comp[i] = compatibility_level < fix_levels[i];
   for (; i<COMP_TOTAL; i++) comp[i] = 1;
-
-  if (!mbf_features) {
-    monster_infighting = 1;
-    monster_backing = 0;
-    monster_avoid_hazards = 0;
-    monster_friction = 0;
-    help_friends = 0;
-
-#ifdef DOGS
-    dogs = 0;
-    dog_jumping = 0;
-#endif
-
-    monkeys = 0;
-  }
+  e6y_G_Compatibility();//e6y
 }
 
 #ifdef DOGS
@@ -2039,17 +2122,15 @@ void G_ReloadDefaults(void)
   compatibility_level = default_compatibility_level;
   {
     int i = M_CheckParm("-complevel");
-    if (i && (1+i) < myargc) {
-      int l = atoi(myargv[i+1]);;
-      if (l >= -1) compatibility_level = l;
-    }
+    if (i && (1+i) < myargc) compatibility_level = atoi(myargv[i+1]);
   }
   if (compatibility_level == -1)
-    compatibility_level = best_compatibility;
+    compatibility_level = MAX_COMPATIBILITY_LEVEL-1;
 
   if (mbf_features)
     memcpy(comp, default_comp, sizeof comp);
-  G_Compatibility();
+  //e6y else
+    G_Compatibility();
 
   // killough 3/31/98, 4/5/98: demo sync insurance
   demo_insurance = default_demo_insurance == 1;
@@ -2067,6 +2148,7 @@ void G_DoNewGame (void)
 
   //jff 4/26/98 wake up the status bar in case were coming out of a DM demo
   ST_Start();
+  walkcamera.type=0; //e6y
 }
 
 // killough 4/10/98: New function to fix bug which caused Doom
@@ -2173,8 +2255,39 @@ void G_InitNew(skill_t skill, int episode, int map)
 
 #define DEMOMARKER    0x80
 
+//e6y
+void GetCurrentTurnsSum(void)
+{
+  int i, first, last;
+  signed short angle;
+  int delta;
+  first = gametic - demo_smoothturnsfactor;
+  last = gametic + demo_smoothturnsfactor;
+  for (i = max(0, first); i <= last; i++)
+  {
+    delta = i - gametic;
+    if (!longtics) {
+      delta = 4*(delta * playerscount + displayplayer) + 2;
+      if (i >= gametic && demo_p+delta < demo_p_end)
+        angle = ((unsigned char)*(demo_p+delta))<<8;
+      else
+        angle = 0;
+    } else {
+      delta = 5*(delta * playerscount + displayplayer) + 2;
+      if (i >= gametic && demo_p+delta+1 < demo_p_end)
+        angle = (unsigned char)*(demo_p+delta) + 
+                (((signed int)(*(demo_p+delta+1)))<<8);
+      else
+        angle = 0;
+    }
+    AddSmoothViewAngel(angle<<16);
+  }
+}
+
 void G_ReadDemoTiccmd (ticcmd_t* cmd)
 {
+  unsigned char at;//e6y
+
   if (*demo_p == DEMOMARKER)
     G_CheckDemoStatus();      // end of demo data stream
   else
@@ -2182,12 +2295,21 @@ void G_ReadDemoTiccmd (ticcmd_t* cmd)
       cmd->forwardmove = ((signed char)*demo_p++);
       cmd->sidemove = ((signed char)*demo_p++);
       if (!longtics) {
-        cmd->angleturn = ((unsigned char)*demo_p++)<<8;
+        cmd->angleturn = ((unsigned char)(at = *demo_p++))<<8;//e6y
       } else {
 	unsigned int lowbyte = (unsigned char)*demo_p++;
         cmd->angleturn = (((signed int)(*demo_p++))<<8) + lowbyte;
       }
       cmd->buttons = (unsigned char)*demo_p++;
+      //e6y
+      if (compatibility_level == tasdoom_compatibility)
+      {
+        signed char k = cmd->forwardmove;
+        cmd->forwardmove = cmd->sidemove;
+        cmd->sidemove = (signed char)at;
+        cmd->angleturn = ((unsigned char)cmd->buttons)<<8;
+        cmd->buttons = (byte)k;
+      }
     }
 }
 
@@ -2199,6 +2321,14 @@ void G_WriteDemoTiccmd (ticcmd_t* cmd)
   char buf[5];
   char *p = buf;
 
+  if (compatibility_level == tasdoom_compatibility)
+  {
+    *p++ = cmd->buttons;
+    *p++ = cmd->forwardmove;
+    *p++ = cmd->sidemove;
+    *p++ = (cmd->angleturn+128)>>8;
+  } else {
+
   *p++ = cmd->forwardmove;
   *p++ = cmd->sidemove;
   if (!longtics) {
@@ -2209,6 +2339,9 @@ void G_WriteDemoTiccmd (ticcmd_t* cmd)
     *p++ = (a >> 8) & 0xff;
   }
   *p++ = cmd->buttons;
+
+  }//e6y
+
   if (fwrite(buf, p-buf, 1, demofp) != 1)
     I_Error("G_WriteDemoTiccmd: error writing demo");
 
@@ -2223,6 +2356,7 @@ void G_WriteDemoTiccmd (ticcmd_t* cmd)
 
 void G_RecordDemo (const char* name)
 {
+  long savegamepos;//e6y
   char     demoname[PATH_MAX];
   usergame = false;
   AddDefaultExtension(strcpy(demoname, name), ".lmp");  // 1/18/98 killough
@@ -2230,43 +2364,54 @@ void G_RecordDemo (const char* name)
   /* cph - Record demos straight to file
    * If file already exists, try to continue existing demo
    */
-  if (access(demoname, F_OK)) {
+  if (access(demoname, F_OK)||demo_recordfromto||demo_compatibility) {//e6ye6y
     demofp = fopen(demoname, "wb");
   } else {
-    demofp = fopen(demoname, "r+");
+    demofp = fopen(demoname, "rb+");//e6y
     if (demofp) {
       int slot = -1;
       int rc;
-      int bytes_per_tic;
+      {
+  byte buf[200];
+  size_t len;
+  fread(buf, 1, sizeof(buf), demofp);
 
-      { /* Read the demo header for options etc */
-        byte buf[200];
-        size_t len;
-        fread(buf, 1, sizeof(buf), demofp);
-      
-        len = G_ReadDemoHeader(buf) - buf;
-        fseek(demofp, len, SEEK_SET);
+  len = G_ReadDemoHeader(buf) - buf;
+  fseek(demofp, len, SEEK_SET);
       }
-      bytes_per_tic = longtics ? 5 : 4;
-      /* Now read the demo to find the last save slot */
       do {
-        byte buf[5];
-      
-        rc = fread(buf, 1, bytes_per_tic, demofp);
-        if (buf[0] == DEMOMARKER) break;
-        if (buf[bytes_per_tic-1] & BT_SPECIAL)
-          if ((buf[bytes_per_tic-1] & BT_SPECIALMASK) == BTS_SAVEGAME)
-            slot = (buf[bytes_per_tic-1] & BTS_SAVEMASK)>>BTS_SAVESHIFT;
-      } while (rc == bytes_per_tic);
+  byte buf[4];
+  rc = fread(buf, 1, sizeof(buf), demofp);
+  if (buf[0] == DEMOMARKER) break;
+  if (buf[3] & BT_SPECIAL)
+    if ((buf[3] & BT_SPECIALMASK) == BTS_SAVEGAME)
+    {//e6y
+      slot = (buf[3] & BTS_SAVEMASK)>>BTS_SAVESHIFT;
+      savegamepos=ftell (demofp);}//e6y
+      } while (rc == /* sizeof(buf) is out of scope here */ 4 );
+      //e6y
+      if (slot == -1 && demo_overwriteexisting)
+      {
+        fclose(demofp);
+        demofp = fopen(demoname, "wb");
+        goto l_end;
+      }
 
       if (slot == -1) I_Error("G_RecordDemo: No save in demo, can't continue");
 
-      /* Return to the last save position, and load the relevant savegame */
+      //e6y
+      if (demo_compatibility) {
+        fseek(demofp, savegamepos - 1, SEEK_SET);
+        fputc(0, demofp);
+      }
+      else
+
       fseek(demofp, -rc, SEEK_CUR);
       G_LoadGame(slot, false);
       autostart = false;
     }
   }
+l_end: //e6y
   if (!demofp) I_Error("G_RecordDemo: failed to open %s", name);
 }
 
@@ -2444,10 +2589,26 @@ const byte *G_ReadOptions(const byte *demo_p)
     }
   else  /* defaults for versions <= 2.02 */
     {
-      /* G_Compatibility will set these */
+      /* cph - comp[] has already been set up right by G_Compatibility */
+
+      monster_infighting = 1;           // killough 7/19/98
+
+      monster_backing = 0;              // killough 9/8/98
+
+      monster_avoid_hazards = 0;        // killough 9/9/98
+
+      monster_friction = 0;             // killough 10/98
+
+      help_friends = 0;                 // killough 9/9/98
+
+#ifdef DOGS
+      dogs = 0;                         // killough 7/19/98
+      dog_jumping = 0;                  // killough 10/98
+#endif
+
+      monkeys = 0;
     }
 
-  G_Compatibility();
   return target;
 }
 
@@ -2456,22 +2617,15 @@ void G_BeginRecording (void)
   int i;
   byte *demostart, *demo_p;
   demostart = demo_p = malloc(1000);
-  longtics = 0;
 
   /* cph - 3 demo record formats supported: MBF+, BOOM, and Doom v1.9 */
   if (mbf_features) {
     { /* Write version code into demo */
       unsigned char v;
       switch(compatibility_level) {
-	case mbf_compatibility: v = 203; break; // e6y: Bug in MBF compatibility mode fixed
+        case mbf_compatibility: v = 203; break;//e6y
         case prboom_2_compatibility: v = 210; break;
         case prboom_3_compatibility: v = 211; break;
-        case prboom_4_compatibility: v = 212; break;
-        case prboom_5_compatibility: v = 213; break;
-        case prboom_6_compatibility:
-				     v = 214; 
-				     longtics = 1;
-				     break;
       }
       *demo_p++ = v;
     }
@@ -2506,7 +2660,7 @@ void G_BeginRecording (void)
     for (; i<MIN_MAXPLAYERS; i++)
       *demo_p++ = 0;
 
-  } else if (compatibility_level > boom_compatibility_compatibility) {
+  } else if (compatibility_level >= boom_compatibility_compatibility) { //e6y
     byte v, c; /* Nominally, version and compatibility bits */
     switch (compatibility_level) {
     case boom_compatibility_compatibility: v = 202, c = 1; break;
@@ -2546,7 +2700,7 @@ void G_BeginRecording (void)
       *demo_p++ = 0;
   } else { // cph - write old v1.9 demos (might even sync)
     longtics = M_CheckParm("-longtics");
-    *demo_p++ = longtics ? 111 : 109; // v1.9 has best chance of syncing these
+    *demo_p++ = longtics ? 111 : (compatibility_level==tasdoom_compatibility?110:109); //e6y// v1.9 has best chance of syncing these
     *demo_p++ = gameskill;
     *demo_p++ = gameepisode;
     *demo_p++ = gamemap;
@@ -2578,30 +2732,14 @@ void G_DeferedPlayDemo (const char* name)
 
 static int demolumpnum = -1;
 
-static int G_GetOriginalDoomCompatLevel(int ver)
-{
-  {
-    int lev;
-    int i = M_CheckParm("-complevel");
-    if (i && (i+1 < myargc))
-    {
-      lev = atoi(myargv[i+1]);
-      if (lev>=0)
-        return lev;
-    }
-  }
-  if (ver < 107) return doom_1666_compatibility;
-  if (gamemode == retail) return ultdoom_compatibility;
-  if (gamemission >= pack_tnt) return finaldoom_compatibility;
-  return doom2_19_compatibility;
-}
-
-static const byte* G_ReadDemoHeader(const byte *demo_p)
+//e6y static
+const byte* G_ReadDemoHeader(const byte *demo_p)
 {
   skill_t skill;
   int i, episode, map;
   int demover;
   const byte *option_p = NULL;      /* killough 11/98 */
+  demo_lastheaderlen = (int)demo_p;//e6y
 
   basetic = gametic;  // killough 9/29/98
 
@@ -2610,11 +2748,13 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
   // compatibility flag, and other flags as well, as a part of the demo.
 
   demover = *demo_p++;
-  longtics = 0;
 
   if (demover < 200)     // Autodetect old demos
     {
+//e6y      compatibility_level = doom_demo_compatibility;
       if (demover >= 111) longtics = 1;
+
+      //e6y G_Compatibility();
 
       // killough 3/2/98: force these variables to be 0 in demo_compatibility
 
@@ -2644,7 +2784,7 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
       if ((skill=demover) >= 100)         // For demos from versions >= 1.4
         {
-	  compatibility_level = G_GetOriginalDoomCompatLevel(demover);
+          compatibility_level = G_GetOriginalDoomCompatLevel(demover);//e6y
           skill = *demo_p++;
           episode = *demo_p++;
           map = *demo_p++;
@@ -2656,13 +2796,13 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
         }
       else
         {
-	  compatibility_level = doom_12_compatibility;
+          compatibility_level = doom_12_compatibility;//e6y
           episode = *demo_p++;
           map = *demo_p++;
           deathmatch = respawnparm = fastparm =
             nomonsters = consoleplayer = 0;
         }
-      G_Compatibility();
+      G_Compatibility();//e6y
     }
   else    // new versions of demos
     {
@@ -2671,52 +2811,40 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
       case 200: /* BOOM */
       case 201:
         if (!*demo_p++)
-	  compatibility_level = boom_201_compatibility;
+    compatibility_level = boom_201_compatibility;
         else
-	  compatibility_level = boom_compatibility_compatibility;
-	  break;
+    compatibility_level = boom_compatibility_compatibility;
+  break;
       case 202:
         if (!*demo_p++)
-	  compatibility_level = boom_202_compatibility;
+    compatibility_level = boom_202_compatibility;
         else
-	  compatibility_level = boom_compatibility_compatibility;
-	  break;
+    compatibility_level = boom_compatibility_compatibility;
+  break;
       case 203:
-	/* LxDoom or MBF - determine from signature
-	 * cph - load compatibility level */
-	switch (demobuffer[2]) {
-	case 'B': /* LxDoom */
-	  /* cph - DEMOSYNC - LxDoom demos recorded in compatibility modes support dropped */
-	  compatibility_level = lxdoom_1_compatibility;
-	  break;
-	case 'M':
-	  compatibility_level = mbf_compatibility;
-	  demo_p++;
-	  break;
-	}
-	break;
+  /* LxDoom or MBF - determine from signature
+   * cph - load compatibility level */
+  switch (demobuffer[2]) {
+  case 'B': /* LxDoom */
+  /* cph - DEMOSYNC - LxDoom demos recorded in compatibility modes support dropped */
+    compatibility_level = lxdoom_1_compatibility;
+    break;
+  case 'M':
+    compatibility_level = mbf_compatibility;
+    demo_p++;
+    break;
+  }
+  break;
       case 210:
-	compatibility_level = prboom_2_compatibility;
-	demo_p++;
-	break;
+  compatibility_level = prboom_2_compatibility;
+  demo_p++;
+  break;
       case 211:
-	compatibility_level = prboom_3_compatibility;
-	demo_p++;
-	break;
-      case 212:
-	compatibility_level = prboom_4_compatibility;
-	demo_p++;
-	break;
-      case 213:
-	compatibility_level = prboom_5_compatibility;
-	demo_p++;
-	break;
-      case 214:
-	compatibility_level = prboom_6_compatibility;
-        longtics = 1;
-	demo_p++;
-	break;
+  compatibility_level = prboom_3_compatibility;
+  demo_p++;
+  break;
       }
+      G_Compatibility();
       skill = *demo_p++;
       episode = *demo_p++;
       map = *demo_p++;
@@ -2725,7 +2853,7 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
       /* killough 11/98: save option pointer for below */
       if (mbf_features)
-	option_p = demo_p;
+  option_p = demo_p;
 
       demo_p = G_ReadOptions(demo_p);  // killough 3/1/98: Read game options
 
@@ -2733,12 +2861,10 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
         demo_p += 128-GAME_OPTION_SIZE;
     }
 
-  if (sizeof(comp_lev_str)/sizeof(comp_lev_str[0]) != MAX_COMPATIBILITY_LEVEL)
-    I_Error("G_ReadDemoHeader: compatibility level strings incomplete");
   lprintf(LO_INFO, "G_DoPlayDemo: playing demo with %s compatibility\n",
     comp_lev_str[compatibility_level]);
 
-  if (demo_compatibility)  // only 4 players can exist in old demos
+  if (demo_compatibility || demover < 200) //e6y  // only 4 players can exist in old demos
     {
       for (i=0; i<4; i++)  // intentionally hard-coded 4 -- killough
         playeringame[i] = *demo_p++;
@@ -2764,6 +2890,9 @@ static const byte* G_ReadDemoHeader(const byte *demo_p)
 
   for (i=0; i<MAXPLAYERS;i++)         // killough 4/24/98
     players[i].cheats = 0;
+  
+  e6y_ProcessDemoHeader();//e6y
+  demo_lastheaderlen = (int)demo_p - demo_lastheaderlen;//e6y
 
   return demo_p;
 }
@@ -2776,13 +2905,15 @@ void G_DoPlayDemo(void)
   basename[8] = 0;
   demobuffer = demo_p = W_CacheLumpNum(demolumpnum = W_GetNumForName(basename));
   /* cph - store lump number for unlocking later */
-
+  
+  demo_p_end = demo_p + W_LumpLength(demolumpnum) - 1;//e6y
   demo_p = G_ReadDemoHeader(demo_p);
 
   gameaction = ga_nothing;
   usergame = false;
 
   demoplayback = true;
+  ClearSmoothViewAngels(NULL);//e6y
 }
 
 //
@@ -2804,11 +2935,12 @@ void G_TimeDemo(const char *name) // CPhipps - const char*
  */
 boolean G_CheckDemoStatus (void)
 {
+  e6y_G_CheckDemoStatus();//e6y
   if (demorecording)
     {
       demorecording = false;
       fputc(DEMOMARKER, demofp);
-      I_Error("G_CheckDemoStatus: Demo recorded");
+//e6y      I_Error("G_CheckDemoStatus: Demo recorded");
       return false;  // killough
     }
 
@@ -2862,4 +2994,132 @@ void doom_printf(const char *s, ...)
 #endif
   va_end(v);
   players[consoleplayer].message = msg;  // set new message
+}
+
+//e6y
+void P_WalkTicker()
+{
+  int strafe;
+  int speed;
+  int tspeed;
+  int turnheld;
+  int forward;
+  int side;
+  int angturn;
+
+  if (!walkcamera.type)
+    return;
+
+  strafe = gamekeydown[key_strafe] || mousebuttons[mousebstrafe]
+    || joybuttons[joybstrafe];
+  speed = autorun || gamekeydown[key_speed] || joybuttons[joybspeed]; // phares
+
+  forward = side = 0;
+  angturn = 0;
+  turnheld = 0;
+
+    // use two stage accelerative turning
+    // on the keyboard and joystick
+  if (joyxmove < 0 || joyxmove > 0 ||
+      gamekeydown[key_right] || gamekeydown[key_left])
+    turnheld += ticdup;
+  else
+    turnheld = 0;
+
+  if (turnheld < SLOWTURNTICS)
+    tspeed = 0;             // slow turn
+  else
+    tspeed = speed;                                                             // phares
+
+  // let movement keys cancel each other out
+
+  if (strafe)
+    {
+      if (gamekeydown[key_right])
+        side += sidemove[speed];
+      if (gamekeydown[key_left])
+        side -= sidemove[speed];
+      if (joyxmove > 0)
+        side += sidemove[speed];
+      if (joyxmove < 0)
+        side -= sidemove[speed];
+    }
+  else
+    {
+      if (gamekeydown[key_right])
+        angturn -= angleturn[tspeed];
+      if (gamekeydown[key_left])
+        angturn += angleturn[tspeed];
+      if (joyxmove > 0)
+        angturn -= angleturn[tspeed];
+      if (joyxmove < 0)
+        angturn += angleturn[tspeed];
+    }
+
+  if (gamekeydown[key_up])
+    forward += forwardmove[speed];
+  if (gamekeydown[key_down])
+    forward -= forwardmove[speed];
+  if (joyymove < 0)
+    forward += forwardmove[speed];
+  if (joyymove > 0)
+    forward -= forwardmove[speed];
+  if (gamekeydown[key_straferight])
+    side += sidemove[speed];
+  if (gamekeydown[key_strafeleft])
+    side -= sidemove[speed];
+
+  angturn -= mousex;
+
+  walkcamera.angle += ((angturn / 8) << ANGLETOFINESHIFT);
+  if(GetMouseLook())
+  {
+    walkcamera.pitch += ((mlooky / 8) << ANGLETOFINESHIFT);
+    CheckPitch((signed int *) &walkcamera.pitch);
+  }
+
+  if (gamekeydown[key_fire] || mousebuttons[mousebfire] ||
+      joybuttons[joybfire])
+  {
+    walkcamera.x = players[0].mo->x;
+    walkcamera.y = players[0].mo->y;
+    walkcamera.angle = players[0].mo->angle;
+    walkcamera.pitch = players[0].mo->pitch;
+  }
+
+  // moving forward
+  walkcamera.x += FixedMul ((ORIG_FRICTION / 4) * forward,
+          finecosine[walkcamera.angle >> ANGLETOFINESHIFT]);
+  walkcamera.y += FixedMul ((ORIG_FRICTION / 4) * forward,
+          finesine[walkcamera.angle >> ANGLETOFINESHIFT]);
+
+  // strafing
+  walkcamera.x += FixedMul ((ORIG_FRICTION / 6) * side,
+          finecosine[(walkcamera.angle -
+          ANG90) >> ANGLETOFINESHIFT]);
+  walkcamera.y += FixedMul ((ORIG_FRICTION / 6) * side,
+        finesine[(walkcamera.angle - ANG90) >> ANGLETOFINESHIFT]);
+
+  {
+    subsector_t *subsec = R_PointInSubsector (walkcamera.x, walkcamera.y);
+    walkcamera.z = subsec->sector->floorheight + 41 * FRACUNIT;
+  }
+
+  mousex = 0;
+  mousey = 0;
+
+}
+
+void P_ResetWalkcam()
+{
+  if (!walkcamera.type)
+    return;
+
+  if (walkcamera.type==1)
+  {
+    walkcamera.angle = players[displayplayer].mo->angle;
+    walkcamera.pitch = players[displayplayer].mo->pitch;
+  }
+  walkcamera.x = players[displayplayer].mo->x;
+  walkcamera.y = players[displayplayer].mo->y;
 }

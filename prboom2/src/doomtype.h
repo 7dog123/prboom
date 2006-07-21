@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -60,24 +60,25 @@ typedef unsigned __int64 uint_64_t;
 #define S_ISDIR(x) (((sbuf.st_mode & S_IFDIR)==S_IFDIR)?1:0)
 #endif
 
-#ifdef __GNUC__
-#define CONSTFUNC __attribute__((const))
-#else
-#define CONSTFUNC
-#endif
-
 /* CPhipps - use limits.h instead of depreciated values.h */
 #include <limits.h>
 
 /* cph - move compatibility levels here so we can use them in d_server.c */
 typedef enum {
-  doom_12_compatibility,   /* Doom v1.2 */
-  doom_1666_compatibility, /* Doom v1.666 */
-  doom2_19_compatibility,  /* Doom & Doom 2 v1.9 */
-  ultdoom_compatibility,   /* Doom 2 v1.9 */
-  finaldoom_compatibility,     /* Final & Ultimate Doom v1.9, and Doom95 */
-  dosdoom_compatibility,     /* Early dosdoom & tasdoom */
-  tasdoom_compatibility,     /* Early dosdoom & tasdoom */
+  doom_12_compatibility, /* Behave like early doom versions */
+  
+  //e6y
+  doom_1666_compatibility,	/* Doom & Doom2, v1.666 */
+  doom2_19_compatibility,	/* Doom 2 doom2.exe v1.9 */
+  ultdoom_compatibility,	/* Ultimate Doom v1.9 */
+  finaldoom_compatibility,	/* Final Doom doom2.exe (and Doom95?) */
+  /* Compatibility with various early Doom ports */
+  dosdoom_compatibility,
+  tasdoom_compatibility,
+
+  //e6y doom_demo_compatibility, /* As compatible as possible for
+  //e6y         * playing original Doom demos */
+  //e6y doom_compatibility,      /* Compatible with original Doom levels */
   boom_compatibility_compatibility,      /* Boom's compatibility mode */
   boom_201_compatibility,                /* Compatible with Boom v2.01 */
   boom_202_compatibility,                /* Compatible with Boom v2.01 */
@@ -85,14 +86,11 @@ typedef enum {
   mbf_compatibility,                     /* MBF */
   prboom_1_compatibility,                /* PrBoom 2.03beta? */
   prboom_2_compatibility,                /* PrBoom 2.1.0-2.1.1 */
-  prboom_3_compatibility,                /* PrBoom 2.2.x */
-  prboom_4_compatibility,                /* PrBoom 2.3.x */
-  prboom_5_compatibility,                /* PrBoom 2.4.0 */
-  prboom_6_compatibility,                /* Latest PrBoom */
+  prboom_3_compatibility,                /* Latest PrBoom */
   MAX_COMPATIBILITY_LEVEL,               /* Must be last entry */
   /* Aliases follow */
   boom_compatibility = boom_201_compatibility, /* Alias used by G_Compatibility */
-  best_compatibility = prboom_6_compatibility,
+  best_compatibility = prboom_3_compatibility,
 } complevel_t;
 
 #endif

@@ -9,27 +9,21 @@ determine how to behave in various circumstances. The supported levels are
 currently:
 
 Number	Name			Description
-0	doom_12_compatibility	Emulate Doom v1.2 game details where possible
-1	doom_1666_compatibility	Behave like Doom v1.666 as far as possible
-2	doom2_19_compatibility	As compatible as possible for playing original 
-				Doom demos
-3	ultdoom_compatibility	Ultimate Doom made a few changes
-4	finaldoom_compatibility	Compatible with Final Doom & Doom95 - needed
-				for some demos recorded with Final Doom doom2.exe
-5 	dosdoom_compatibility	Emulate early dosdoom versions
-				(some TASdoom demos work with this)
-6	tasdoom_compatibility	unused
-7 	boom_compatibility_compatibility	Emulates Boom's compatibility mode
-8	boom_201_compatibility	Emulates Boom v2.01
-9	boom_202_compatibility	Emulates Boom v2.02
-10	lxdoom_1_compatibility	Emulates LxDoom v1.4.x
-11	mbf_compatibility	Emulates MBF
-12	prboom_1_compatibility	Emulates PrBoom v2.03beta
-13	prboom_2_compatibility	PrBoom v2.1.0
-14	prboom_3_compatibility	PrBoom v2.1.1-2.2.6
-15	prboom_4_compatibility	PrBoom v2.3.x
-16	prboom_5_compatibility	PrBoom v2.4.0
-17	prboom_6_compatibility	Current PrBoom
+0	doom_12_compatibility	Not implemented (you can guess what it will
+				become, though :-)
+1	doom_demo_compatibility	As compatible as possible for playing original 
+				Doom demos, tries to emulate the poorer RNG
+				and LOS algorithms
+2	doom_compatibility	Compatible with original Doom levels -
+				emulates all original game bugs
+3 	boom_compatibility_compatibility	Emulates Boom's compatibility mode
+4	boom_201_compatibility,	Emulates Boom v2.01
+5	boom_202_compatibility,	Emulates Boom v2.02
+6	lxdoom_1_compatibility,	Emulates LxDoom v1.4.x
+7	mbf_compatibility	Emulates MBF
+8	prboom_1_compatibility	Emulates PrBoom v2.03beta
+9	prboom_2_compatibility	PrBoom v2.1.0
+10	prboom_3_compatibility	PrBoom v2.1.1, latest version
 
 You can cycle through the compatibility levels in the game using the TNTCOMP
 cheat. There's also the default_compatibility_level config file option, and
@@ -74,20 +68,20 @@ grabbing tricks)
 PrBoom can also record old demos with some success (demo players see the
 comp_moveblock note above):
 
-prboom -complevel 2 -record test
+prboom -complevel 1 -record test
 
 records a doom v1.9 compatible demo
 
-prboom -complevel 9 -record whatever
+prboom -complevel 5 -record whatever
 
 records a Boom (v2.02) demo
 
-prboom -complevel 11 -record blah
+prboom -complevel 7 -record blah
 
 records an MBF demo.
 
 Of course, demo recording is no more reliable than demo playback; original
 Doom demos will usually but not always work. MBF support should be perfect.
 
-- Colin <cph@moria.org.uk>
+- Colin <doom@cph.demon.co.uk>
 

@@ -46,6 +46,7 @@
 #include "p_tick.h"
 #include "m_bbox.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 static mobj_t *current_actor;
 
@@ -431,6 +432,7 @@ static boolean P_SmartMove(mobj_t *actor)
 {
   mobj_t *target = actor->target;
   int on_lift, dropoff = false, under_damage;
+  int tmp_monster_avoid_hazards = (force_monster_avoid_hazards?true:(demo_compatibility?false:monster_avoid_hazards));//e6y
 
   /* killough 9/12/98: Stay on a lift if target is on one */
   on_lift = !comp[comp_staylift]
@@ -438,7 +440,7 @@ static boolean P_SmartMove(mobj_t *actor)
     && target->subsector->sector->tag==actor->subsector->sector->tag &&
     P_IsOnLift(actor);
 
-  under_damage = monster_avoid_hazards && P_IsUnderDamage(actor);
+  under_damage = tmp_monster_avoid_hazards && P_IsUnderDamage(actor);//e6y
 
   // killough 10/98: allow dogs to drop off of taller ledges sometimes.
   // dropoff==1 means always allow it, dropoff==2 means only up to 128 high,
@@ -461,7 +463,7 @@ static boolean P_SmartMove(mobj_t *actor)
       (on_lift && P_Random(pr_stayonlift) < 230 &&      // Stay on lift
        !P_IsOnLift(actor))
       ||
-      (monster_avoid_hazards && !under_damage &&  // Get away from damage
+      (tmp_monster_avoid_hazards && !under_damage &&//e6y  // Get away from damage
        (under_damage = P_IsUnderDamage(actor)) &&
        (under_damage < 0 || P_Random(pr_avoidcrush) < 200))
       )
@@ -523,7 +525,7 @@ static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
     return;
 
   // try other directions
-  if (P_Random(pr_newchase) > 200 || D_abs(deltay)>D_abs(deltax))
+  if (P_Random(pr_newchase) > 200 || abs(deltay)>abs(deltax))
     tdir = xdir, xdir = ydir, ydir = tdir;
 
   if ((xdir == turnaround ? xdir = DI_NODIR : xdir) != DI_NODIR &&
@@ -1668,6 +1670,7 @@ void A_VileChase(mobj_t* actor)
        */
       corpsehit->flags =
         (info->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND);
+      corpsehit->flags = corpsehit->flags | MF_RESSURECTED;//e6y
 
 		  if (!((corpsehit->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))
 		    totallive++;
@@ -2099,7 +2102,7 @@ void A_BossDeath(mobj_t *mo)
           if (gamemap != 8)
             return;
 
-	  if (mo->type != MT_BRUISER && !comp[comp_666])
+	  if (mo->type != MT_BRUISER && !comp[comp_666]) //e6y
 	    return;
           break;
 
@@ -2107,7 +2110,7 @@ void A_BossDeath(mobj_t *mo)
           if (gamemap != 8)
             return;
 
-          if (mo->type != MT_CYBORG && !comp[comp_666])
+          if (mo->type != MT_CYBORG && !comp[comp_666]) //e6y
             return;
           break;
 
@@ -2115,7 +2118,7 @@ void A_BossDeath(mobj_t *mo)
           if (gamemap != 8)
             return;
 
-          if (mo->type != MT_SPIDER && !comp[comp_666])
+          if (mo->type != MT_SPIDER && !comp[comp_666]) //e6y
             return;
 
           break;

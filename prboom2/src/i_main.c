@@ -33,7 +33,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -59,6 +59,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "e6y.h" //e6y
 
 int broken_pipe;
 
@@ -70,7 +71,8 @@ int broken_pipe;
  */
 
 int realtic_clock_rate = 100;
-static int_64_t I_GetTime_Scale = 1<<24;
+//e6y static 
+int_64_t I_GetTime_Scale = 1<<24;
 
 static int I_GetTime_Scaled(void)
 {
@@ -117,6 +119,27 @@ void I_Init(void)
     if (!(nomusicparm && nosfxparm))
       I_InitSound();
   }
+  e6y_I_Init();//e6y
+}
+
+//e6y
+void I_Init2(void)
+{
+  if (fastdemo)
+    I_GetTime = I_GetTime_FastDemo;
+  else
+    if (realtic_clock_rate != 100)
+      {
+        I_GetTime_Scale = ((int_64_t) realtic_clock_rate << 24) / 100;
+        I_GetTime = I_GetTime_Scaled;
+      }
+    else
+      I_GetTime = I_GetTime_RealTime;
+  if (movement_smooth)
+  {
+    otic = 0;
+  }
+  e6y_I_Init();
 }
 
 /* cleanup handling -- killough:
@@ -311,7 +334,7 @@ static void I_EndDoom(void)
     puts("\e[0m"); /* cph - reset colours */
   PrintVer();
 #else /* _WIN32 */
-  I_uSleep(3000000); // CPhipps - don't thrash cpu in this loop
+//e6y  I_uSleep(3000000); // CPhipps - don't thrash cpu in this loop
 #endif /* _WIN32 */
 }
 
@@ -361,23 +384,18 @@ int main(int argc, char **argv)
     else
       fprintf(stderr, "Revoked uid %d\n",stored_euid);
 #endif
-
-  myargc = argc;
-  myargv = argv;
-
 #ifdef _WIN32
-  if (!M_CheckParm("-nodraw")) {
-    /* initialize the console window */
-    Init_ConsoleWin();
-    atexit(Done_ConsoleWin);
-  }
+  /* initialize the console window */
+  Init_ConsoleWin();
+  atexit(Done_ConsoleWin);
 #endif
   /* Version info */
   lprintf(LO_INFO,"\n");
   PrintVer();
 
-  /* cph - Z_Close must be done after I_Quit, so we register it first. */
-  atexit(Z_Close);
+  myargc = argc;
+  myargv = argv;
+
   /*
      killough 1/98:
 
@@ -403,6 +421,7 @@ int main(int argc, char **argv)
   signal(SIGPIPE, I_SignalHandler); /* CPhipps - add SIGPIPE, as this is fatal */
 #endif
   signal(SIGTERM, I_SignalHandler);
+  signal(SIGILL,  I_SignalHandler);
   signal(SIGFPE,  I_SignalHandler);
   signal(SIGILL,  I_SignalHandler);
   signal(SIGINT,  I_SignalHandler);  /* killough 3/6/98: allow CTRL-BRK during init */
@@ -411,6 +430,10 @@ int main(int argc, char **argv)
 
   /* cphipps - call to video specific startup code */
   I_PreInitGraphics();
+
+  /* 2/2/98 Stan
+   * Must call this here.  It's required by both netgames and i_video.c.
+   */
 
   D_DoomMain ();
   return 0;

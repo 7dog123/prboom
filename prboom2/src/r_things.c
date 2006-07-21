@@ -40,6 +40,7 @@
 #ifdef GL_DOOM
 #include "gl_struct.h"
 #endif
+#include "e6y.h"//e6y
 
 #define MINZ        (FRACUNIT*4)
 #define BASEYCENTER 100
@@ -64,6 +65,8 @@ fixed_t pspritescale;
 fixed_t pspriteiscale;
 // proff 11/06/98: Added for high-res
 fixed_t pspriteyscale;
+
+static lighttable_t **spritelights;        // killough 1/25/98 made static
 
 // constant arrays
 //  used for psprite clipping and initializing clipping
@@ -414,7 +417,7 @@ void R_DrawVisSprite(vissprite_t *vis, int x1, int x2)
 // Generates a vissprite for a thing if it might be visible.
 //
 
-void R_ProjectSprite (mobj_t* thing, int lightlevel)
+void R_ProjectSprite (mobj_t* thing)
 {
   fixed_t   gzt;               // killough 3/27/98
   fixed_t   tx;
@@ -432,13 +435,46 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   int heightsec;      // killough 3/27/98
 
   // transform the origin point
-  fixed_t tr_x = thing->x - viewx;
-  fixed_t tr_y = thing->y - viewy;
+  //e6y
+  fixed_t tr_x, tr_y;
+  fixed_t fx, fy, fz;
+  fixed_t gxt, gyt;
+  fixed_t tz;
+  boolean mlook = GetMouseLook() || (render_fov > FOV90);
+  if (movement_smooth)
+  {
+    fx = thing->PrevX + FixedMul (r_TicFrac, thing->x - thing->PrevX);
+    fy = thing->PrevY + FixedMul (r_TicFrac, thing->y - thing->PrevY);
+    fz = thing->PrevZ + FixedMul (r_TicFrac, thing->z - thing->PrevZ);
+  }
+  else
+  {
+    fx = thing->x;
+    fy = thing->y;
+    fz = thing->z;
+  }
+  tr_x = fx - viewx;
+  tr_y = fy - viewy;
 
-  fixed_t gxt = FixedMul(tr_x,viewcos);
-  fixed_t gyt = -FixedMul(tr_y,viewsin);
+//e6y  fixed_t tr_x = thing->x - viewx;
+//e6y  fixed_t tr_y = thing->y - viewy;
 
-  fixed_t tz = gxt-gyt;
+  //e6y fixed_t 
+  gxt = FixedMul(tr_x,viewcos);
+  //e6y fixed_t 
+  gyt = -FixedMul(tr_y,viewsin);
+
+  //e6y fixed_t 
+  tz = gxt-gyt;
+
+//e6y
+#ifdef GL_DOOM
+  if (!render_paperitems && mlook)
+  {
+    if (tz < -(FRACUNIT*64))
+      return;
+  } else
+#endif
 
     // thing is behind view plane?
   if (tz < MINZ)
@@ -449,6 +485,15 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   gxt = -FixedMul(tr_x,viewsin);
   gyt = FixedMul(tr_y,viewcos);
   tx = -(gyt+gxt);
+
+//e6y
+#ifdef GL_DOOM
+  if (!render_paperitems && mlook)
+  {
+    if (tz >= MINZ && (D_abs(tx)>>5) > tz)
+      return;
+  } else
+#endif
 
   // too far off the side?
   if (D_abs(tx)>(tz<<2))
@@ -473,7 +518,8 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   if (sprframe->rotate)
     {
       // choose a different rotation based on player view
-      angle_t ang = R_PointToAngle(thing->x, thing->y);
+      //e6y angle_t ang = R_PointToAngle(thing->x, thing->y);
+      angle_t ang = R_PointToAngle(fx, fy); //e6y
       unsigned rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
       lump = sprframe->lump[rot];
       flip = (boolean) sprframe->flip[rot];
@@ -492,6 +538,7 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   x1 = (centerxfrac + FixedMul(tx,xscale)) >>FRACBITS;
 
     // off the right side?
+  if(!mlook)//e6y
   if (x1 > viewwidth)
     return;
 
@@ -499,12 +546,16 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   x2 = ((centerxfrac + FixedMul (tx,xscale) ) >>FRACBITS) - 1;
 
     // off the left side
+  if(!mlook)//e6y
   if (x2 < 0)
     return;
 
-  gzt = thing->z + spritetopoffset[lump];
+  //e6y gzt = thing->z + spritetopoffset[lump];
+  gzt = fz + spritetopoffset[lump]; //e6y
 
   // killough 4/9/98: clip things which are out of view due to height
+  if(!GetMouseLook() && render_fov <= FOV90)//e6y
+
   if (thing->z > viewz + FixedDiv(centeryfrac, xscale) ||
       gzt      < viewz - FixedDiv(centeryfrac-viewheight, xscale))
     return;
@@ -529,6 +580,11 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
         return;
     }
 
+  //e6y FIXME!!!
+  if (thing == players[displayplayer].mo && walkcamera.type != 2)
+//  if (thing->player && thing->player == &players[displayplayer] && walkcamera.type != 2)
+    return;
+
   // store information in a vissprite
   vis = R_NewVisSprite ();
 
@@ -547,9 +603,12 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
   vis->mobjflags = thing->flags;
 // proff 11/06/98: Changed for high-res
   vis->scale = FixedDiv(projectiony, tz);
-  vis->gx = thing->x;
-  vis->gy = thing->y;
-  vis->gz = thing->z;
+//e6y  vis->gx = thing->x;
+//e6y  vis->gy = thing->y;
+//e6y  vis->gz = thing->z;
+  vis->gx = fx;//e6y
+  vis->gy = fy;//e6y
+  vis->gz = fz;//e6y
   vis->gzt = gzt;                          // killough 3/27/98
   vis->texturemid = vis->gzt - viewz;
   vis->x1 = x1 < 0 ? 0 : x1;
@@ -580,7 +639,10 @@ void R_ProjectSprite (mobj_t* thing, int lightlevel)
     vis->colormap = fullcolormap;     // full bright  // killough 3/20/98
   else
     {      // diminished light
-      vis->colormap = R_ColourMap(lightlevel,xscale);
+      int index = xscale>>LIGHTSCALESHIFT;
+      if (index >= MAXLIGHTSCALE)
+        index = MAXLIGHTSCALE-1;
+      vis->colormap = spritelights[index];
     }
 #endif
 }
@@ -594,6 +656,7 @@ void R_AddSprites(subsector_t* subsec, int lightlevel)
 {
   sector_t* sec=subsec->sector;
   mobj_t *thing;
+  int    lightnum;
 
   // BSP is traversed by subsector.
   // A sector might have been split into several
@@ -606,17 +669,26 @@ void R_AddSprites(subsector_t* subsec, int lightlevel)
   // Well, now it will be done.
   sec->validcount = validcount;
 
+  lightnum = (lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+  if (lightnum < 0)
+    spritelights = scalelight[0];
+  else if (lightnum >= LIGHTLEVELS)
+    spritelights = scalelight[LIGHTLEVELS-1];
+  else
+    spritelights = scalelight[lightnum];
+
   // Handle all things in sector.
 
   for (thing = sec->thinglist; thing; thing = thing->snext)
-    R_ProjectSprite(thing, lightlevel);
+    R_ProjectSprite(thing);
 }
 
 //
 // R_DrawPSprite
 //
 
-void R_DrawPSprite (pspdef_t *psp, int lightlevel)
+void R_DrawPSprite (pspdef_t *psp)
 {
   fixed_t       tx;
   int           x1, x2;
@@ -699,7 +771,7 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   else if (psp->state->frame & FF_FULLBRIGHT)
     vis->colormap = fullcolormap;            // full bright // killough 3/20/98
   else
-    vis->colormap = R_ColourMap(lightlevel,pspritescale);  // local light
+    vis->colormap = spritelights[MAXLIGHTSCALE-1];  // local light
 
   // proff 11/99: don't use software stuff in OpenGL
 #ifndef GL_DOOM
@@ -735,8 +807,21 @@ void R_DrawPSprite (pspdef_t *psp, int lightlevel)
 
 void R_DrawPlayerSprites(void)
 {
-  int i, lightlevel = viewplayer->mo->subsector->sector->lightlevel;
+  int i, lightnum;
   pspdef_t *psp;
+
+  if (walkcamera.type != 0) return;//e6y
+
+  // get light level
+  lightnum = (viewplayer->mo->subsector->sector->lightlevel >> LIGHTSEGSHIFT)
+    + extralight;
+
+  if (lightnum < 0)
+    spritelights = scalelight[0];
+  else if (lightnum >= LIGHTLEVELS)
+    spritelights = scalelight[LIGHTLEVELS-1];
+  else
+    spritelights = scalelight[lightnum];
 
   // clip to screen bounds
   mfloorclip = screenheightarray;
@@ -745,7 +830,7 @@ void R_DrawPlayerSprites(void)
   // add all active psprites
   for (i=0, psp=viewplayer->psprites; i<NUMPSPRITES; i++,psp++)
     if (psp->state)
-      R_DrawPSprite (psp, lightlevel);
+      R_DrawPSprite (psp);
 }
 
 //

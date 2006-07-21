@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -82,6 +82,10 @@
 #ifdef GL_DOOM
 #include "gl_struct.h"
 #endif
+#include "e6y.h" //e6y
+
+// DEHacked support - Ty 03/09/97 // CPhipps - const char*'s
+void ProcessDehFile(const char *filename, const char *outfilename, int lumpnum);
 
 void GetFirstMap(int *ep, int *map); // Ty 08/29/98 - add "-warp x" functionality
 
@@ -117,8 +121,13 @@ int ffmap;
 
 boolean advancedemo;
 
+extern boolean timingdemo, singledemo, demoplayback, fastdemo; // killough
+
+static int      basetic;
+
 char    wadfile[PATH_MAX+1];       // primary wad file
 char    mapdir[PATH_MAX+1];        // directory of development maps
+char    basedefault[PATH_MAX+1];   // default file
 char    baseiwad[PATH_MAX+1];      // jff 3/23/98: iwad directory
 char    basesavegame[PATH_MAX+1];  // killough 2/16/98: savegame directory
 
@@ -133,7 +142,8 @@ const char *const standard_iwads[]=
   "doom1.wad",
   "doomu.wad", /* CPhipps - alow doomu.wad */
 };
-static const int nstandard_iwads = sizeof standard_iwads/sizeof*standard_iwads;
+//e6y static 
+const int nstandard_iwads = sizeof standard_iwads/sizeof*standard_iwads;
 
 void D_DoAdvanceDemo (void);
 
@@ -174,6 +184,7 @@ static void D_Wipe(void)
   boolean done;
   int wipestart = I_GetTime () - 1;
 
+  if (!render_wipescreen) return;//e6y
   do
     {
       int nowtime, tics;
@@ -206,6 +217,7 @@ extern int     showMessages;
 
 void D_Display (void)
 {
+  unsigned int entertime;//e6y
   static boolean inhelpscreensstate   = false;
   static boolean isborderstate        = false;
   static boolean borderwillneedredraw = false;
@@ -217,6 +229,12 @@ void D_Display (void)
 
   if (nodrawers)                    // for comparative timing / profiling
     return;
+
+  //e6y
+  if (skipDDisplay)
+    return;
+  entertime = SDL_GetTicks();
+  skipDDisplay = true;
 
 #ifndef GL_DOOM
   // save the current screen if about to wipe
@@ -280,10 +298,12 @@ void D_Display (void)
 #endif
 
     // Now do the drawing
-    if (viewactive)
+//e6y    if (viewactive)
       R_RenderPlayerView (&players[displayplayer]);
+
     if (automapmode & am_active)
       AM_Drawer();
+
     ST_Drawer((viewheight != SCREENHEIGHT) || ((automapmode & am_active) && !(automapmode & am_overlay)), redrawborderstuff);
 #ifndef GL_DOOM
     R_DrawViewBorder();
@@ -332,6 +352,10 @@ void D_Display (void)
 #else
   I_FinishUpdate ();              // page flip or blit buffer
 #endif /* GL_DOOM */
+
+  //e6y
+  DDisplayTime = SDL_GetTicks() - entertime;
+  skipDDisplay = false;
 }
 
 // CPhipps - Auto screenshot Variables
@@ -354,8 +378,11 @@ extern boolean demorecording;
 
 static void D_DoomLoop(void)
 {
+  basetic = gametic;
+
   for (;;)
     {
+      WasRenderedInTryRunTics = false;//e6y
       // frame syncronous IO operations
       I_StartFrame ();
 
@@ -378,9 +405,16 @@ static void D_DoomLoop(void)
 
       // killough 3/16/98: change consoleplayer to displayplayer
       if (players[displayplayer].mo) // cph 2002/08/10
-	S_UpdateSounds(players[displayplayer].mo);// move positional sounds
+        S_UpdateSounds(players[displayplayer].mo);// move positional sounds
 
       // Update display, next frame, with current state.
+//e6y
+#ifdef GL_DOOM
+      if (!movement_smooth || !WasRenderedInTryRunTics)
+#else
+      if (!movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate)
+#endif
+
       D_Display();
 
       // CPhipps - auto screenshot
@@ -388,6 +422,14 @@ static void D_DoomLoop(void)
   auto_shot_count = auto_shot_time;
   M_DoScreenShot(auto_shot_fname);
       }
+//e6y
+      if (avi_shot_fname && !doSkip)
+      {
+        avi_shot_num++;
+        sprintf(avi_shot_curr_fname, "%s%06.6i.tga", avi_shot_fname, avi_shot_num);
+        M_DoScreenShot(avi_shot_curr_fname);
+      }
+
     }
 }
 
@@ -581,7 +623,8 @@ void D_AddFile (const char *file, wad_source_t source)
 
 // killough 10/98: support -dehout filename
 // cph - made const, don't cache results
-static const char *D_dehout(void)
+//e6y static 
+const char *D_dehout(void)
 {
   int p = M_CheckParm("-dehout");
   if (!p)
@@ -602,20 +645,22 @@ static const char *D_dehout(void)
 // jff 4/19/98 Add routine to test IWAD for validity and determine
 // the gamemode from it. Also note if DOOM II, whether secret levels exist
 // CPhipps - const char* for iwadname, made static
-static void CheckIWAD(const char *iwadname,GameMode_t *gmode,boolean *hassec)
+//e6y static 
+void CheckIWAD(const char *iwadname,GameMode_t *gmode,boolean *hassec)
 {
   if ( !access (iwadname,R_OK) )
   {
     int ud=0,rg=0,sw=0,cm=0,sc=0;
-    FILE* fp;
+    int handle;
 
     // Identify IWAD correctly
-    if ((fp = fopen(iwadname, "rb")))
+    if ( (handle = open (iwadname,O_RDONLY | O_BINARY)) != -1)
     {
       wadinfo_t header;
 
       // read IWAD header
-      if (fread(&header, sizeof(header), 1, fp) == 1 && !strncmp(header.identification, "IWAD", 4))
+      read (handle, &header, sizeof(header));
+      if (!strncmp(header.identification,"IWAD",4))
       {
         size_t length;
         filelump_t *fileinfo;
@@ -625,10 +670,9 @@ static void CheckIWAD(const char *iwadname,GameMode_t *gmode,boolean *hassec)
         header.infotableofs = LONG(header.infotableofs);
         length = header.numlumps;
         fileinfo = malloc(length*sizeof(filelump_t));
-        if (fseek (fp, header.infotableofs, SEEK_SET) ||
-            fread (fileinfo, sizeof(filelump_t), length, fp) != length ||
-            fclose(fp))
-          I_Error("CheckIWAD: failed to read directory %s",iwadname);
+        lseek (handle, header.infotableofs, SEEK_SET);
+        read (handle, fileinfo, length*sizeof(filelump_t));
+        close(handle);
 
         // scan directory for levelname lumps
         while (length--)
@@ -795,6 +839,19 @@ void IdentifyVersion (void)
   int         i;    //jff 3/24/98 index of args on commandline
   struct stat sbuf; //jff 3/24/98 used to test save path for existence
   char *iwad;
+
+  // get config file from same directory as executable
+#ifdef GL_DOOM
+  sprintf(basedefault,"%s/glboom.cfg", I_DoomExeDir());  // killough
+#else
+  sprintf(basedefault,"%s/prboom.cfg", I_DoomExeDir());  // killough
+#endif
+
+  //e6y: was moved from D_DoomMainSetup
+  // init subsystems
+  //jff 9/3/98 use logical output routine
+  lprintf(LO_INFO,"M_LoadDefaults: Load system defaults.\n");
+  M_LoadDefaults();              // load before initing other systems
 
   // set save path to -save parm or current dir
 
@@ -991,8 +1048,8 @@ void FindResponseFile (void)
         // DISPLAY ARGS
         //jff 9/3/98 use logical output routine
         lprintf(LO_CONFIRM,"%d command-line args:\n",myargc);
-	for (index=1;index<myargc;index++)
-	  //jff 9/3/98 use logical output routine
+        for (index=1;index<myargc;index++)
+          //jff 9/3/98 use logical output routine
           lprintf(LO_CONFIRM,"%s\n",myargv[index]);
         break;
       }
@@ -1144,24 +1201,6 @@ void D_DoomMainSetup(void)
   int p,i,slot;
   const char *cena="ICWEFDA",*pos;  //jff 9/3/98 use this for parsing console masks // CPhipps - const char*'s
 
-  // proff 04/05/2000: Added support for include response files
-  /* proff 2001/7/1 - Moved up, so -config can be in response files */
-  {
-    boolean rsp_found;
-    int i;
-
-    do {
-      rsp_found=false;
-      for (i=0; i<myargc; i++)
-        if (myargv[i][0]=='@')
-          rsp_found=true;
-      FindResponseFile();
-    } while (rsp_found==true);
-  }
-
-  lprintf(LO_INFO,"M_LoadDefaults: Load system defaults.\n");
-  M_LoadDefaults();              // load before initing other systems
-
   // figgi 09/18/00-- added switch to force classic bsp nodes
   if (M_CheckParm ("-forceoldbsp"))
   {
@@ -1185,12 +1224,23 @@ void D_DoomMainSetup(void)
 
   setbuf(stdout,NULL);
 
+  // proff 04/05/2000: Added support for include response files
+  {
+    boolean rsp_found;
+    int i;
+
+    do {
+      rsp_found=false;
+      for (i=0; i<myargc; i++)
+        if (myargv[i][0]=='@')
+          rsp_found=true;
+      FindResponseFile();
+    } while (rsp_found==true);
+  }
   DoLooseFiles();  // Ty 08/29/98 - handle "loose" files on command line
   IdentifyVersion();
 
-  // e6y: DEH files preloaded in wrong order
-  // http://sourceforge.net/tracker/index.php?func=detail&aid=1418158&group_id=148658&atid=772943
-  // The dachaked stuff has been moved below an autoload
+  //e6y the dachaked stuff has been moved below an autoload
 
   // jff 1/24/98 set both working and command line value of play parms
   nomonsters = clnomonsters = M_CheckParm ("-nomonsters");
@@ -1343,6 +1393,12 @@ void D_DoomMainSetup(void)
   nodrawers = M_CheckParm ("-nodraw");
   noblit = M_CheckParm ("-noblit");
 
+#ifndef NO_PREDEFINED_LUMPS
+  // jff 4/21/98 allow writing predefined lumps out as a wad
+  if ((p = M_CheckParm("-dumplumps")) && p < myargc-1)
+    WritePredefinedLumpWad(myargv[p+1]);
+#endif
+
   //proff 11/22/98: Added setting of viewangleoffset
   p = M_CheckParm("-viewangle");
   if (p)
@@ -1353,6 +1409,9 @@ void D_DoomMainSetup(void)
   }
 
   // init subsystems
+  //jff 9/3/98 use logical output routine
+  //e6y lprintf(LO_INFO,"M_LoadDefaults: Load system defaults.\n");
+  //e6y M_LoadDefaults();              // load before initing other systems
 
   G_ReloadDefaults();    // killough 3/4/98: set defaults just loaded.
   // jff 3/24/98 this sets startskill if it was -1
@@ -1434,10 +1493,7 @@ void D_DoomMainSetup(void)
     }
   }
 
-  // e6y: DEH files preloaded in wrong order
-  // http://sourceforge.net/tracker/index.php?func=detail&aid=1418158&group_id=148658&atid=772943
-  // The dachaked stuff has been moved from above
-
+  //e6y the dachaked stuff has been moved from above
   // ty 03/09/98 do dehacked stuff
   // Note: do this before any other since it is expected by
   // the deh patch author that this is actually part of the EXE itself
@@ -1466,7 +1522,7 @@ void D_DoomMainSetup(void)
         }
     }
   // ty 03/09/98 end of do dehacked stuff
-
+  
   // add any files specified on the command line with -file wadfile
   // to the wad list
 
@@ -1511,6 +1567,8 @@ void D_DoomMainSetup(void)
   //jff 9/3/98 use logical output routine
   lprintf(LO_INFO,"D_InitNetGame: Checking for network game.\n");
   D_InitNetGame();
+
+  LauncherShow();//e6y
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_INFO,"W_Init: Init WADfiles.\n");
@@ -1564,8 +1622,7 @@ void D_DoomMainSetup(void)
   lprintf(LO_INFO,"HU_Init: Setting up heads up display.\n");
   HU_Init();
 
-  if (!(M_CheckParm("-nodraw") && M_CheckParm("-nosound")))
-    I_InitGraphics();
+  I_InitGraphics();
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_INFO,"ST_Init: Init status bar.\n");
@@ -1631,6 +1688,7 @@ void D_DoomMainSetup(void)
     singledemo = true;          // quit after one demo
   }
 
+  e6y_D_DoomMainSetup();//e6y
   if (slot && ++slot < myargc)
     {
       slot = atoi(myargv[slot]);        // killough 3/16/98: add slot info
@@ -1656,7 +1714,7 @@ void D_DoomMainSetup(void)
 void D_DoomMain(void)
 {
   D_DoomMainSetup(); // CPhipps - setup out of main execution stack
-
+  
   D_DoomLoop ();  // never returns
 }
 

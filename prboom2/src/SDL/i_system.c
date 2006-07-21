@@ -50,29 +50,11 @@
 
 #include "SDL.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef _MSC_VER
-#include <io.h>
-#endif
-#ifdef DREAMCAST
-#include <kos/fs.h>
-#else
-#include <fcntl.h>
-#include <sys/stat.h>
-#endif
-#include <errno.h>
-
 #include "i_system.h"
 #include "m_argv.h"
 #include "lprintf.h"
 #include "doomtype.h"
 #include "doomdef.h"
-#include "lprintf.h"
 
 #ifdef __GNUG__
 #pragma implementation "i_system.h"
@@ -80,7 +62,7 @@
 #include "i_system.h"
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 void I_uSleep(unsigned long usecs)
@@ -137,42 +119,6 @@ const char* I_SigString(char* buf, size_t sz, int signum)
   return buf;
 }
 
-
-/* 
- * I_Read
- *
- * cph 2001/11/18 - wrapper for read(2) which handles partial reads and aborts
- * on error.
- */
-void I_Read(int fd, void* vbuf, size_t sz)
-{
-  unsigned char* buf = vbuf;
-
-  while (sz) {
-    int rc = read(fd,buf,sz);
-    if (rc <= 0) {
-      I_Error("I_Read: read failed: %s", rc ? strerror(errno) : "EOF");
-    }
-    sz -= rc; buf += rc;
-  }
-}
-
-/*
- * I_Filelength
- *
- * Return length of an open file.
- */
-
-int I_Filelength(int handle)
-{
-#ifndef DREAMCAST
-  struct stat   fileinfo;
-  if (fstat(handle,&fileinfo) == -1)
-    I_Error("I_Filelength: %s",strerror(errno));
-  return fileinfo.st_size;
-#endif  
-}
-
 #ifndef PRBOOM_SERVER
 
 // Return the path where the executable lies -- Lee Killough
@@ -206,9 +152,6 @@ char *I_DoomExeDir(void)
 //  if non-existant
 static const char prboom_dir[] = {"/.prboom"}; // Mead rem extra slash 8/21/03
 
-#ifdef MACOSX
-/* Defined elsewhere */
-#else
 char *I_DoomExeDir(void)
 {
   static char *base;
@@ -227,7 +170,6 @@ char *I_DoomExeDir(void)
   return base;
 }
 #endif
-#endif
 
 /*
  * HasTrailingSlash
@@ -235,7 +177,8 @@ char *I_DoomExeDir(void)
  * cphipps - simple test for trailing slash on dir names
  */
 
-static boolean HasTrailingSlash(const char* dn)
+//e6y static 
+boolean HasTrailingSlash(const char* dn)
 {
   return (dn[strlen(dn)-1] == '/');
 }
@@ -257,9 +200,6 @@ static boolean HasTrailingSlash(const char* dn)
  * ~
  */
 
-#ifdef MACOSX
-/* Defined elsewhere */
-#else
 char* I_FindFile(const char* wfname, const char* ext)
 {
   int   i;
@@ -315,6 +255,5 @@ char* I_FindFile(const char* wfname, const char* ext)
   }
   return NULL;
 }
-#endif
 
 #endif // PRBOOM_SERVER

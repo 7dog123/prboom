@@ -35,8 +35,6 @@
 #include "r_main.h"
 #include "r_sky.h"
 #include "i_system.h"
-#include "r_bsp.h"
-#include "r_things.h"
 #include "lprintf.h"  // jff 08/03/98 - declaration of lprintf
 
 //
@@ -683,47 +681,6 @@ int R_ColormapNumForName(const char *name)
   return i;
 }
 
-/*
- * R_ColourMap
- *
- * cph 2001/11/17 - unify colour maping logic in a single place; 
- *  obsoletes old c_scalelight stuff
- */
-
-static inline int between(int l,int u,int x)
-{ return (l > x ? l : x > u ? u : x); }
-
-const lighttable_t* R_ColourMap(int lightlevel, fixed_t spryscale)
-{
-  if (fixedcolormap) return fixedcolormap;
-  else {
-    if (curline)
-      if (curline->v1->y == curline->v2->y)
-        lightlevel -= 1 << LIGHTSEGSHIFT;
-      else
-        if (curline->v1->x == curline->v2->x)
-          lightlevel += 1 << LIGHTSEGSHIFT;
-
-    lightlevel += extralight << LIGHTSEGSHIFT;
-
-    /* cph 2001/11/17 -
-     * Work out what colour map to use, remembering to clamp it to the number of
-     * colour maps we actually have. This formula is basically the one from the
-     * original source, just brought into one place. The main difference is it
-     * throws away less precision in the lightlevel half, so it supports 32
-     * light levels in WADs compared to Doom's 16.
-     *
-     * Note we can make it more accurate if we want - we should keep all the
-     * precision until the final step, so slight scale differences can count
-     * against slight light level variations.
-     */
-    return fullcolormap + between(0,NUMCOLORMAPS-1,
-          ((256-lightlevel)*2*NUMCOLORMAPS/256) - 4
-          - (FixedMul(spryscale,pspriteiscale)/2 >> LIGHTSCALESHIFT)
-          )*256;
-  }
-}
-
 //
 // R_InitTranMap
 //
@@ -911,6 +868,7 @@ int R_TextureNumForName(const char *name)  // const added -- killough
 {
   int i = R_CheckTextureNumForName(name);
   if (i == -1)
+    if ((i = R_CheckTextureNumForName("-")) == -1)//e6y
     I_Error("R_TextureNumForName: %.8s not found", name);
   return i;
 }
@@ -922,11 +880,6 @@ int R_TextureNumForName(const char *name)  // const added -- killough
 // Totally rewritten by Lee Killough to use less memory,
 // to avoid using alloca(), and to improve performance.
 // cph - new wad lump handling, calls cache functions but acquires no locks
-
-static inline void precache_lump(int l)
-{
-  W_CacheLumpNum(l); W_UnlockLumpNum(l);
-}
 
 void R_PrecacheLevel(void)
 {
@@ -950,7 +903,7 @@ void R_PrecacheLevel(void)
 
   for (i = numflats; --i >= 0; )
     if (hitlist[i])
-      precache_lump(firstflat + i);
+      (W_CacheLumpNum)(firstflat + i, 0);
 
   // Precache textures.
 
@@ -976,7 +929,7 @@ void R_PrecacheLevel(void)
         texture_t *texture = textures[i];
         int j = texture->patchcount;
         while (--j >= 0)
-          precache_lump(texture->patches[j].patch);
+          (W_CacheLumpNum)(texture->patches[j].patch, 0);
       }
 
   // Precache sprites.
@@ -998,7 +951,7 @@ void R_PrecacheLevel(void)
             short *sflump = sprites[i].spriteframes[j].lump;
             int k = 7;
             do
-              precache_lump(firstspritelump + sflump[k]);
+              (W_CacheLumpNum)(firstspritelump + sflump[k], 0);
             while (--k >= 0);
           }
       }

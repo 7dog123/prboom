@@ -31,7 +31,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 #ifdef HAVE_LIBSDL_MIXER
 #define HAVE_MIXER
@@ -154,10 +154,7 @@ int addsfx(int sfxid, int channel)
     {
       int lump = S_sfx[sfxid].lumpnum;
       size_t len = W_LumpLength(lump);
-      // e6y: Crash with zero-length sounds.
-      // Example wad: dakills (http://www.doomworld.com/idgames/index.php?id=2803)
-      // The entries DSBSPWLK, DSBSPACT, DSSWTCHN and DSSWTCHX are all zero-length sounds
-      if (len<=8) return -1;
+      if (len==0) return -1;//e6y
 
       /* Find padded length */
     len -= 8;
@@ -327,6 +324,7 @@ int I_StartSound(int id, int channel, int vol, int sep, int pitch, int priority)
   if (handle>=MAX_CHANNELS)
     I_Error("I_StartSound: handle out of range");
 #endif
+  if (handle!=-1)
   updateSoundParams(handle, vol, sep, pitch);
     SDL_UnlockAudio();
 
@@ -556,8 +554,6 @@ I_InitSound()
 // MUSIC API.
 //
 
-#ifndef HAVE_OWN_MUSIC
-
 #ifdef HAVE_MIXER
 #include "SDL_mixer.h"
 #include "mmus2mid.h"
@@ -581,6 +577,7 @@ void I_ShutdownMusic(void)
 
 void I_InitMusic(void)
 {
+  if (music_tmp) return;//e6y
 #ifdef HAVE_MIXER
 #ifndef _WIN32
   music_tmp = strdup("/tmp/prboom-music-XXXXXX");
@@ -727,6 +724,4 @@ void I_SetMusicVolume(int volume)
   Mix_VolumeMusic(volume*8);
 #endif
 }
-
-#endif /* HAVE_OWN_MUSIC */
 

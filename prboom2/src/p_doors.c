@@ -37,6 +37,7 @@
 #include "r_main.h"
 #include "dstrings.h"
 #include "d_deh.h"  // Ty 03/27/98 - externalized
+#include "e6y.h"//e6y
 
 ///////////////////////////////////////////////////////////////
 //
@@ -127,10 +128,7 @@ void T_VerticalDoor (vldoor_t* door)
             );
 
       /* killough 10/98: implement gradual lighting effects */
-      // e6y: "Tagged doors don't trigger special lighting" handled wrong
-      // http://sourceforge.net/tracker/index.php?func=detail&aid=1411400&group_id=148658&atid=772943
-      // Old code: if (door->lighttag && door->topheight - door->sector->floorheight)
-      if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level >= mbf_compatibility)
+      if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level >= mbf_compatibility)//e6y
         EV_LightTurnOnPartway(door->line,
                               FixedDiv(door->sector->ceilingheight -
                                        door->sector->floorheight,
@@ -177,10 +175,10 @@ void T_VerticalDoor (vldoor_t* door)
           default:
             break;
         }
-        // e6y: "Tagged doors don't trigger special lighting" handled wrong
-        // http://sourceforge.net/tracker/index.php?func=detail&aid=1411400&group_id=148658&atid=772943
+        //e6y
         if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level < mbf_compatibility)
           EV_LightTurnOnPartway(door->line,0);
+
       }
       /* jff 1/31/98 turn lighting off in tagged sectors of manual doors
        * killough 10/98: replaced with gradual lighting code
@@ -224,10 +222,7 @@ void T_VerticalDoor (vldoor_t* door)
             );
 
       /* killough 10/98: implement gradual lighting effects */
-      // e6y: "Tagged doors don't trigger special lighting" handled wrong
-      // http://sourceforge.net/tracker/index.php?func=detail&aid=1411400&group_id=148658&atid=772943
-      // Old code: if (door->lighttag && door->topheight - door->sector->floorheight)
-      if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level >= mbf_compatibility)
+      if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level >= mbf_compatibility)//e6y
         EV_LightTurnOnPartway(door->line,
                               FixedDiv(door->sector->ceilingheight -
                                        door->sector->floorheight,
@@ -264,8 +259,7 @@ void T_VerticalDoor (vldoor_t* door)
 
         /* jff 1/31/98 turn lighting on in tagged sectors of manual doors
    * killough 10/98: replaced with gradual lighting code */
-        // e6y: "Tagged doors don't trigger special lighting" handled wrong
-        // http://sourceforge.net/tracker/index.php?func=detail&aid=1411400&group_id=148658&atid=772943
+        //e6y
         if (door->lighttag && door->topheight - door->sector->floorheight && compatibility_level < mbf_compatibility)
           EV_LightTurnOnPartway(door->line,FRACUNIT);
       }
@@ -358,13 +352,15 @@ int EV_DoDoor
   secnum = -1;
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) goto manual_door; else return rtn;//e6y
   // open all doors with the same tag as the activating line
   while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
   {
     sec = &sectors[secnum];
+manual_door://e6y
     // if the ceiling already moving, don't start the door action
     if (P_SectorActive(ceiling_special,sec)) //jff 2/22/98
-        continue;
+      if (!zerotag_manual) continue; else  return rtn;//e6y
 
     // new door thinker
     rtn = 1;
@@ -426,6 +422,7 @@ int EV_DoDoor
       default:
         break;
     }
+    if (zerotag_manual) return rtn; //e6y
   }
   return rtn;
 }
@@ -496,7 +493,7 @@ int EV_VerticalDoor
   }
 
   // if the wrong side of door is pushed, give oof sound
-  if (line->sidenum[1]==-1)                     // killough
+  if (line->sidenum[1]==NO_INDEX)//e6y                     // killough
   {
     S_StartSound(player->mo,sfx_oof);           // killough 3/20/98
     return 0;
@@ -519,30 +516,26 @@ int EV_VerticalDoor
     if (!door) door = sec->floordata;
     if (!door) door = sec->lightingdata;
   }
-  /* If this is a repeatable line, and the door is already moving, then we can just reverse the current action. Note that in prboom 2.3.0 I erroneously removed the if-this-is-repeatable check, hence the prboom_4_compatibility clause below (foolishly assumed that already moving implies repeatable - but it could be moving due to another switch, e.g. lv19-509) */
-  if (door &&
-	  ((compatibility_level == prboom_4_compatibility) ||
-	   (line->special == 1) || (line->special == 117) || (line->special == 26) || (line->special == 27) || (line->special == 28)
-	  )
-     ) {
-    /* For old demos we have to emulate the old buggy behavior and
-     * mess up non-T_VerticalDoor actions.
-     */
-    if (compatibility_level < prboom_4_compatibility || 
-        door->thinker.function == T_VerticalDoor) {
-      /* An already moving repeatable door which is being re-pressed, or a
-       * monster is trying to open a closing door - so change direction
-       */
-      if (door->direction == -1) {
-        door->direction = 1; return 1; /* go back up */
-      } else if (player) {
-        door->direction = -1; return 1; /* go back down */
-      }
+  if (door)
+  {
+    switch(line->special)
+    {
+      case  1: // only for "raise" doors, not "open"s
+      case  26:
+      case  27:
+      case  28:
+      case  117:
+        if (door->direction == -1)
+          door->direction = 1;  // go back up
+        else
+        {
+          if (!thing->player)
+            return 0;           // JDC: bad guys never close doors
+
+          door->direction = -1; // start going down immediately
+        }
+        return 1;
     }
-    /* Either we're in prboom >=v2.3 and it's not a door, or it's a door but
-     * we're a monster and don't want to shut it; exit with no action.
-     */
-    return 0;
   }
 
   // emit proper sound
@@ -553,7 +546,12 @@ int EV_VerticalDoor
       S_StartSound((mobj_t *)&sec->soundorg,sfx_bdopn);
       break;
 
-    default:  // normal or locked door sound
+    case 1:   // normal door sound
+    case 31:
+      S_StartSound((mobj_t *)&sec->soundorg,sfx_doropn);
+      break;
+
+    default:  // locked door sound
       S_StartSound((mobj_t *)&sec->soundorg,sfx_doropn);
       break;
   }

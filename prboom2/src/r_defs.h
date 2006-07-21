@@ -189,15 +189,15 @@ typedef enum
 
 typedef struct line_s
 {
-#ifdef GL_DOOM
+//e6y #ifdef GL_DOOM
   int iLineID;           // proff 04/05/2000: needed for OpenGL
-#endif
+//e6y #endif
   vertex_t *v1, *v2;     // Vertices, from v1 to v2.
   fixed_t dx, dy;        // Precalculated v2 - v1 for side checking.
   short flags;           // Animation related.
   short special;
   short tag;
-  short sidenum[2];      // Visual appearance: SideDefs.
+  unsigned short sidenum[2];//e6y      // Visual appearance: SideDefs.
   fixed_t bbox[4];       // A bounding box, for the linedef's extent
   slopetype_t slopetype; // To aid move clipping.
   sector_t *frontsector; // Front and back sector.
@@ -384,7 +384,7 @@ typedef struct vissprite_s
   uint_64_t mobjflags;
 
   // for color translation and shadow draw, maxbright frames as well
-  const lighttable_t *colormap;
+  lighttable_t *colormap;
 
   // killough 3/27/98: height sector for underwater/fake ceiling support
   int heightsec;

@@ -300,7 +300,6 @@ void R_DrawTLColumn (void)
       }
     else
       {
-	if (heightmask == -1 && frac < 0) frac = 0;
         while ((count-=2)>=0)   // texture height is a power of 2 -- killough
           {
             *dest = tranmap[(*dest<<8)+colormap[source[(frac>>FRACBITS) & heightmask]]]; // phares

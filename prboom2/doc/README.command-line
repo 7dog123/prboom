@@ -15,7 +15,7 @@ USAGE
        ~/.prboom/glboom.cfg if compiled with GL support. Alternatively, it can
        be made to look elsewhere by using a command-line parameter:
 
-       {prboom,glboom} [ -config myconf ]
+       {prboom,xprboom} [ -config myconf ]
 
 FORMAT
        boom.cfg consists of a number of variables and values. Each line is  of
@@ -154,11 +154,11 @@ GAME SETTINGS
               Whether dogs will jump.
 
        sts_always_red
-              PrBoom  can  make  the colour of the text displays on the status
-              bar  reflect  your  current  status  (red=low,   yellow=average,
-              green=good, blue=super-charged).  This option if set selects the
-              traditional Doom behavior of always-red status bar display;  set
-              to 0 to allow the coloured display.
+              PrBoom  makes  the colour of the text displays on the status bar
+              reflect   your   current   status   (red=low,    yellow=average,
+              green=good,  blue=super-charged).  This option, if set, disables
+              this behavior, returning to the original Doom behavior  of  dis-
+              playing the numbers in red always, which is slightly faster.
 
        sts_pct_always_gray
               See  above,  this  makes  just  the  percent  signs always gray,
@@ -202,7 +202,7 @@ SOUND SETTINGS
        samplerate
               The  samplerate  for soundmixing and timidity. The sound quality
               is much better at higher samplerates, but if  you  use  timidity
-              then  higher samplerates need much more CPU power. Useful values
+              then higher samplerates need much more CPU power. Usefull values
               are 11025, 22050, 44100 and 48000.
 
        sfx_volume
@@ -265,9 +265,15 @@ VIDEO SETTINGS
               selected in the game with the F11 key, this  config  entry  pre-
               serves that setting.
 
+       X_options
+              Sets  various  misc  options  used  by  the  X version, xprboom.
+              Default is 0;  add 1 to disable MitSHM, add 2 to  select  alter-
+              nate  24bpp  code  (use  this if xprboom has video corruption in
+              24bpp visuals).
+
 
 OPENGL SETTINGS
-       If  you are knowledgable about OpenGL, you can tweak various aspects of
+       If you are knowledgable about OpenGL, you can tweak various aspects  of
        the GL rendering engine.
 
        gl_nearclip
@@ -283,22 +289,22 @@ OPENGL SETTINGS
               The bit depth for the z-buffer. (16, 24 or 32 bits)
 
        gl_tex_filter_string
-              A string, one of the  following:  GL_NEAREST  or  GL_LINEAR  (no
-              mipmapping),   or  one  of  GL_NEAREST_MIPMAP_NEAREST,  GL_NEAR-
+              A  string,  one  of  the  following: GL_NEAREST or GL_LINEAR (no
+              mipmapping),  or  one  of  GL_NEAREST_MIPMAP_NEAREST,   GL_NEAR-
               EST_MIPMAP_LINEAR,       GL_LINEAR_MIPMAP_NEAREST,       GL_LIN-
               EAR_MIPMAP_LINEAR with mipmapping.
 
        gl_tex_format_string
               One of the following strings: GL_RGBA - means format selected by
               driver (not so good), GL_RGBA2 - means 2 bits for each component
-              (bad),  GL_RGBA4 - means 4 bits for each component (like GL_RGBA
-              on most cards), GL_RGB5_A1 - means 5 bits for each color  compo-
-              nent  1  bit for the alpha channel (default), GL_RGBA8 - means 8
-              bits for each component (best quality, but  only  a  little  bit
+              (bad), GL_RGBA4 - means 4 bits for each component (like  GL_RGBA
+              on  most cards), GL_RGB5_A1 - means 5 bits for each color compo-
+              nent 1 bit for the alpha channel (default), GL_RGBA8 -  means  8
+              bits  for  each  component  (best quality, but only a little bit
               better than GL_RGB5_A1 and slower on most cards)
 
        gl_drawskys
-              If  0,  disables  drawing  skies,  which may be needed with some
+              If 0, disables drawing skies, which  may  be  needed  with  some
               problematic 3D cards.
 
        gl_sortsprites
@@ -306,9 +312,9 @@ OPENGL SETTINGS
 
 
 MOUSE SETTINGS
-       This section specifies settings for using a mouse  with  PrBoom.  There
-       are  several  settings  that  control button bindings (what action each
-       button causes in the game); these are  easiest  set  from  the  in-game
+       This  section  specifies  settings for using a mouse with PrBoom. There
+       are several settings that control button  bindings  (what  action  each
+       button  causes  in  the  game);  these are easiest set from the in-game
        menus, these config entries are to preserve the settings between games.
 
        use_mouse
@@ -320,58 +326,58 @@ MOUSE SETTINGS
 
 
 KEY BINDINGS
-       These  specify  the  keys  that  trigger various actions in PrBoom. The
+       These specify the keys that trigger  various  actions  in  PrBoom.  The
        codes used for keys are internal to PrBoom, though many keys are repre-
-       sented  by their ASCII codes. It is easiest to modify these via the in-
-       game menus (OPTIONS->SETUP->KEY BINDINGS). These  config  file  entries
+       sented by their ASCII codes. It is easiest to modify these via the  in-
+       game  menus  (OPTIONS->SETUP->KEY  BINDINGS). These config file entries
        preserve the settings from this menu between game sessions.
 
 
 JOYSTICK SETTINGS
-       There  are the trigger variables here, which are calculated during joy-
-       stick calibration (the values received from the kernel  driver  outside
-       of  which  movement  is caused in the game). Also there are the button-
+       There are the trigger variables here, which are calculated during  joy-
+       stick  calibration  (the values received from the kernel driver outside
+       of which movement is caused in the game). Also there  are  the  button-
        bindings, again best adjusted using the in-game menus.
 
        use_joystick
-              This selects the number of the joystick to use, or 0 selects  no
-              joystick.  You  have to have the relevant device files (/dev/js0
+              This  selects the number of the joystick to use, or 0 selects no
+              joystick. You have to have the relevant device  files  (/dev/js0
               etc) and the kernel driver loaded.
 
 
 CHAT MACROS
        These are pre-written text strings for quick transmission to players in
-       a  network  game (consult your Doom documentation). Easiest set via the
+       a network game (consult your Doom documentation). Easiest set  via  the
        in-game menus (OPTIONS->SETUP->CHAT MACROS).
 
 
 AUTOMAP SETTINGS
-       These are settings related to the automap. These are easiest  set  from
+       These  are  settings related to the automap. These are easiest set from
        within the game.
 
 
 HEADS_UP DISPLAY SETTINGS
-       These  are  settings  related to the heads-up display, that is messages
-       received while playing and the heads-up display of your current  status
+       These are settings related to the heads-up display,  that  is  messages
+       received  while playing and the heads-up display of your current status
        obtained by pressing + while the view is full-screen in PrBoom. See the
-       Boom documentation for details. All controlled  best  from  within  the
+       Boom  documentation  for  details.  All controlled best from within the
        game.
 
 
 WEAPON PREFERENCES
-       Here   are   the   settings   from   the   Weapons  menu  in  the  game
+       Here  are  the  settings  from   the   Weapons   menu   in   the   game
        (OPTIONS->SETUP->WEAPONS).
 
 
 ALSO SEE
-       prboom(6), PrBoom's documentation (including the Boom and MBF  documen-
+       prboom(6),  PrBoom's documentation (including the Boom and MBF documen-
        tation) and your Doom documentation.
 
 
 AUTHOR
        See the file AUTHORS included with PrBoom for a list of contributors to
-       PrBoom.   This  config  file  reference   written   by   Colin   Phipps
-       (cph@moria.org.uk).
+       PrBoom.   This  config  file  reference written by Colin Phipps (cph at
+       cph.demon.co.uk).
 
 PRBOOM(6)                                                            PRBOOM(6)
 
@@ -382,31 +388,31 @@ NAME
 
 SYNOPSIS
        prboom [ -complevel lvl ]  [ -width w ] [ -height h ]  [ -iwad iwadname
-       ] [ -file wad1 ... ] [ -deh  deh_file  ]  [  -noload  ]    [  -loadgame
-       {0,1,2,3,4,5,6,7}  ] [ -warp { map | epis level } -skill {1,2,3,4,5} ]
-       [ {-fastdemo,-timedemo,-playdemo} demofile [ -ffmap num ] ]  [  -record
-       demofile  ]  [ -net hostname[:port] ] [ -deathmatch [ -altdeath ] ] [ {
+       ]  [  -file  wad1  ...  ]  [  -deh  deh_file ] [ -noload ]  [ -loadgame
+       {0,1,2,3,4,5,6,7} ] [ -warp { map | epis level } -skill {1,2,3,4,5} ]
+       [  {-fastdemo,-timedemo,-playdemo}  demofile [ -ffmap num ] ] [ -record
+       demofile ]  [ -net hostname[:port] ] [ -deathmatch [ -altdeath ] ] [  {
        -timer mins | -avg }] ]  [ -nosound ] [ -nosfx ] [ -nomusic] [ -nojoy ]
-       [  -nomouse  ]  [  -noaccel  ]  [ -nodraw ]  [ -config myconf ] [ -save
-       savedir ]  [ -bexout bexdbg ] [ -debugfile debug_file ] [ -devparm ]  [
+       [ -nomouse ] [ -noaccel ] [ -{1,2,3} ]  [  -config  myconf  ]  [  -save
+       savedir  ]  [ -bexout bexdbg ] [ -debugfile debug_file ] [ -devparm ] [
        -noblit ] [ -nodrawers ]
 
 DESCRIPTION
-       PrBoom  is a version of the 3D shoot'em'up Doom, originally by iD soft-
-       ware.  It is based on Boom,  a  version  of  Doom  adapted  by  TeamTNT
-       (http://www.teamtnt.com)  for DOS. PrBoom uses the SDL library, meaning
-       it can run on a variety of different systems, including  Windows,  X11,
+       PrBoom is a version of the 3D shoot'em'up Doom, originally by iD  soft-
+       ware.   It  is  based  on  Boom,  a  version of Doom adapted by TeamTNT
+       (http://www.teamtnt.com) for DOS. PrBoom uses the SDL library,  meaning
+       it  can  run on a variety of different systems, including Windows, X11,
        Linux/SVGALib.
 
 Options
        -complevel lvl
-              This  sets  the  compatibility  mode that PrBoom runs in. If you
+              This sets the compatibility mode that PrBoom  runs  in.  If  you
               need to change this, see README.compat.
 
 
 Video Options
        -width w
-              Specifies the width of the PrBoom window, in pixels. Default  is
+              Specifies  the width of the PrBoom window, in pixels. Default is
               320, the width must be greater than 320..
 
        -height h
@@ -415,20 +421,20 @@ Video Options
 
 WAD Options
        -iwad iwadname
-              Specifies the location of the IWAD file, typically  doom.wad  or
+              Specifies  the  location of the IWAD file, typically doom.wad or
               doom2.wad (or doom2f.wad). This tells prboom where the main .wad
               file that came with the version of Doom that you own is.
 
        -file wad1 ...
-              Specifies a list of PWAD files to load in addition to  the  IWAD
+              Specifies  a  list of PWAD files to load in addition to the IWAD
               file. PWAD files modify the existing Doom game, by adding levels
-              or new sounds or graphics. PWAD files are widely  available  for
+              or  new  sounds or graphics. PWAD files are widely available for
               download; try ftp.cdrom.com/pub/idgames for starters.
 
        -deh deh_file
-              Tells PrBoom to load the dehacked patch deh_file.
+              Tells PrBoom to load  the  dehacked  patch  deh_file.  .SH  Game
+              Options
 
-Game Options
        -loadgame {0,1,2,3,4,5,6,7}
               Instructs PrBoom to load the specified saved game immediately.
 
@@ -438,7 +444,7 @@ Game Options
               begin  at  (epis is 1 for Knee-Deep in the Dead, 2 for Shores of
               Hell, 3 for Inferno, 4 for Ultimate Doom; level is between 1 and
               9). For Doom ][ or Final Doom, you must specify the map to begin
-              at, which is between 1 and 32 (30 for German Doom ][).
+              at, which is between 1 and 32 (30 for german Doom ][).
 
        -skill n
               Tells PrBoom to begin the game at skill level n (1 for ITYTD,  2
@@ -540,53 +546,56 @@ I/O Options
               SVGALib provides even when they are  supported  for  your  video
               card (normally this is autodetected).
 
-       -nodraw
-              Suppress  all graphical display. Only for debugging & demo test-
-              ing.
+       -{1,2,3}
+              Specifies  the  scale factor by which to enlarge the window. The
+              default, -1, displays the normal 320x200 pixel Doom  screen  (or
+              whatever  size is specified by the -width and -height parameters
+              or in the config file for prboom).  If this window is too small,
+              try using -2 or -3 to enlarge the window.
 
 Configuration
        -config myconf
-              Loads an  alternative  configuration  file,  named  myconf.  The
+              Loads  an  alternative  configuration  file,  named  myconf. The
               default is boom.cfg, taken from the same directory as PrBoom was
               run from.
 
        -save savedir
-              Causes prboom to  save  games  in  the  directory  specified  by
+              Causes  prboom  to  save  games  in  the  directory specified by
               savedir instead of ~/.prboom/.
 
 Debugging/Profiling Options
        -devparm
               Development mode. Mostly redundant these days, but it does force
-              non-lazy generation of texture lookups which can be  useful  for
+              non-lazy  generation  of texture lookups which can be useful for
               level authors debugging PWADs.
 
        -debugfile debug_file
-              Causes   some  debugging  information,  mainly  network  info  I
+              Causes  some  debugging  information,  mainly  network  info   I
               believe, to be written to the named file as prboom runs.
 
        -nodrawers
               Causes no rendering to be done. The only conceivable use of this
-              is  (a)  a multiplayer server (b) to test the speed of the other
+              is (a) a multiplayer server (b) to test the speed of  the  other
               routines in the program, when combined with -timedemo.
 
        -noblit
-              Causes no copying to the screen from the rendering buffer to  be
+              Causes  no copying to the screen from the rendering buffer to be
               performed. The only conceivable use of this is (a) a multiplayer
-              server (b) to test the speed of the other routines in  the  pro-
+              server  (b)  to test the speed of the other routines in the pro-
               gram, when combined with -timedemo.
 
        -bexout bexdbg
-              Causes  diagnostics  related to bex and dehacked file processing
+              Causes diagnostics related to bex and dehecked  file  processing
               to be written to the names file.
 
 More Information
        wget(1), unzip(1), boom.cfg(5), prboom-game-server(6)
 
-       For more information, see the README that came with  PrBoom,  the  Boom
+       For  more  information,  see the README that came with PrBoom, the Boom
        documentation, and your original Doom documentation.
 
-       Doom     is     a     registered     trademark     of    id    software
-       (http://www.idsoftware.com).
+       Doom is a  registered  trademark  of  id  software  (http://www.idsoft-
+       ware.com).
 
 Author
 PRBOOM-GAME-SERVER(6)                                    PRBOOM-GAME-SERVER(6)
@@ -604,33 +613,33 @@ SYNOPSIS
         [ -w wadname[,dl_url ]]
 
 DESCRIPTION
-       PrBoom is a version of the 3D shoot'em'up Doom, originally by id  soft-
+       PrBoom  is a version of the 3D shoot'em'up Doom, originally by id soft-
        ware.  It includes, amongst other things, the ability to play with sev-
-       eral players connected by a tcp/ip network. prboom-game-server  is  the
-       `server',  that  is  the program that passes data between the different
+       eral  players  connected by a tcp/ip network. prboom-game-server is the
+       `server', that is the program that passes data  between  the  different
        players in the game.
 
-       To start a network game (often abbreviated  to  `netgame'),  first  the
-       server  is  started.  prboom-game-server  accepts various parameters to
-       control the type of game (the skill level, number of players, level  to
+       To  start  a  network  game (often abbreviated to `netgame'), first the
+       server is started. prboom-game-server  accepts  various  parameters  to
+       control  the type of game (the skill level, number of players, level to
        play, optional WAD file(s) to load, etc).
 
-       Then  each player that wishes to participate runs prboom -net hostname,
-       where hostname is the name of the machine on which the server  is  run-
+       Then each player that wishes to participate runs prboom -net  hostname,
+       where  hostname  is the name of the machine on which the server is run-
        ning. Each copy of prboom retrieves information about the game from the
-       server, and when the specified number of players have joined, the  game
+       server,  and when the specified number of players have joined, the game
        begins.
 
 
 Options
        -N players
-              Specifies  the  number  of  players in the game (default 2). The
-              server will wait for this many players to join  before  starting
+              Specifies the number of players in the  game  (default  2).  The
+              server  will  wait for this many players to join before starting
               the game.
 
        -e epis
-              The  episode  to play (default 1). Unless you are playing Doom 1
-              or Ultimate Doom, and wish to play one of  the  later  episodes,
+              The episode to play (default 1). Unless you are playing  Doom  1
+              or  Ultimate  Doom,  and wish to play one of the later episodes,
               you do not need to change this.
 
        -l level
@@ -639,8 +648,8 @@ Options
        -s skill
               Specify the skill level to play (1-5).
 
-       -d     Set  game mode to (old) deathmatch (default is cooperative). See
-              the original Doom docs for information about the different  net-
+       -d     Set game mode to (old) deathmatch (default is cooperative).  See
+              the  original Doom docs for information about the different net-
               work game modes.
 
        -a     Set game mode to `altdeath' (v2 deathmatch) (default is coopera-
@@ -651,44 +660,44 @@ Options
 
        -n     Selects nomonsters mode, i.e. there are no monsters in the game.
 
-       -r     Respawn mode. If you don't know what this is, you don't want  to
+       -r     Respawn  mode. If you don't know what this is, you don't want to
               ;-).
 
        -c conffilename
               Specifies a configuration file to read which sets parameters for
               the game. This is in the same format as the PrBoom configuration
               file (in fact, you can ask it to read your normal PrBoom config-
-              uration file if you want). Only certain  settings  are  acknowl-
-              edged:  default_skill, default_compatibility_level, the compati-
+              uration  file  if  you want). Only certain settings are acknowl-
+              edged: default_skill, default_compatibility_level, the  compati-
               bility options and some of the game settings (use -v to have the
               server print the options as it recognises them).
 
        -w wadname[,dl_url]
               Specifies a WAD file to play. This is added to the internal list
-              that the server keeps. When a client connects, the server  sends
-              the  list of WADs; PrBoom will then add this to the list of WADs
-              specified on its command line.  Optionally, an url to  the  file
-              can  be  given  too;  if when PrBoom connects it cannot find the
-              named WAD, it will attempt to retrieve the file from  the  given
-              url,  extracting  it if necessary. See prboom(1) for information
+              that  the server keeps. When a client connects, the server sends
+              the list of WADs; PrBoom will then add this to the list of  WADs
+              specified  on  its command line.  Optionally, an url to the file
+              can be given too; if when PrBoom connects  it  cannot  find  the
+              named  WAD,  it will attempt to retrieve the file from the given
+              url, extracting it if necessary. See prboom(1)  for  information
               about the supported url types and compression formats.
 
        -t ticdup
               Reserved.
 
        -x xtics
-              This causes extra information  to  be  sent  with  each  network
-              packet;  this  will  help on networks with high packet loss, but
+              This  causes  extra  information  to  be  sent with each network
+              packet; this will help on networks with high  packet  loss,  but
               will use more bandwidth.
 
        -p port
-              Tells prboom-game-server what port  number  to  communicate  via
-              (default  5030).  Note that if you change this from the default,
-              then all the clients will also need to specify this number  when
-              they  try to connect (the default programmed into prboom is also
+              Tells  prboom-game-server  what  port  number to communicate via
+              (default 5030).  Note that if you change this from the  default,
+              then  all the clients will also need to specify this number when
+              they try to connect (the default programmed into prboom is  also
               5030).
 
-       -v     Increases  verbosity  level;  causes  more  diagnostics  to   be
+       -v     Increases   verbosity  level;  causes  more  diagnostics  to  be
               printed, the more times -v is specified.
 
 More Information
@@ -696,12 +705,12 @@ More Information
 
        For more information, see the README that came with PrBoom.
 
-       Doom  is  a  registered  trademark  of  id software (http://www.idsoft-
+       Doom is a  registered  trademark  of  id  software  (http://www.idsoft-
        ware.com).
 
 Author
-       See the file AUTHORS included with the PrBoom distribution.   This  man
-       page was written by Colin Phipps (cph@moria.org.uk).
+       See  the  file AUTHORS included with the PrBoom distribution.  This man
+       page was written by Colin Phipps (cph at cph.demon.co.uk).
 
 
 

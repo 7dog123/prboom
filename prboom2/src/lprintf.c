@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------*/
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -50,7 +50,7 @@
 #include "doomtype.h"
 #include "lprintf.h"
 #include "i_main.h"
-#include "m_argv.h"
+#include "e6y.h"//e6y
 
 int cons_error_mask = -1-LO_INFO; /* all but LO_INFO when redir'd */
 int cons_output_mask = -1;        /* all output enabled */
@@ -234,6 +234,7 @@ void I_UpdateConsole(void)
   while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) > 0)
   {
     TranslateMessage(&msg);
+    if (!movement_altmousesupport||msg.message != WM_MOUSEMOVE)//e6y
     DispatchMessage(&msg);
   }
   if (should_exit)
@@ -371,8 +372,8 @@ void I_Error(const char *error, ...)
   va_end(argptr);
   fprintf(stderr,"%s\n",errmsg);
 #ifdef _MSC_VER
-  if (!M_CheckParm ("-nodraw")) {
-    //Init_ConsoleWin();
+  {
+    Init_ConsoleWin();
     MessageBox(con_hWnd,errmsg,"PrBoom",MB_OK | MB_TASKMODAL | MB_TOPMOST);
   }
 #endif

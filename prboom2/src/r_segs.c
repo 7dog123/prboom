@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -61,6 +61,7 @@ static fixed_t  toptexheight, midtexheight, bottomtexheight; // cph
 angle_t         rw_normalangle; // angle to line origin
 int             rw_angle1;
 fixed_t         rw_distance;
+lighttable_t    **walllights;
 
 //
 // regular wall
@@ -74,7 +75,6 @@ static fixed_t  rw_scalestep;
 static fixed_t  rw_midtexturemid;
 static fixed_t  rw_toptexturemid;
 static fixed_t  rw_bottomtexturemid;
-static int      rw_lightlevel;
 static int      worldtop;
 static int      worldbottom;
 static int      worldhigh;
@@ -114,9 +114,12 @@ static fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 // R_RenderMaskedSegRange
 //
 
+int fake_contrast;
+
 void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 {
   column_t *col;
+  int      lightnum;
   int      texnum;
   sector_t tempsec;      // killough 4/13/98
 
@@ -141,13 +144,28 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   frontsector = curline->frontsector;
   backsector = curline->backsector;
 
-  // cph 2001/11/25 - middle textures did not animate in v1.2
+  //e6y // cph 2001/11/25 - middle textures did not animate in v1.2
   texnum = curline->sidedef->midtexture;
   if (!comp[comp_maskedanim])
     texnum = texturetranslation[texnum];
+  //e6y texnum = texturetranslation[curline->sidedef->midtexture];
 
   // killough 4/13/98: get correct lightlevel for 2s normal textures
-  rw_lightlevel = R_FakeFlat(frontsector, &tempsec, NULL, NULL, false) ->lightlevel;
+  lightnum = (R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)
+              ->lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+  /* cph - ...what is this for? adding contrast to rooms?
+   * It looks crap in outdoor areas */
+  if (fake_contrast) {
+    if (curline->v1->y == curline->v2->y)
+      lightnum--;
+    else
+      if (curline->v1->x == curline->v2->x)
+        lightnum++;
+  }
+
+  walllights = lightnum >= LIGHTLEVELS ? scalelight[LIGHTLEVELS-1] :
+    lightnum <  0           ? scalelight[0] : scalelight[lightnum];
 
   maskedtexturecol = ds->maskedtexturecol;
 
@@ -179,7 +197,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   for (dc_x = x1 ; dc_x <= x2 ; dc_x++, spryscale += rw_scalestep)
     if (maskedtexturecol[dc_x] != SHRT_MAX)
       {
-        dc_colormap = R_ColourMap(rw_lightlevel,spryscale);
+        if (!fixedcolormap)      // calculate lighting
+          {
+            unsigned index = spryscale>>LIGHTSCALESHIFT;
+
+            if (index >=  MAXLIGHTSCALE )
+              index = MAXLIGHTSCALE-1;
+
+            dc_colormap = walllights[index];
+          }
 
         // killough 3/2/98:
         //
@@ -220,8 +246,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   // Except for main_tranmap, mark others purgable at this point
   if (curline->linedef->tranlump > 0 && general_translucency)
     W_UnlockLumpNum(curline->linedef->tranlump-1); // cph - unlock it
-
-  curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so R_ColourMap doesn't try using it for other things */
 }
 
 //
@@ -289,13 +313,20 @@ static void R_RenderSegLoop (void)
       // texturecolumn and lighting are independent of wall tiers
       if (segtextured)
         {
+          unsigned index;
+
           // calculate texture offset
           angle_t angle =(rw_centerangle+xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 
           texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
           texturecolumn >>= FRACBITS;
+          // calculate lighting
+          index = rw_scale>>LIGHTSCALESHIFT;
 
-          dc_colormap = R_ColourMap(rw_lightlevel,rw_scale);
+          if (index >=  MAXLIGHTSCALE )
+            index = MAXLIGHTSCALE-1;
+
+          dc_colormap = walllights[index];
           dc_x = rw_x;
           dc_iscale = 0xffffffffu / (unsigned)rw_scale;
         }
@@ -694,7 +725,30 @@ void R_StoreWallRange(const int start, const int stop)
 
       rw_centerangle = ANG90 + viewangle - rw_normalangle;
 
-      rw_lightlevel = frontsector->lightlevel;
+      // calculate light table
+      //  use different light tables
+      //  for horizontal / vertical / diagonal
+      // OPTIMIZE: get rid of LIGHTSEGSHIFT globally
+      if (!fixedcolormap)
+        {
+          int lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT)+extralight;
+
+    /* cph - ...what is this for? adding contrast to rooms?
+     * It looks crap in outdoor areas */
+    if (fake_contrast) {
+          if (curline->v1->y == curline->v2->y)
+            lightnum--;
+          else if (curline->v1->x == curline->v2->x)
+            lightnum++;
+    }
+
+          if (lightnum < 0)
+            walllights = scalelight[0];
+          else if (lightnum >= LIGHTLEVELS)
+            walllights = scalelight[LIGHTLEVELS-1];
+          else
+            walllights = scalelight[lightnum];
+        }
     }
 
   // if a floor / ceiling plane is on the wrong side of the view

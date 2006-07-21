@@ -32,7 +32,7 @@
 // killough 5/2/98: reindented, removed useless code, beautified
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include "doomstat.h"
@@ -155,17 +155,6 @@ void S_Init(int sfxVolume, int musicVolume)
   }
 }
 
-void S_Stop(void)
-{
-  int cnum;
-
-  //jff 1/22/98 skip sound init if sound not enabled
-  if (snd_card && !nosfxparm)
-    for (cnum=0 ; cnum<numChannels ; cnum++)
-      if (channels[cnum].sfxinfo)
-        S_StopChannel(cnum);
-}
-
 //
 // Per level startup code.
 // Kills playing sounds at start of level,
@@ -173,12 +162,16 @@ void S_Stop(void)
 //
 void S_Start(void)
 {
-  int mnum;
+  int cnum,mnum;
 
   // kill all playing sounds at start of level
   //  (trust me - a good idea)
 
-  S_Stop();
+  //jff 1/22/98 skip sound init if sound not enabled
+  if (snd_card && !nosfxparm)
+    for (cnum=0 ; cnum<numChannels ; cnum++)
+      if (channels[cnum].sfxinfo)
+        S_StopChannel(cnum);
 
   //jff 1/22/98 return if music is not enabled
   if (!mus_card || nomusicparm)
@@ -306,13 +299,12 @@ void S_StartSoundAtVolume(void *origin_p, int sfx_id, int volume)
     sfx->usefulness = 1;
 
   // Assigns the handle to one of the channels in the mix/output buffer.
-  channels[cnum].handle = I_StartSound(sfx_id, cnum, volume, sep, pitch, priority);
-
-  // e6y: Crash with zero-length sounds.
-  // e6y: old code: channels[cnum].handle = I_StartSound(sfx_id, cnum, volume, sep, pitch, priority);
+  //e6y channels[cnum].handle = I_StartSound(sfx_id, cnum, volume, sep, pitch, priority);
+  //e6y
   {
-    int h = I_StartSound(sfx_id, cnum, volume, sep, pitch, priority);
-    if (h != -1) channels[cnum].handle = h;
+    int h;
+    h = I_StartSound(sfx_id, cnum, volume, sep, pitch, priority);
+    if (h!=-1) channels[cnum].handle = h;
   }
 }
 
@@ -379,10 +371,6 @@ void S_UpdateSounds(void* listener_p)
   //jff 1/22/98 return if sound is not enabled
   if (!snd_card || nosfxparm)
     return;
-
-#ifdef UPDATE_MUSIC
-  I_UpdateMusic();
-#endif
 
   for (cnum=0 ; cnum<numChannels ; cnum++)
     {

@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -43,6 +43,7 @@
 #include "m_random.h"
 #include "m_bbox.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 static mobj_t    *tmthing;
 static fixed_t   tmx;
@@ -81,7 +82,8 @@ static int    tmunstuck;     /* killough 8/1/98: whether to allow unsticking */
 
 // 1/11/98 killough: removed limit on special lines crossed
 line_t **spechit;                // new code -- killough
-static int spechit_max;          // killough
+//e6y static 
+int spechit_max;          // killough
 
 int numspechit;
 
@@ -275,6 +277,10 @@ boolean P_TeleportMove (mobj_t* thing,fixed_t x,fixed_t y, boolean boss)
   thing->y = y;
 
   P_SetThingPosition (thing);
+//e6y
+  thing->PrevX = x;
+  thing->PrevY = y;
+  thing->PrevZ = thing->floorz;
 
   return true;
   }
@@ -283,9 +289,6 @@ boolean P_TeleportMove (mobj_t* thing,fixed_t x,fixed_t y, boolean boss)
 //
 // MOVEMENT ITERATOR FUNCTIONS
 //
-
-// e6y: Spechits overrun emulation code
-static void SpechitOverrun(line_t *ld);
 
 //                                                                  // phares
 // PIT_CrossLine                                                    //   |
@@ -407,15 +410,17 @@ boolean PIT_CheckLine (line_t* ld)
 
   // if contacted a special line, add it to the list
 
+  CheckLinesCrossTracer(ld);//e6y
   if (ld->special)
     {
       // 1/11/98 killough: remove limit on lines hit, by array doubling
-      if (numspechit >= spechit_max) {
-        spechit_max = spechit_max ? spechit_max*2 : 8;
-	spechit = realloc(spechit,sizeof *spechit*spechit_max); // killough
-      }
+      if (numspechit >= spechit_max)
+  {
+    spechit_max = spechit_max ? spechit_max*2 : 8;
+    spechit = realloc(spechit,sizeof *spechit*spechit_max); // killough
+  }
       spechit[numspechit++] = ld;
-      if (numspechit >= 8 && demo_compatibility) SpechitOverrun(ld); // e6y: Spechits overrun emulation code
+    SpechitOverrun(ld);//e6y
     }
 
   return true;
@@ -515,8 +520,7 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
   if (thing == tmthing->target)
     return true;                // Don't hit same species as originator.
   else
-    // e6y: Dehacked support - monsters infight
-    if (thing->type != MT_PLAYER && !monsters_infight) // Explode, but do no damage.
+    if (thing->type != MT_PLAYER && !monsters_infight)//e6y // Explode, but do no damage.
       return false;         // Let players missile other players.
       }
 
@@ -715,7 +719,8 @@ boolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
     for (by=yl ; by<=yh ; by++)
       if (!P_BlockLinesIterator (bx,by,PIT_CheckLine))
         return false; // doesn't fit
-
+  
+  ClearLinesCrossTracer();//e6y
   return true;
   }
 
@@ -1010,7 +1015,9 @@ boolean P_ThingHeightClip (mobj_t* thing)
 
 /* killough 8/2/98: make variables static */
 static fixed_t   bestslidefrac;
+static fixed_t   secondslidefrac;
 static line_t*   bestslideline;
+static line_t*   secondslideline;
 static mobj_t*   slidemo;
 static fixed_t   tmxmove;
 static fixed_t   tmymove;
@@ -1164,6 +1171,8 @@ isblocking:
 
   if (in->frac < bestslidefrac)
     {
+    secondslidefrac = bestslidefrac;
+    secondslideline = bestslideline;
     bestslidefrac = in->frac;
     bestslideline = li;
     }
@@ -1627,7 +1636,7 @@ boolean PTR_UseTraverse (intercept_t* in)
   //WAS can't use for than one special line in a row
   //jff 3/21/98 NOW multiple use allowed with enabling line flag
 
-  return (!demo_compatibility && (in->d.line->flags&ML_PASSUSE))?
+  return (!demo_compatibility && ((in->d.line->flags&ML_PASSUSE) || compbad_get(&comperr_passuse)))?//e6y
           true : false;
 }
 
@@ -1692,8 +1701,10 @@ void P_UseLines (player_t*  player)
 // RADIUS ATTACK
 //
 
-static mobj_t *bombsource, *bombspot;
-static int bombdamage;
+//e6y static 
+mobj_t *bombsource, *bombspot;
+//e6y static 
+int bombdamage;
 
 
 //
@@ -1794,7 +1805,8 @@ void P_RadiusAttack(mobj_t* spot,mobj_t* source,int damage)
 //  to undo the changes.
 //
 
-static boolean crushchange, nofit;
+//e6y static 
+boolean crushchange, nofit;
 
 //
 // PIT_ChangeSector
@@ -2178,6 +2190,7 @@ void P_CreateSecNodeList(mobj_t* thing,fixed_t x,fixed_t y)
    * OTOH for Boom/MBF demos we have to preserve the buggy behavior.
    *  Fun. We restore its previous value unless we're in a Boom/MBF demo.
    */
+   //e6ye6y
   if ((compatibility_level < boom_compatibility_compatibility) ||
       (compatibility_level >= prboom_3_compatibility))
     tmthing = saved_tmthing;
@@ -2204,34 +2217,3 @@ void P_MapEnd(void) {
 	tmthing = NULL;
 }
 
-// e6y
-// Code to emulate the behavior of Vanilla Doom when encountering an overrun
-// of the spechit array.
-// No more desyncs on compet-n\hr.wad\hr18*.lmp, all strain.wad\map07 demos etc.
-// http://www.doomworld.com/vb/showthread.php?s=&threadid=35214
-static void SpechitOverrun(line_t *ld)
-{
-  int addr = 0x01C09C98 + (ld - lines) * 0x3E;
-
-  switch(numspechit)
-  {
-    case 8: break; /* numspechit, not significant it seems - cph */
-    case 9: 
-    case 10:
-    case 11:
-    case 12:
-      tmbbox[numspechit-9] = addr;
-      break;
-    case 13: 
-      crushchange = addr; 
-      break;
-    case 14: 
-      nofit = addr; 
-      break;
-    default:
-      fprintf(stderr, "SpechitOverrun: Warning: unable to emulate"
-                      " an overrun where numspechit=%i\n",
-                      numspechit);
-      break;
-  }
-}

@@ -47,6 +47,7 @@
 #pragma implementation "p_inter.h"
 #endif
 #include "p_inter.h"
+#include "e6y.h"//e6y
 
 #define BONUSADD        6
 
@@ -72,7 +73,7 @@ int idkfa_armor = 200;
 int idkfa_armor_class = 2;
 
 int bfgcells = 40;      // used in p_pspr.c
-int monsters_infight = 0; // e6y: Dehacked support - monsters infight
+int monsters_infight = 0;//e6y
 // Ty 03/07/98 - end deh externals
 
 // a weapon is found with two clip loads,
@@ -329,8 +330,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         // bonus items
     case SPR_BON1:
       player->health++;               // can go over 100%
-      if (player->health > (maxhealth * 2))
-        player->health = (maxhealth * 2);
+      if (player->health > (maxhealthbonus))//e6y
+        player->health = (maxhealthbonus);//e6y
       player->mo->health = player->health;
       player->message = s_GOTHTHBONUS; // Ty 03/22/98 - externalized
       break;
@@ -604,6 +605,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   P_RemoveMobj (special);
   player->bonuscount += BONUSADD;
 
+  CheckThingsPickupTracer(special);//e6y
+
   /* cph 20028/10 - for old-school DM addicts, allow old behavior
    * where only consoleplayer's pickup sounds are heard */
   if (!comp[comp_sound] || player == &players[consoleplayer])
@@ -634,7 +637,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
     {
       // count for intermission
       if (target->flags & MF_COUNTKILL)
+      {//e6y
         source->player->killcount++;
+        //e6y
+        if (target->flags & MF_RESSURECTED)
+          source->player->resurectedkillcount++;
+      }//e6y
       if (target->player)
         source->player->frags[target->player-players]++;
     }
@@ -642,9 +650,41 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
       if (target->flags & MF_COUNTKILL) { /* Add to kills tally */
   if ((compatibility_level < lxdoom_1_compatibility) || !netgame) {
     if (!netgame)
+    {//e6y
       // count all monster deaths,
       // even those caused by other monsters
       players[0].killcount++;
+      //e6y
+      if (target->flags & MF_RESSURECTED)
+        players[0].resurectedkillcount++;
+    //e6y
+    }
+    else
+    {
+      if (!deathmatch) {
+        if (target->lastenemy && target->lastenemy->health > 0 && target->lastenemy->player)
+        {
+          target->lastenemy->player->killcount++;
+          if (target->flags & MF_RESSURECTED)
+            target->lastenemy->player->resurectedkillcount++;
+        }
+        else
+        {
+          unsigned int player;
+          for (player = 0; player<MAXPLAYERS; player++)
+          {
+            if (playeringame[player])
+            {
+              players[player].killcount++;
+              if (target->flags & MF_RESSURECTED)
+                players[player].resurectedkillcount++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
   } else
     if (!deathmatch) {
       // try and find a player to give the kill to, otherwise give the
@@ -653,7 +693,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
       // CPhipps - not a bug as such, but certainly an inconsistency.
       if (target->lastenemy && target->lastenemy->health > 0
     && target->lastenemy->player) // Fighting a player
+        {//e6y
           target->lastenemy->player->killcount++;
+         //e6y
+          if (target->flags & MF_RESSURECTED)
+            target->lastenemy->player->resurectedkillcount++;
+        }//e6y
         else {
         // cph - randomely choose a player in the game to be credited
         //  and do it uniformly between the active players
@@ -669,7 +714,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
     for (i=0; i<MAXPLAYERS; i++)
       if (playeringame[i])
         if (!player--)
+        {//e6y
           players[i].killcount++;
+          //e6y
+          if (target->flags & MF_RESSURECTED)
+            players[i].resurectedkillcount++;
+        }//e6y
         }
       }
     }
@@ -741,7 +791,7 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
 void P_DamageMobj(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage)
 {
   player_t *player;
-  boolean justhit = false;          /* killough 11/98 */
+  boolean justhit;          /* killough 11/98 */
 
   /* killough 8/31/98: allow bouncers to take damage */
   if (!(target->flags & (MF_SHOOTABLE | MF_BOUNCES)))
@@ -864,15 +914,17 @@ void P_DamageMobj(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage)
   }
     }
 
-  if (P_Random (pr_painchance) < target->info->painchance &&
-      !(target->flags & MF_SKULLFLY)) { //killough 11/98: see below
-    if (mbf_features)
-      justhit = true;
-    else
-      target->flags |= MF_JUSTHIT;    // fight back!
+  if ((justhit = (P_Random (pr_painchance) < target->info->painchance &&
+      !(target->flags & MF_SKULLFLY)))) //killough 11/98: see below
+  //e6y
+  {
+    if(demo_compatibility)
+      if ((target->target == source || !target->target ||
+         !(target->flags & target->target->flags & MF_FRIEND)))
+        target->flags |= MF_JUSTHIT;    // fight back!
 
-    P_SetMobjState(target, target->info->painstate);
-  }
+  P_SetMobjState(target, target->info->painstate);
+  }//e6y
 
   target->reactiontime = 0;           // we're awake now...
 
@@ -905,8 +957,8 @@ void P_DamageMobj(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage)
         P_SetMobjState (target, target->info->seestate);
     }
 
-  /* killough 11/98: Don't attack a friend, unless hit by that friend.
-   * cph 2006/04/01 - implicitly this is only if mbf_features */
+  /* killough 11/98: Don't attack a friend, unless hit by that friend. */
+  if(!demo_compatibility) //e6y
   if (justhit && (target->target == source || !target->target ||
       !(target->flags & target->target->flags & MF_FRIEND)))
     target->flags |= MF_JUSTHIT;    // fight back!

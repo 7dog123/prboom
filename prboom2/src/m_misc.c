@@ -32,7 +32,7 @@
  *-----------------------------------------------------------------------------*/
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include <stdio.h>
@@ -52,7 +52,6 @@
 #include "m_menu.h"
 #include "am_map.h"
 #include "w_wad.h"
-#include "i_system.h"
 #include "i_sound.h"
 #include "i_video.h"
 #include "v_video.h"
@@ -65,6 +64,7 @@
 #include "i_joy.h"
 #include "lprintf.h"
 #include "d_main.h"
+#include "e6y.h"//e6y
 
 //
 // M_DrawText
@@ -99,70 +99,56 @@ int M_DrawText(int x,int y,boolean direct,char* string)
   return x;
 }
 
-/* cph - disk icon not implemented */
-static inline void I_BeginRead(void) {}
-static inline void I_EndRead(void) {}
+//
+// M_WriteFile
+//
 
-/*
- * M_WriteFile
- *
- * killough 9/98: rewritten to use stdio and to flash disk icon
- */
-
-boolean M_WriteFile(char const *name, void *source, int length)
+boolean M_WriteFile(char const* name,void* source,int length)
 {
-  FILE *fp;
+  int handle;
+  int count;
 
-  errno = 0;
+  handle = open ( name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
 
-  if (!(fp = fopen(name, "wb")))       // Try opening file
-    return 0;                          // Could not open file for writing
+  if (handle == -1)
+    return false;
 
-  I_BeginRead();                       // Disk icon on
-  length = fwrite(source, 1, length, fp) == (size_t)length;   // Write data
-  fclose(fp);
-  I_EndRead();                         // Disk icon off
+  count = write (handle, source, length);
+  close (handle);
 
-  if (!length)                         // Remove partially written file
-    remove(name);
+  if (count < length) {
+    unlink(name); // CPhipps - no corrupt data files around, they only confuse people.
+    return false;
+  }
 
-  return length;
+  return true;
 }
 
-/*
- * M_ReadFile
- *
- * killough 9/98: rewritten to use stdio and to flash disk icon
- */
 
-int M_ReadFile(char const *name, byte **buffer)
+//
+// M_ReadFile
+//
+
+int M_ReadFile(char const* name,byte** buffer)
 {
-  FILE *fp;
+  int handle, count, length;
+  struct stat fileinfo;
+  byte   *buf;
 
-  errno = 0;
+  handle = open (name, O_RDONLY | O_BINARY, 0666);
+  if ((handle == -1) || (fstat (handle,&fileinfo) == -1))
+    I_Error ("M_ReadFile: Couldn't read file %s", name);
 
-  if ((fp = fopen(name, "rb")))
-    {
-      size_t length;
+  length = fileinfo.st_size;
+  buf = Z_Malloc (length, PU_STATIC, NULL);
+  count = read (handle, buf, length);
+  close (handle);
 
-      I_BeginRead();
-      fseek(fp, 0, SEEK_END);
-      length = ftell(fp);
-      fseek(fp, 0, SEEK_SET);
-      *buffer = Z_Malloc(length, PU_STATIC, 0);
-      if (fread(*buffer, 1, length, fp) == length)
-        {
-          fclose(fp);
-          I_EndRead();
-          return length;
-        }
-      fclose(fp);
-    }
+  if (count < length)
+    I_Error ("M_ReadFile: Couldn't read file %s", name);
 
-  I_Error("Couldn't read file %s: %s", name, 
-	  errno ? strerror(errno) : "(Unknown Error)");
-
-  return 0;
+  *buffer = buf;
+  return length;
 }
 
 //
@@ -178,6 +164,7 @@ extern int mousebforward;
 
 extern int viewwidth;
 extern int viewheight;
+extern int fake_contrast;
 #ifdef GL_DOOM
 extern int gl_nearclip;
 extern int gl_farclip;
@@ -209,6 +196,7 @@ int         mus_pause_opt; // 0 = kill music, 1 = pause, 2 = continue
 extern const char* chat_macros[];
 
 extern int endoom_mode;
+int X_opt;
 
 extern const char* S_music_files[]; // cournia
 
@@ -220,7 +208,7 @@ int map_point_coordinates;
 default_t defaults[] =
 {
   {"Misc settings",{NULL},{0},UL,UL,def_none,ss_none},
-  {"default_compatibility_level",{(int*)&default_compatibility_level},
+  {"default_compatibility_level",{&default_compatibility_level},
    {-1},-1,MAX_COMPATIBILITY_LEVEL-1,
    def_int,ss_none}, // compatibility level" - CPhipps
   {"realtic_clock_rate",{&realtic_clock_rate},{100},0,UL,
@@ -237,8 +225,15 @@ default_t defaults[] =
    def_bool,ss_none}, // precache level data?
 
   {"Files",{NULL},{0},UL,UL,def_none,ss_none},
-  /* cph - MBF-like wad/deh/bex autoload code */
-  {"wadfile_1",{NULL,&wad_files[0]},{0,""},UL,UL,def_str,ss_none},
+  /* cph - MBF-like wad/deh/bex autoload code
+   * POSIX targets need to get lumps from prboom.wad */
+  {"wadfile_1",{NULL,&wad_files[0]},{0,
+#ifdef ALL_IN_ONE
+             ""
+#else
+             "prboom.wad"
+#endif
+                                         },UL,UL,def_str,ss_none},
   {"wadfile_2",{NULL,&wad_files[1]},{0,""},UL,UL,def_str,ss_none},
   {"dehfile_1",{NULL,&deh_files[0]},{0,""},UL,UL,def_str,ss_none},
   {"dehfile_2",{NULL,&deh_files[1]},{0,""},UL,UL,def_str,ss_none},
@@ -312,9 +307,12 @@ default_t defaults[] =
   {"comp_zerotags",{&default_comp[comp_zerotags]},{0},0,1,def_bool,ss_comp,&comp[comp_zerotags]},
   {"comp_moveblock",{&default_comp[comp_moveblock]},{0},0,1,def_bool,ss_comp,&comp[comp_moveblock]},
   {"comp_sound",{&default_comp[comp_sound]},{0},0,1,def_bool,ss_comp,&comp[comp_sound]},
+  //e6y
+  {"PrBoom-plus compatibility settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"comp_666",{&default_comp[comp_666]},{0},0,1,def_bool,ss_comp,&comp[comp_666]},
-  {"comp_soul",{&default_comp[comp_soul]},{0},0,1,def_bool,ss_comp,&comp[comp_soul]},
   {"comp_maskedanim",{&default_comp[comp_maskedanim]},{0},0,1,def_bool,ss_comp,&comp[comp_maskedanim]},
+  {"comp_maxhealth",{&default_comp[comp_maxhealth]},{0},0,1,def_bool,ss_comp,&comp[comp_maxhealth]},
+  {"comp_translucency",{&default_comp[comp_translucency]},{0},0,1,def_bool,ss_comp,&comp[comp_translucency]},
 
   {"Sound settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"sound_card",{&snd_card},{-1},-1,7,       // jff 1/18/98 allow Allegro drivers
@@ -349,12 +347,12 @@ default_t defaults[] =
   {"gl_sprite_offset",{&gl_sprite_offset},{0}, 0, 5,
    def_int,ss_none}, // amount to bring items out of floor (GL) Mead 8/13/03
 #endif
+  {"fake_contrast",{&fake_contrast},{1},0,1,
+   def_bool,ss_none}, /* cph - allow crappy fake contrast to be disabled */
   {"use_fullscreen",{&use_fullscreen},{1},0,1, /* proff 21/05/2000 */
    def_bool,ss_none},
-#ifndef DISABLE_DOUBLEBUFFER
   {"use_doublebuffer",{&use_doublebuffer},{1},0,1,             // proff 2001-7-4
    def_bool,ss_none}, // enable doublebuffer to avoid display tearing (fullscreen)
-#endif
   {"translucency",{&default_translucency},{1},0,1,   // phares
    def_bool,ss_none}, // enables translucency
   {"tran_filter_pct",{&tran_filter_pct},{66},0,100,         // killough 2/21/98
@@ -363,6 +361,8 @@ default_t defaults[] =
    def_int,ss_none},
   {"usegamma",{&usegamma},{3},0,4, //jff 3/6/98 fix erroneous upper limit in range
    def_int,ss_none}, // gamma correction level // killough 1/18/98
+  {"X_options",{&X_opt},{0},0,3, // CPhipps - misc X options
+   def_hex,ss_none}, // X options, see l_video_x.c
 
 #ifdef GL_DOOM
   {"OpenGL settings",{NULL},{0},UL,UL,def_none,ss_none},
@@ -689,6 +689,133 @@ default_t defaults[] =
   {"hud_nosecrets", {&hud_nosecrets},  {0},0,1, // no secrets/items/kills HUD line
    def_bool,ss_stat}, // disables display of kills/items/secrets on HUD
 
+//e6y
+  {"Prboom-plus key bindings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"key_speedup", {&key_speed_up}, {KEYD_KEYPADPLUS},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_speeddown", {&key_speed_down}, {KEYD_KEYPADMINUS},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_speeddefault", {&key_speed_default}, {KEYD_KEYPADMULTIPLY},
+   0,MAX_KEY,def_key,ss_keys},
+  {"speed_step",{&speed_step},{0},0,1000,
+   def_int,ss_none},
+  {"key_demo_jointogame", {&key_demo_jointogame}, {KEYD_LALT},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_demo_nextlevel", {&key_demo_nextlevel}, {KEYD_PAGEDOWN},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_demo_endlevel", {&key_demo_endlevel}, {KEYD_END},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_walkcamera", {&key_walkcamera}, {KEYD_LALT},
+   0,MAX_KEY,def_key,ss_keys},
+
+  {"Prboom-plus heads-up display settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"hudadd_gamespeed", {&hudadd_gamespeed},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_leveltime", {&hudadd_leveltime},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_secretarea", {&hudadd_secretarea},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_smarttotals", {&hudadd_smarttotals},  {0},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus mouse settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"mouse_acceleration",{&mouse_acceleration},{0},0,UL,
+   def_int,ss_none},
+  {"mouse_sensitivity_mlook",{&mouseSensitivity_mlook},{10},0,UL,
+   def_int,ss_none},
+
+  {"Prboom-plus demos settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"demo_overwriteexisting", {&demo_overwriteexisting},  {0},0,1,
+   def_bool,ss_stat},
+  {"demo_smoothturns", {&demo_smoothturns},  {0},0,1,
+   def_bool,ss_stat},
+  {"demo_smoothturnsfactor", {&demo_smoothturnsfactor},  {6},1,MAX_DEMOS_SMOOTHFACTOR,
+   def_int,ss_stat},
+
+  {"Prboom-plus game settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"movement_smooth", {&movement_smooth},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_altmousesupport", {&movement_altmousesupport},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_strafe50", {&movement_strafe50},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_strafe50onturns", {&movement_strafe50onturns},  {0},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus video settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"palette_ondamage", {&palette_ondamage},  {1},0,1,
+   def_bool,ss_stat},
+  {"palette_onbonus", {&palette_onbonus},  {1},0,1,
+   def_bool,ss_stat},
+  {"palette_onpowers", {&palette_onpowers},  {1},0,1,
+   def_bool,ss_stat},
+#ifndef GL_DOOM
+  {"render_wipescreen", {&render_wipescreen},  {1},0,1,
+   def_bool,ss_stat},
+#endif
+
+#ifdef GL_DOOM
+  {"Prboom-plus OpenGL settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"render_detailedwalls", {&render_detailedwalls},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_detailedflats", {&render_detailedflats},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_multisampling", {&render_multisampling},  {0},0,8,
+   def_int,ss_stat},
+  {"render_fov", {&render_fov},  {90},20,160,
+   def_int,ss_stat},
+  {"render_smartitemsclipping", {&render_smartitemsclipping},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_mouselook", {&movement_mouselook},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_mouseinvert", {&movement_mouseinvert},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_paperitems", {&render_paperitems},  {1},0,1,
+   def_bool,ss_stat},
+  {"test_sky1", {&test_sky1},  {1},0,1,
+   def_bool,ss_stat},
+  {"test_sky2", {&test_sky2},  {1},0,1,
+   def_bool,ss_stat},
+  {"test_dots", {&test_dots},  {1},0,1,
+   def_bool,ss_stat},
+#endif
+  {"Prboom-plus emulation settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"overrun_spechit_warn", {&overrun_spechit_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_spechit_emulate", {&overrun_spechit_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_reject_warn", {&overrun_reject_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_reject_emulate", {&overrun_reject_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_intercept_warn", {&overrun_intercept_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_intercept_emulate", {&overrun_intercept_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_playeringame_warn", {&overrun_playeringame_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_playeringame_emulate", {&overrun_playeringame_emulate},  {1},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus 'bad' compatibility settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"comperr_zerotag", {&comperr_zerotag},  {0},0,1,
+   def_bool,ss_stat},
+  {"comperr_passuse", {&comperr_passuse},  {0},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus launcher settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"launcher_enable", {&launcher_enable},  {0},0,1, def_bool,ss_stat},
+  {"launcher_history0", {NULL,&launcher_history[0]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history1", {NULL,&launcher_history[1]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history2", {NULL,&launcher_history[2]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history3", {NULL,&launcher_history[3]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history4", {NULL,&launcher_history[4]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history5", {NULL,&launcher_history[5]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history6", {NULL,&launcher_history[6]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history7", {NULL,&launcher_history[7]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history8", {NULL,&launcher_history[8]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history9", {NULL,&launcher_history[9]}, {0,""},UL,UL,def_str,ss_none},
+
   {"Weapon preferences",{NULL},{0},UL,UL,def_none,ss_none},
   // killough 2/8/98: weapon preferences set by user:
   {"weapon_choice_1", {&weapon_preferences[0][0]}, {6}, 0,9,
@@ -922,7 +1049,7 @@ void M_LoadDefaults (void)
   int   len;
   FILE* f;
   char  def[80];
-  char  strparm[100];
+  char  strparm[32767];//e6y
   char* newstring = NULL;   // killough
   int   parm;
   boolean isstring;
@@ -942,15 +1069,8 @@ void M_LoadDefaults (void)
   i = M_CheckParm ("-config");
   if (i && i < myargc-1)
     defaultfile = myargv[i+1];
-  else {
-    defaultfile = malloc(PATH_MAX+1);
-    /* get config file from same directory as executable */
-#ifdef GL_DOOM
-    snprintf((char *)defaultfile,PATH_MAX,"%s/glboom.cfg", I_DoomExeDir());
-#else
-    snprintf((char *)defaultfile,PATH_MAX,"%s/prboom.cfg", I_DoomExeDir());
-#endif
-  }
+  else
+    defaultfile = basedefault;
 
   lprintf (LO_CONFIRM, " default file: %s\n",defaultfile);
 
@@ -1016,9 +1136,6 @@ void M_LoadDefaults (void)
     fclose (f);
     }
   //jff 3/4/98 redundant range checks for hud deleted here
-  /* proff 2001/7/1 - added prboom.wad as last entry so it's always loaded and
-     doesn't overlap with the cfg settings */
-  wad_files[MAXLOADFILES-1]="prboom.wad";
 }
 
 
@@ -1036,8 +1153,8 @@ static boolean screenshot_write_error;
 
 #define BI_RGB 0L
 
-typedef unsigned int dword_t;
-typedef signed int   long_t;
+typedef unsigned long dword_t;
+typedef long     long_t;
 typedef unsigned char ubyte_t;
 
 #ifdef _MSC_VER // proff: This is the same as __attribute__ ((packed)) in GNUC
@@ -1090,59 +1207,20 @@ static void SafeWrite(const void *data, size_t size, size_t number, FILE *st)
 }
 
 #ifndef GL_DOOM
-#ifdef HAVE_LIBPNG
-
-#include <png.h>
-
-static void error_fn(png_structp p, png_const_charp s)
-{ screenshot_write_error = true; lprintf(LO_ERROR, "%s\n", s); }
-
-static void WritePNGfile(FILE* fp, const byte* data,
-       const int width, const int height, const byte* palette)
-{
-  png_structp png_ptr;
-  png_infop info_ptr;
-
-  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, png_error_ptr_NULL, error_fn, NULL);
-  if (png_ptr == NULL) { screenshot_write_error = true; return; }
-  info_ptr = png_create_info_struct(png_ptr);
-  if (info_ptr != NULL) {
-    png_init_io(png_ptr, fp);
-    png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-    png_set_PLTE(png_ptr, info_ptr, (png_colorp)palette, PNG_MAX_PALETTE_LENGTH);
-    {
-      png_time t;
-      png_convert_from_time_t(&t, time(NULL));
-      png_set_tIME(png_ptr, info_ptr, &t);
-    }
-
-    { /* Now write the image header and data */
-      int y;
-
-      png_write_info(png_ptr, info_ptr);
-      for (y = 0; y < height; y++)
-	png_write_row(png_ptr, data + y*width);
-    }
-
-    png_write_end(png_ptr, info_ptr);
-  }
-  png_destroy_write_struct(&png_ptr,  png_infopp_NULL);
-}
-#else
 //
 // WriteBMPfile
 // jff 3/30/98 Add capability to write a .BMP file (256 color uncompressed)
 //
 
 // CPhipps - static, const on parameters
-static void WriteBMPfile(FILE* st, const byte* data,
+static void WriteBMPfile(const char* filename, const byte* data,
        const int width, const int height, const byte* palette)
 {
   int i,wid;
   BITMAPFILEHEADER bmfh;
   BITMAPINFOHEADER bmih;
   int fhsiz,ihsiz;
+  FILE *st;
   char zero=0;
   ubyte_t c;
 
@@ -1168,10 +1246,8 @@ static void WriteBMPfile(FILE* st, const byte* data,
   bmih.biClrUsed = LONG(256);
   bmih.biClrImportant = LONG(256);
 
-  {
-    int gtlump = (W_CheckNumForName)("GAMMATBL",ns_prboom);
-    register const byte * const gtable = (const byte *)W_CacheLumpNum(gtlump) + 256*usegamma;
-
+  st = fopen(filename,"wb");
+  if (st!=NULL) {
     // write the header
     SafeWrite(&bmfh.bfType,sizeof(bmfh.bfType),1,st);
     SafeWrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,st);
@@ -1193,11 +1269,11 @@ static void WriteBMPfile(FILE* st, const byte* data,
 
     // write the palette, in blue-green-red order, gamma corrected
     for (i=0;i<768;i+=3) {
-      c=gtable[palette[i+2]];
+      c=gammatable[usegamma][palette[i+2]];
       SafeWrite(&c,sizeof(char),1,st);
-      c=gtable[palette[i+1]];
+      c=gammatable[usegamma][palette[i+1]];
       SafeWrite(&c,sizeof(char),1,st);
-      c=gtable[palette[i+0]];
+      c=gammatable[usegamma][palette[i+0]];
       SafeWrite(&c,sizeof(char),1,st);
       SafeWrite(&zero,sizeof(char),1,st);
     }
@@ -1205,11 +1281,10 @@ static void WriteBMPfile(FILE* st, const byte* data,
     for (i = 0 ; i < height ; i++)
       SafeWrite(data+(height-1-i)*width,sizeof(byte),wid,st);
 
-    W_UnlockLumpNum(gtlump);
+    fclose(st);
   }
 }
 
-#endif /* !HAVE_LIBPNG */
 #else /* GL_DOOM */
 
 //
@@ -1218,14 +1293,16 @@ static void WriteBMPfile(FILE* st, const byte* data,
 //
 
 // CPhipps - static, const on parameters
-static void WriteTGAfile(FILE* st, const byte* data,
+static void WriteTGAfile(const char* filename, const byte* data,
        const int width, const int height)
 {
   unsigned char c;
   unsigned short s;
   int i;
+  FILE *st;
 
-  {
+  st = fopen(filename,"wb");
+  if (st!=NULL) {
     // write the header
     // id_length
     c=0; SafeWrite(&c,sizeof(c),1,st);
@@ -1258,6 +1335,8 @@ static void WriteTGAfile(FILE* st, const byte* data,
       SafeWrite(&data[i+1],sizeof(byte),1,st);
       SafeWrite(&data[i+0],sizeof(byte),1,st);
     }
+
+    fclose(st);
   }
 }
 #endif /* GL_DOOM */
@@ -1279,17 +1358,13 @@ static void WriteTGAfile(FILE* st, const byte* data,
 
 void M_DoScreenShot (const char* fname)
 {
+  extern int st_palette;//e6y
   byte       *linear;
-  FILE	*fp = fopen(fname,"wb");
 #ifndef GL_DOOM
   const byte *pal;
   int        pplump = W_GetNumForName("PLAYPAL");
 #endif
 
-  if (!fp) {
-    doom_printf("Error opening %s", fname);
-    return;
-  }
   screenshot_write_error = false;
 
 #ifdef GL_DOOM
@@ -1300,7 +1375,7 @@ void M_DoScreenShot (const char* fname)
   // save the bmp file
 
   WriteTGAfile
-    (fp, linear, SCREENWIDTH, SCREENHEIGHT);
+    (fname, linear, SCREENWIDTH, SCREENHEIGHT);
 #else
   // munge planar buffer to linear
   // CPhipps - use a malloc()ed buffer instead of screens[2]
@@ -1311,12 +1386,8 @@ void M_DoScreenShot (const char* fname)
 
   // save the bmp file
 
-#ifdef HAVE_LIBPNG
-  WritePNGfile(fp, linear, SCREENWIDTH, SCREENHEIGHT, pal + 3*256*st_palette);
-#else
   WriteBMPfile
-    (fp, linear, SCREENWIDTH, SCREENHEIGHT, pal + 3*256*st_palette);
-#endif
+    (fname, linear, SCREENWIDTH, SCREENHEIGHT, pal + 3*256*st_palette);//e6y
 
   // cph - free the palette
   W_UnlockLumpNum(pplump);
@@ -1326,7 +1397,6 @@ void M_DoScreenShot (const char* fname)
 
   if (screenshot_write_error)
     doom_printf("M_ScreenShot: Error writing screenshot");
-  fclose(fp);
 }
 
 void M_ScreenShot(void)
@@ -1343,13 +1413,9 @@ void M_ScreenShot(void)
 
   do
 #ifdef GL_DOOM
-    sprintf(lbmname,"doom%02d.TGA", shot++);
+    sprintf(lbmname,"DOOM%02d.TGA", shot++);
 #else
-#ifdef HAVE_LIBPNG
-    sprintf(lbmname,"doom%02d.png", shot++);
-#else
-    sprintf(lbmname,"doom%02d.bmp", shot++);
-#endif
+    sprintf(lbmname,"DOOM%02d.BMP", shot++);
 #endif
   while (!access(lbmname,0) && (shot != startshot) && (shot < 10000));
 

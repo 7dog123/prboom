@@ -32,7 +32,7 @@
 #ifndef __M_FIXED__
 #define __M_FIXED__
 
-#include "config.h"
+#include "../config.h"
 #include "doomtype.h"
 
 /*
@@ -93,6 +93,7 @@ __inline static fixed_t FixedMul(fixed_t a, fixed_t b)
         shrd eax,edx,16
     }
 }
+
 #pragma warning( default : 4035 )
 # else /* _MSC_VER */
 /* killough 5/10/98: In djgpp, use inlined assembly for performance
@@ -123,7 +124,7 @@ static const fixed_t FixedMul(fixed_t a, fixed_t b)
 /* CPhipps - made __inline__ to inline, as specified in the gcc docs
  * Also made const */
 
-inline static CONSTFUNC fixed_t FixedMul(fixed_t a, fixed_t b)
+inline static const fixed_t FixedMul(fixed_t a, fixed_t b)
 {
   return (fixed_t)((int_64_t) a*b >> FRACBITS);
 }
@@ -154,6 +155,7 @@ __inline static fixed_t FixedDiv(fixed_t a, fixed_t b)
                         // compiler produced wrong code in a different place
     }
 }
+
 #pragma warning( default : 4035 )
 # else /* _MSC_VER */
 /* killough 5/10/98: In djgpp, use inlined assembly for performance
@@ -163,7 +165,7 @@ __inline static fixed_t FixedDiv(fixed_t a, fixed_t b)
  * Replaced inline asm with Julian's version for Eternity dated 6/7/2001
  */
 inline
-static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b)
+static const fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
   if (D_abs(a) >> 14 < D_abs(b))
     {
@@ -186,7 +188,7 @@ static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b)
 /* CPhipps - made __inline__ to inline, as specified in the gcc docs
  * Also made const */
 
-inline static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b)
+inline static const fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
   return (D_abs(a)>>14) >= D_abs(b) ? ((a^b)>>31) ^ INT_MAX :
     (fixed_t)(((int_64_t) a << FRACBITS) / b);
@@ -199,7 +201,7 @@ inline static CONSTFUNC fixed_t FixedDiv(fixed_t a, fixed_t b)
  * (notice that the C standard for % does not guarantee this)
  */
 
-inline static CONSTFUNC fixed_t FixedMod(fixed_t a, fixed_t b)
+inline static const fixed_t FixedMod(fixed_t a, fixed_t b)
 {
   if (b & (b-1)) {
     fixed_t r = a % b;

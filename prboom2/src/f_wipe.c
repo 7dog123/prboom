@@ -32,7 +32,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include "z_zone.h"
@@ -41,6 +41,7 @@
 #include "v_video.h"
 #include "m_random.h"
 #include "f_wipe.h"
+#include "e6y.h"//e6y
 
 //
 // SCREEN WIPE PACKAGE
@@ -116,12 +117,7 @@ static int wipe_doMelt(int width, int height, int ticks)
             short *s, *d;
             int j, dy, idx;
 
-            /* cph 2001/07/29 -
-             *  The original melt rate was 8 pixels/sec, i.e. 25 frames to melt
-             *  the whole screen, so make the melt rate depend on SCREENHEIGHT
-             *  so it takes no longer in high res
-             */
-            dy = (y[i] < 16) ? y[i]+1 : SCREENHEIGHT/25;
+            dy = (y[i] < 16) ? y[i]+1 : 8;
             if (y[i]+dy >= height)
               dy = height - y[i];
             s = &((short *)wipe_scr_end)[i*height+y[i]];
@@ -161,6 +157,8 @@ static int wipe_exitMelt(int width, int height, int ticks)
 
 int wipe_StartScreen(int x, int y, int width, int height)
 {
+  if(!render_wipescreen||wasWiped) return 0;//e6y
+  wasWiped = true;//e6y
   wipe_scr_start = screens[SRC_SCR] = malloc(SCREENWIDTH * SCREENHEIGHT);
   V_CopyRect(x, y, 0,       width, height, x, y, SRC_SCR, VPT_NONE ); // Copy start screen to buffer
   return 0;
@@ -168,6 +166,8 @@ int wipe_StartScreen(int x, int y, int width, int height)
 
 int wipe_EndScreen(int x, int y, int width, int height)
 {
+  if(!render_wipescreen||!wasWiped) return 0;//e6y
+  wasWiped = false;//e6y
   wipe_scr_end = screens[DEST_SCR] = malloc(SCREENWIDTH * SCREENHEIGHT);
   V_CopyRect(x, y, 0,       width, height, x, y, DEST_SCR, VPT_NONE); // Copy end screen to buffer
   V_CopyRect(x, y, SRC_SCR, width, height, x, y, 0       , VPT_NONE); // restore start screen
@@ -178,13 +178,14 @@ int wipe_EndScreen(int x, int y, int width, int height)
 int wipe_ScreenWipe(int x, int y, int width, int height, int ticks)
 {
   static boolean go;                               // when zero, stop the wipe
+  if(!render_wipescreen) return 0;//e6y
   if (!go)                                         // initial stuff
     {
       go = 1;
       wipe_scr = screens[0];
       wipe_initMelt(width, height, ticks);
     }
-  // do a piece of wipe-in
+  V_MarkRect(0, 0, width, height);                 // do a piece of wipe-in
   if (wipe_doMelt(width, height, ticks))     // final stuff
     {
       wipe_exitMelt(width, height, ticks);

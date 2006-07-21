@@ -40,6 +40,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "d_event.h"
+#include "e6y.h"//e6y
 
 #define LOWERSPEED   (FRACUNIT*6)
 #define RAISESPEED   (FRACUNIT*6)
@@ -268,6 +269,8 @@ boolean P_CheckAmmo(player_t *player)
 // P_FireWeapon.
 //
 
+int lastshottic; // killough 3/22/98
+
 static void P_FireWeapon(player_t *player)
 {
   statenum_t newstate;
@@ -279,6 +282,7 @@ static void P_FireWeapon(player_t *player)
   newstate = weaponinfo[player->readyweapon].atkstate;
   P_SetPsprite(player, ps_weapon, newstate);
   P_NoiseAlert(player->mo, player->mo);
+  lastshottic = gametic;                       // killough 3/22/98
 }
 
 //
@@ -371,14 +375,7 @@ void A_ReFire(player_t *player, pspdef_t *psp)
 
 void A_CheckReload(player_t *player, pspdef_t *psp)
 {
-  if (!P_CheckAmmo(player) && compatibility_level >= prboom_4_compatibility) {
-    /* cph 2002/08/08 - In old Doom, P_CheckAmmo would start the weapon lowering
-     * immediately. This was lost in Boom when the weapon switching logic was
-     * rewritten. But we must tell Doom that we don't need to complete the
-     * reload frames for the weapon here. G_BuildTiccmd will set ->pendingweapon
-     * for us later on. */
-    P_SetPsprite(player,ps_weapon,weaponinfo[player->readyweapon].downstate);
-  }
+  P_CheckAmmo(player);
 }
 
 //
@@ -510,6 +507,7 @@ void A_Punch(player_t *player, pspdef_t *psp)
 
   player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y,
                                       linetarget->x, linetarget->y);
+  ClearSmoothViewAngels(player);//e6y
 }
 
 //
@@ -558,6 +556,7 @@ void A_Saw(player_t *player, pspdef_t *psp)
   }
 
   player->mo->flags |= MF_JUSTATTACKED;
+  ClearSmoothViewAngels(player);//e6y
 }
 
 //
@@ -612,7 +611,8 @@ void A_FirePlasma(player_t *player, pspdef_t *psp)
 // the height of the intended target
 //
 
-static fixed_t bulletslope;
+//e6y static 
+fixed_t bulletslope;
 
 static void P_BulletSlope(mobj_t *mo)
 {

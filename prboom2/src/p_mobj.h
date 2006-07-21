@@ -358,13 +358,19 @@ typedef struct mobj_s
     // a linked list of sectors where this object appears
     struct msecnode_s* touching_sectorlist;                 // phares 3/14/98
 
+    //e6y
+    fixed_t             PrevX;
+    fixed_t             PrevY;
+    fixed_t             PrevZ;
+    angle_t             pitch;  // orientation
+    int index;
     // SEE WARNING ABOVE ABOUT POINTER FIELDS!!!
 } mobj_t;
 
 // External declarations (fomerly in p_local.h) -- killough 5/2/98
 
 #define VIEWHEIGHT      (41*FRACUNIT)
-#define PLAYERRADIUS    (16*FRACUNIT)
+#define PLAYERRADIUS    (16*(1<<MAPBITS))//e6y
 
 #define GRAVITY         FRACUNIT
 #define MAXMOVE         (30*FRACUNIT)
@@ -388,6 +394,8 @@ typedef struct mobj_s
 // Whether an object is "sentient" or not. Used for environmental influences.
 #define sentient(mobj) ((mobj)->health > 0 && (mobj)->info->seestate)
 
+extern mapthing_t itemrespawnque[];
+extern int itemrespawntime[];
 extern int iquehead;
 extern int iquetail;
 
@@ -400,8 +408,7 @@ void    P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z);
 void    P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
 mobj_t  *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 void    P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
-void    P_SpawnMapThing (const mapthing_t*  mthing);
-void    P_SpawnPlayer(int n, const mapthing_t *mthing);
+void    P_SpawnMapThing (mapthing_t*  mthing, int index);//e6y
 void    P_CheckMissileSpawn(mobj_t*);  // killough 8/2/98
 void    P_ExplodeMissile(mobj_t*);    // killough
 #endif

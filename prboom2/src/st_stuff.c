@@ -45,6 +45,7 @@
 #include "sounds.h"
 #include "dstrings.h"
 #include "r_draw.h"
+#include "e6y.h"//e6y
 
 //
 // STATUS BAR DATA
@@ -283,6 +284,11 @@ static boolean st_armson;
 
 // !deathmatch
 static boolean st_fragson;
+
+// main bar left
+// CPhipps - convert to a bitmap
+static byte *sbar;
+static unsigned short sbar_width, sbar_height;
 
 // 0-9, tall numbers
 static patchnum_t tallnum[10];
@@ -697,6 +703,7 @@ void ST_Ticker(void)
   st_oldhealth = plyr->health;
 }
 
+//e6y static 
 int st_palette = 0;
 
 void ST_doPaletteStuff(void)
@@ -733,7 +740,15 @@ void ST_doPaletteStuff(void)
       else
         palette = 0;
 
-  if (palette != st_palette)
+//e6y  if (palette != st_palette)
+//e6y
+  if ((palette != st_palette) && (
+      (palette == 0) || 
+      (palette_ondamage && plyr->damagecount > 0) ||
+      (palette_onbonus && !cnt && plyr->bonuscount > 0) ||
+      (palette_onpowers && palette == STARTREDPALS + 2 && (plyr->powers[pw_strength] || plyr->powers[pw_ironfeet]))
+     ))
+
     V_SetPalette(st_palette = palette); // CPhipps - use new palette function
 }
 
@@ -834,10 +849,10 @@ void ST_Drawer(boolean st_statusbaron, boolean refresh)
     ST_doRefresh();
 #else
   if (st_statusbaron) {
-    if (st_firsttime)
+//e6y    if (st_firsttime)
       ST_doRefresh();     /* If just after ST_Start(), refresh all */
-    else
-      ST_diffDraw();      /* Otherwise, update as little as possible */
+//e6y    else
+//e6y      ST_diffDraw();      /* Otherwise, update as little as possible */
   }
 #endif
 }
@@ -856,6 +871,11 @@ static void ST_loadGraphics(boolean doload)
   char namebuf[9];
   // cph - macro that either acquires a pointer and lock for a lump, or
   // unlocks it. var is referenced exactly once in either case, so ++ in arg works
+/*
+#define LOADORFREE(var,name) \
+if (!doload) { W_UnlockLumpName(name); var = NULL; } \
+else var = (const patch_t*)W_CacheLumpName(name)
+*/
 
   // Load the numbers, tall and short
   for (i=0;i<10;i++)
@@ -895,6 +915,14 @@ static void ST_loadGraphics(boolean doload)
   // killough 3/7/98: add better support for spy mode by loading all
   // player face backgrounds and using displayplayer to choose them:
   R_SetPatchNum(&faceback, "STFB0");
+
+  // status bar background bits
+  if (doload)
+    sbar = V_PatchToBlock("STBAR", CR_DEFAULT, VPT_NONE,
+      &sbar_width, &sbar_height);
+  else {
+    free(sbar); sbar=NULL;
+  }
 
   // face states
   facenum = 0;

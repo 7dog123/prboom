@@ -50,6 +50,7 @@
 #ifdef GL_DOOM
 #include "gl_struct.h"
 #endif
+#include "e6y.h"//e6y
 
 //
 // MAP related Lookup tables.
@@ -333,7 +334,7 @@ static void P_LoadSegs (int lump)
       li->frontsector = sides[ldef->sidenum[side]].sector;
 
       // killough 5/3/98: ignore 2s flag if second sidedef missing:
-      if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1]!=-1)
+      if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1]!=NO_INDEX)//e6y
         li->backsector = sides[ldef->sidenum[side^1]].sector;
       else
         li->backsector = 0;
@@ -532,32 +533,23 @@ static void P_LoadNodes (int lump)
 }
 
 
-/*
- * P_LoadThings
- *
- * killough 5/3/98: reformatted, cleaned up
- * cph 2001/07/07 - don't write into the lump cache, especially non-idepotent
- * changes like byte order reversals. Take a copy to edit.
- */
+//
+// P_LoadThings
+//
+// killough 5/3/98: reformatted, cleaned up
 
 static void P_LoadThings (int lump)
 {
   int  i, numthings = W_LumpLength (lump) / sizeof(mapthing_t);
-  const mapthing_t *data = W_CacheLumpNum (lump);
+  const byte *data = W_CacheLumpNum (lump); // cph - wad lump handling updated, const*
 
   for (i=0; i<numthings; i++)
     {
-      mapthing_t mt = data[i];
-
-      mt.x = SHORT(mt.x);
-      mt.y = SHORT(mt.y);
-      mt.angle = SHORT(mt.angle);
-      mt.type = SHORT(mt.type);
-      mt.options = SHORT(mt.options);
+      mapthing_t *mt = (mapthing_t *) data + i;
 
       // Do not spawn cool, new monsters if !commercial
       if (gamemode != commercial)
-        switch(mt.type)
+        switch(mt->type)
           {
           case 68:  // Arachnotron
           case 64:  // Archvile
@@ -573,7 +565,13 @@ static void P_LoadThings (int lump)
           }
 
       // Do spawn all other stuff.
-      P_SpawnMapThing(&mt);
+      mt->x = SHORT(mt->x);
+      mt->y = SHORT(mt->y);
+      mt->angle = SHORT(mt->angle);
+      mt->type = SHORT(mt->type);
+      mt->options = SHORT(mt->options);
+
+      P_SpawnMapThing (mt, i);//e6y
     }
 
   W_UnlockLumpNum(lump); // cph - release the data
@@ -640,14 +638,14 @@ static void P_LoadLineDefs (int lump)
           ld->bbox[BOXTOP] = v1->y;
         }
 
-#ifdef GL_DOOM
+//e6y #ifdef GL_DOOM
       ld->iLineID=i; // proff 04/05/2000: needed for OpenGL
-#endif
+//e6y #endif
       ld->sidenum[0] = SHORT(mld->sidenum[0]);
       ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
       // killough 4/4/98: support special sidedef interpretation below
-      if (ld->sidenum[0] != -1 && ld->special)
+      if (ld->sidenum[0] != NO_INDEX && ld->special)//e6y
         sides[*ld->sidenum].special = ld->special;
     }
 
@@ -666,26 +664,27 @@ static void P_LoadLineDefs2(int lump)
       { // cph 2002/07/20 - these errors are fatal if not fixed, so apply them in compatibility mode - a desync is better than a crash!
   // killough 11/98: fix common wad errors (missing sidedefs):
 
-  if (ld->sidenum[0] == -1) {
+  if (ld->sidenum[0] == NO_INDEX) {//e6y
     ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
     // cph - print a warning about the bug
     lprintf(LO_WARN, "P_LoadSegs: linedef %d missing first sidedef\n",numlines-i);
   }
 
-  if ((ld->sidenum[1] == -1) && (ld->flags & ML_TWOSIDED)) {
+  if ((ld->sidenum[1] == NO_INDEX) && (ld->flags & ML_TWOSIDED)) {//e6y
     ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
     // cph - print a warning about the bug
     lprintf(LO_WARN, "P_LoadSegs: linedef %d has two-sided flag set, but no second sidedef\n",numlines-i);
   }
       }
 
-      ld->frontsector = ld->sidenum[0]!=-1 ? sides[ld->sidenum[0]].sector : 0;
-      ld->backsector  = ld->sidenum[1]!=-1 ? sides[ld->sidenum[1]].sector : 0;
+      ld->frontsector = ld->sidenum[0]!=NO_INDEX ? sides[ld->sidenum[0]].sector : 0;//e6y
+      ld->backsector  = ld->sidenum[1]!=NO_INDEX ? sides[ld->sidenum[1]].sector : 0;//e6y
       switch (ld->special)
         {                       // killough 4/11/98: handle special types
           int lump, j;
 
         case 260:               // killough 4/11/98: translucent 2s textures
+            transparentpresent = true;//e6y
             lump = sides[*ld->sidenum].special; // translucency from sidedef
             if (!ld->tag)                       // if tag==0,
               ld->tranlump = lump;              // affect this linedef only
@@ -1067,7 +1066,8 @@ void P_CreateBlockMap()
     {
       linelist_t *tmp = bl->next;
       blockmaplump[offs++] = bl->num;
-      free(bl);
+      free(bl);//e6y
+      //free(e6y_BlockMap[i]);
       bl = tmp;
     }
   }
@@ -1077,6 +1077,7 @@ void P_CreateBlockMap()
   free (blocklists);
   free (blockcount);
   free (blockdone);
+  //free(e6y_BlockMap);
 }
 
 // jff 10/6/98
@@ -1154,26 +1155,6 @@ static void P_AddLineToSector(line_t* li, sector_t* sector)
   M_AddToBox (bbox, li->v2->x, li->v2->y);
 }
 
-// e6y: REJECT overrun emulation code
-// It's emulated successfully if the size of overflow no more than 16 bytes.
-// No more desync on teeth-32.wad\teeth-32.lmp.
-// http://www.doomworld.com/vb/showthread.php?s=&threadid=35214
-int rjreq, rjlen;
-static void RejectOverrunAddInt(int k)
-{
-  int i = 0;
-
-  if (demo_compatibility)
-  {
-    while (rjlen < rjreq)
-    {
-      ((byte*)rejectmatrix)[rjlen++] = (k & 0x000000ff);
-      k >>= 8;
-      if ((++i)==4) break;
-    }
-  }
-}
-
 void P_GroupLines (void)
 {
   register line_t *li;
@@ -1211,17 +1192,13 @@ void P_GroupLines (void)
 
   {  // allocate line tables for each sector
     line_t **linebuffer = Z_Malloc(total*sizeof(line_t *), PU_LEVEL, 0);
-
-    // e6y: REJECT overrun emulation code
-    // It's emulated successfully if the size of overflow no more than 16 bytes.
-    // No more desync on teeth-32.wad\teeth-32.lmp.
-    // http://www.doomworld.com/vb/showthread.php?s=&threadid=35214
+    //e6y
     if (demo_compatibility)
     {
-      RejectOverrunAddInt(((total*4+3)&~3)+24);
-      RejectOverrunAddInt(0);
-      RejectOverrunAddInt(50);//DOOM_CONST_PU_LEVEL
-      RejectOverrunAddInt(0x1d4a11);//DOOM_CONST_ZONEID
+      AddIntForRejectOverflow(((total*4+3)&~3)+24);
+      AddIntForRejectOverflow(0);
+      AddIntForRejectOverflow(50);//DOOM_CONST_PU_LEVEL
+      AddIntForRejectOverflow(0x1d4a11);//DOOM_CONST_ZONEID
     }
 
     for (i=0, sector = sectors; i<numsectors; i++, sector++)
@@ -1367,12 +1344,19 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   char  gl_lumpname[9];
   int   gl_lumpnum;
 
+  //e6y
+  totallive = 0;
+  stopallinterpolation();
+  transparentpresent = false;
 
-  totallive = totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
+  totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
   wminfo.partime = 180;
 
   for (i=0; i<MAXPLAYERS; i++)
+  {//e6y
     players[i].killcount = players[i].secretcount = players[i].itemcount = 0;
+    players[i].resurectedkillcount = 0;//e6y
+  }//e6y
 
   // Initial height of PointOfView will be set by player think.
   players[consoleplayer].viewz = 1;
@@ -1411,7 +1395,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   lumpnum = W_GetNumForName(lumpname);
   gl_lumpnum = W_CheckNumForName(gl_lumpname); // figgi
 
-  leveltime = 0; totallive = 0;
+  leveltime = 0;
 
   // note: most of this ordering is important
 
@@ -1468,13 +1452,11 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
 
   if (rejectlump != -1)
     W_UnlockLumpNum(rejectlump);
-  /* CHECKME this code is not in 2.3, but I can't find the place where it was removed
-
   rejectlump = lumpnum+ML_REJECT;
   {
-    // e6y: Needed for REJECT overrun emulation
+    //e6y int 
     rjlen = W_LumpLength(rejectlump);
-    // e6y: Needed for REJECT overrun emulation
+    //e6y int
     rjreq = (numsectors*numsectors+7)/8;
     if (rjlen < rjreq) {
       lprintf(LO_WARN,"P_SetupLevel: REJECT too short (%d<%d) - padded\n",rjlen,rjreq);
@@ -1482,8 +1464,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
     } else {
       rejectmatrix = W_CacheLumpNum(rejectlump);
     }
-  }*/
-  rejectmatrix = W_CacheLumpNum(rejectlump = lumpnum+ML_REJECT);
+  }
   P_GroupLines();
 
   P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
@@ -1492,12 +1473,8 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // a much simpler fix is in g_game.c -- killough 10/98
 
   bodyqueslot = 0;
-
-  /* cph - reset all multiplayer starts */
-  memset(playerstarts,0,sizeof(playerstarts));
   deathmatch_p = deathmatchstarts;
   P_MapStart();
-
   P_LoadThings(lumpnum+ML_THINGS);
 
   // if deathmatch, randomly spawn the active players
@@ -1529,7 +1506,9 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
  // proff 11/99: calculate all OpenGL specific tables etc.
   gld_PreprocessLevel();
 #endif
-
+  //e6y
+  P_ResetWalkcam();
+  ClearSmoothViewAngels(NULL);
 }
 
 //

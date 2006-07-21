@@ -6,7 +6,7 @@
  *  based on BOOM, a modified and improved DOOM engine
  *  Copyright (C) 1999 by
  *  id Software, Chi Hoang, Lee Killough, Jim Flynn, Rand Phares, Ty Halderman
- *  Copyright (C) 1999-2006 by
+ *  Copyright (C) 1999-2000 by
  *  Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze
  *
  *  This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #endif
 
 #include <stdlib.h>
@@ -58,6 +58,7 @@
 #include "sounds.h"
 #include "w_wad.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 #ifdef GL_DOOM
 #include "gl_struct.h"
@@ -68,11 +69,8 @@ int gl_depthbuffer_bits=16;
 #endif
 
 extern void M_QuitDOOM(int choice);
-#ifdef DISABLE_DOUBLEBUFFER
-int use_doublebuffer = 0;
-#else
-int use_doublebuffer = 1; // Included not to break m_misc, but not relevant to SDL
-#endif
+
+int use_doublebuffer = 0; // Included not to break m_misc, but not relevant to SDL
 int use_fullscreen;
 static SDL_Surface *screen;
 
@@ -174,7 +172,8 @@ int I_ScanCode2DoomCode(int c)
 // Main input code
 
 /* cph - pulled out common button code logic */
-static int I_SDLtoDoomMouseState(Uint8 buttonstate)
+//e6y static 
+int I_SDLtoDoomMouseState(Uint8 buttonstate)
 {
   return 0
       | (buttonstate & SDL_BUTTON(1) ? 1 : 0)
@@ -222,6 +221,16 @@ static void I_GetEvent(SDL_Event *Event)
   }
   break;
 
+  //e6y
+  case SDL_ACTIVEEVENT:
+    if (movement_altmousesupport)
+    {
+      if (Event->active.gain)
+        GrabMouse_Win32();
+      else
+        UngrabMouse_Win32();
+    }
+    break;
 
   case SDL_QUIT:
     S_StartSound(NULL, sfx_swtchn);
@@ -241,6 +250,7 @@ static int mouse_currently_grabbed;
 void I_StartTic (void)
 {
   SDL_Event Event;
+  if (!movement_altmousesupport)
   {
     int should_be_grabbed = grabMouse &&
       !(paused || (gamestate != GS_LEVEL) || demoplayback);
@@ -250,6 +260,7 @@ void I_StartTic (void)
           ? SDL_GRAB_ON : SDL_GRAB_OFF);
   }
 
+  e6y_I_GetEvent();//e6y
   while ( SDL_PollEvent(&Event) )
     I_GetEvent(&Event);
 
@@ -271,10 +282,9 @@ static void I_InitInputs(void)
 {
   // check if the user wants to grab the mouse
   grabMouse = M_CheckParm("-nomouse") ? false : usemouse ? true : false;
-  // e6y: fix for turn-snapping bug on fullscreen in software mode
-  SDL_WarpMouse((unsigned short)(desired_screenwidth/2), (unsigned short)(desired_screenheight/2));
 
   I_InitJoystick();
+  e6y_I_InitInputs();//e6y
 }
 /////////////////////////////////////////////////////////////////////////////
 
@@ -314,13 +324,12 @@ static void I_UploadNewPalette(int pal)
   return;
 #endif
   if ((colours == NULL) || (cachedgamma != usegamma)) {
-    int pplump = W_GetNumForName("PLAYPAL");
-    int gtlump = (W_CheckNumForName)("GAMMATBL",ns_prboom);
-    register const byte * palette = W_CacheLumpNum(pplump);
-    register const byte * const gtable = (const byte *)W_CacheLumpNum(gtlump) + 256*(cachedgamma = usegamma);
+    int            lump = W_GetNumForName("PLAYPAL");
+    const byte *palette = W_CacheLumpNum(lump);
+    register const byte *const gtable = gammatable[cachedgamma = usegamma];
     register int i;
 
-    num_pals = W_LumpLength(pplump) / (3*256);
+    num_pals = W_LumpLength(lump) / (3*256);
     num_pals *= 256;
 
     if (!colours) {
@@ -336,8 +345,7 @@ static void I_UploadNewPalette(int pal)
       palette += 3;
     }
 
-    W_UnlockLumpNum(pplump);
-    W_UnlockLumpNum(gtlump);
+    W_UnlockLumpNum(lump);
     num_pals/=256;
   }
 
@@ -389,7 +397,7 @@ void I_FinishUpdate (void)
       char *dest;
 
       if (SDL_LockSurface(screen) < 0) {
-        lprintf(LO_INFO,"I_FinishUpdate: %s\n", SDL_GetError());
+	lprintf(LO_INFO,"I_FinishUpdate: %s\n", SDL_GetError());
         return;
       }
       dest=(char *)screen->pixels;
@@ -444,13 +452,7 @@ void I_ShutdownSDL(void)
 void I_PreInitGraphics(void)
 {
   // Initialize SDL
-  unsigned int flags;
-  if (!(M_CheckParm("-nodraw") && M_CheckParm("-nosound")))
-    flags = SDL_INIT_VIDEO;
-#ifdef _DEBUG
-  flags |= SDL_INIT_NOPARACHUTE;
-#endif
-  if ( SDL_Init(flags) < 0 ) {
+  if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) {
     I_Error("Could not initialize SDL [%s]", SDL_GetError());
   }
 
@@ -463,8 +465,11 @@ void I_PreInitGraphics(void)
 
 void I_SetRes(unsigned int width, unsigned int height)
 {
-  SCREENWIDTH = (width+3) & ~3;
-  SCREENHEIGHT = (height+3) & ~3;
+//e6y  SCREENWIDTH = (width+3) & ~3;
+//e6y  SCREENHEIGHT = (height+3) & ~3;
+//e6y
+  SCREENWIDTH = width;
+  SCREENHEIGHT = height;
 
   lprintf(LO_INFO,"I_SetRes: Using resolution %dx%d\n", SCREENWIDTH, SCREENHEIGHT);
 }
@@ -502,7 +507,7 @@ void I_UpdateVideoMode(void)
   unsigned int w, h;
   int init_flags;
 
-  lprintf(LO_INFO, "I_UpdateVideoMode: %dx%d (%s)\n", SCREENWIDTH, SCREENHEIGHT, use_fullscreen ? "fullscreen" : "nofullscreen");
+//e6y (below)  lprintf(LO_INFO, "I_UpdateVideoMode: %dx%d (%s)\n", SCREENWIDTH, SCREENHEIGHT, use_fullscreen ? "fullscreen" : "nofullscreen");
 
   w = SCREENWIDTH;
   h = SCREENHEIGHT;
@@ -512,7 +517,7 @@ void I_UpdateVideoMode(void)
   init_flags = SDL_OPENGL;
 #else
   if (use_doublebuffer)
-    init_flags = SDL_DOUBLEBUF;
+    init_flags = SDL_HWSURFACE | SDL_DOUBLEBUF;//e6y SDL_DOUBLEBUF - Enable hardware double buffering; only valid with SDL_HWSURFACE
   else
     init_flags = SDL_SWSURFACE;
 #ifndef _DEBUG
@@ -521,6 +526,18 @@ void I_UpdateVideoMode(void)
 #endif
   if ( use_fullscreen )
     init_flags |= SDL_FULLSCREEN;
+  //e6y
+  if (M_CheckParm("-window")) init_flags &= ~SDL_FULLSCREEN;
+  if (M_CheckParm("-nowindow")) init_flags |= SDL_FULLSCREEN;
+#ifdef GL_DOOM
+  if ( init_flags & SDL_FULLSCREEN )
+  {
+    I_ClosestResolution(&w, &h, init_flags);
+    SCREENWIDTH = w;
+    SCREENHEIGHT = h;
+  }
+#endif
+  lprintf(LO_INFO, "I_UpdateVideoMode: %dx%d (%s)\n", SCREENWIDTH, SCREENHEIGHT, use_fullscreen ? "fullscreen" : "nofullscreen");
 
 #ifdef GL_DOOM
   SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 0 );
@@ -535,6 +552,7 @@ void I_UpdateVideoMode(void)
   SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
   SDL_GL_SetAttribute( SDL_GL_BUFFER_SIZE, gl_colorbuffer_bits );
   SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, gl_depthbuffer_bits );
+  e6y_MultisamplingSet();//e6y
   screen = SDL_SetVideoMode(w, h, gl_colorbuffer_bits, init_flags);
 #else
   screen = SDL_SetVideoMode(w, h, 8, init_flags);
@@ -543,6 +561,7 @@ void I_UpdateVideoMode(void)
   if(screen == NULL) {
     I_Error("Couldn't set %dx%d video mode [%s]", w, h, SDL_GetError());
   }
+  e6y_MultisamplingCheck();//e6y
 
   lprintf(LO_INFO, "I_UpdateVideoMode: 0x%x, %s, %s\n", init_flags, screen->pixels ? "SDL buffer" : "own buffer", SDL_MUSTLOCK(screen) ? "lock-and-copy": "direct access");
 
@@ -595,6 +614,7 @@ void I_UpdateVideoMode(void)
   lprintf(LO_INFO,"    SDL_GL_BUFFER_SIZE: %i\n",temp);
   SDL_GL_GetAttribute( SDL_GL_DEPTH_SIZE, &temp );
   lprintf(LO_INFO,"    SDL_GL_DEPTH_SIZE: %i\n",temp);
+  e6y_MultisamplingPrint();//e6y
     gld_Init(SCREENWIDTH, SCREENHEIGHT);
   }
 #endif

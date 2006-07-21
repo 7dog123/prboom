@@ -83,6 +83,7 @@ extern boolean rendering_stats;
 #define LIGHTZSHIFT       20
 
 // killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
+extern lighttable_t *(*scalelight)[MAXLIGHTSCALE];
 extern lighttable_t *(*zlight)[MAXLIGHTZ];
 extern lighttable_t *fullcolormap;
 extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
@@ -107,8 +108,8 @@ extern void (*colfunc)(void);
 // Utility functions.
 //
 
-CONSTFUNC int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node);
-CONSTFUNC int R_PointOnSegSide(fixed_t x, fixed_t y, const seg_t *line);
+const int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node);
+const int R_PointOnSegSide(fixed_t x, fixed_t y, const seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);

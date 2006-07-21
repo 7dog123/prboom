@@ -8,7 +8,7 @@ Source: ftp://prdownloads.sourceforge.net/prboom/@PACKAGE@-@VERSION@.tar.gz
 URL: http://prboom.sourceforge.net/
 Group: Amusements/Games
 BuildRoot: /var/tmp/%{doomname}-buildroot
-License: GPL
+Copyright: GPL
 Packager: Colin Phipps <doom@cph.demon.co.uk>
 Prefix: %{_prefix}
 Autoreq: 0
@@ -28,7 +28,20 @@ rm -rf $RPM_BUILD_ROOT
 %setup -q
 
 %build
-./configure --disable-cpu-opt --prefix=/usr
+./configure --disable-cpu-opt \
+ 	--prefix=/usr \
+	--exec-prefix=/usr \
+	--bindir=/usr/bin \
+	--sbindir=/usr/sbin \
+	--sysconfdir=/etc \
+	--datadir=/usr/share \
+	--includedir=/usr/include \
+	--libdir=/usr/lib \
+	--libexecdir=/usr/lib \
+	--localstatedir=/var/lib \
+	--sharedstatedir=/usr/com \
+	--mandir=/usr/share/man \
+	--infodir=/usr/share/info
 make
 
 %install
@@ -38,10 +51,17 @@ make
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{_mandir}/man5
-%{_mandir}/man6
-%docdir %{_docdir}
-%{_docdir}
-/usr/games
+%doc %{_mandir}/man5/*
+%doc %{_mandir}/man6/*
+%doc NEWS
+%doc AUTHORS
+%doc README
+%doc COPYING
+%doc doc/README.compat
+%doc doc/README.demos
+%doc doc/MBF.txt
+%doc doc/MBFFAQ.txt
+%doc doc/boom.txt
+/usr/games/*
 %{_datadir}/games/doom/prboom.wad
 
