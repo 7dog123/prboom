@@ -61,13 +61,10 @@
 // MUSIC API.
 //
 
-// This is to keep the 10.4 build working on 10.5
-// It's ugly but this header does fail for some reason -- NS
 #define __OS_OSMESSAGENOTIFICATION_H
-
 #include <Carbon/Carbon.h>
 #include <QuickTime/Movies.h>
-#include "mmus2mid.h"
+#include "mus2mid.h"
 
 static int playFile(const char *filename);
 
@@ -169,8 +166,8 @@ void I_UnRegisterSong(int handle)
 
 int I_RegisterSong(const void *data, size_t len)
 {
-  MIDI *mididata;
   FILE *midfile;
+  boolean MidiIsReady = false;
 
   if ( music_tmp == NULL )
     return 0;
@@ -182,20 +179,36 @@ int I_RegisterSong(const void *data, size_t len)
   /* Convert MUS chunk to MIDI? */
   if ( memcmp(data, "MUS", 3) == 0 )
   {
-    UBYTE *mid;
-    int midlen;
+    // e6y
+    // New mus -> mid conversion code thanks to Ben Ryves <benryves@benryves.com>
+    // This plays back a lot of music closer to Vanilla Doom - eg. tnt.wad map02
+    void *outbuf;
+    size_t outbuf_len;
+    int result;
+    
+    MEMFILE *instream = mem_fopen_read((void*)data, len);
+    MEMFILE *outstream = mem_fopen_write();
 
-    mididata = malloc(sizeof(MIDI));
-    mmus2mid(data, mididata, 89, 0);
-    MIDIToMidi(mididata,&mid,&midlen);
-    M_WriteFile(music_tmp,mid,midlen);
-    free(mid);
-    free_mididata(mididata);
-    free(mididata);
+    result = mus2mid(instream, outstream);
+
+    if (result == 0)
+    {
+      mem_get_buf(outstream, &outbuf, &outbuf_len);
+      MidiIsReady = M_WriteFile(music_tmp, outbuf, outbuf_len);
+    }
+
+    mem_fclose(instream);
+    mem_fclose(outstream);
   } else {
-    fwrite(data, len, 1, midfile);
+    MidiIsReady = fwrite(data, len, 1, midfile) == 1;
   }
   fclose(midfile);
+
+  if (!MidiIsReady)
+  {
+    lprintf(LO_ERROR,"Couldn't write MIDI to %s\n", music_tmp);
+    return 0;
+  }
 
   return playFile(music_tmp);
 }

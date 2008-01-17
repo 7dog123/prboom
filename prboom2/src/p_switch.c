@@ -39,6 +39,7 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 // killough 2/8/98: Remove switch limit
 
@@ -201,6 +202,35 @@ void P_ChangeSwitchTexture
     P_StartButton(line, position, switchlist[i], BUTTONTIME);
 }
 
+//
+// GetPairForSwitchTexture
+//
+int GetPairForSwitchTexture(side_t *side)
+{
+  int i;
+  short *texture, *ttop, *tmid, *tbot;
+
+  ttop = &side->toptexture;
+  tmid = &side->midtexture;
+  tbot = &side->bottomtexture;
+
+  /* search for a texture to change */
+  texture = NULL;
+  for (i = 0;i < numswitches*2;i++) {
+    if (switchlist[i] == *ttop) {
+      texture = ttop; break;
+    } else if (switchlist[i] == *tmid) {
+      texture = tmid; break;
+    } else if (switchlist[i] == *tbot) {
+      texture = tbot; break;
+    }
+  }
+
+  if (texture == NULL)
+    return -1;
+  
+  return switchlist[i^1];
+}
 
 //
 // P_UseSpecialLine
@@ -243,7 +273,7 @@ P_UseSpecialLine
       if (!thing->player)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
           return false; // FloorModel is "Allow Monsters" if FloorChange is 0
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenFloor;
     }
@@ -252,7 +282,7 @@ P_UseSpecialLine
       if (!thing->player)
         if ((line->special & CeilingChange) || !(line->special & CeilingModel))
           return false;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenCeiling;
     }
@@ -265,7 +295,7 @@ P_UseSpecialLine
         if (line->flags & ML_SECRET) // they can't open secret doors either
           return false;
       }
-      if (!line->tag && ((line->special&6)!=6)) //jff 3/2/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 3/2/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenDoor;
     }
@@ -275,7 +305,7 @@ P_UseSpecialLine
         return false;   // monsters disallowed from unlocking doors
       if (!P_CanUnlockGenDoor(line,thing->player))
         return false;
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
 
       linefunc = EV_DoGenLockedDoor;
@@ -285,7 +315,7 @@ P_UseSpecialLine
       if (!thing->player)
         if (!(line->special & LiftMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenLift;
     }
@@ -294,7 +324,7 @@ P_UseSpecialLine
       if (!thing->player)
         if (!(line->special & StairMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenStairs;
     }
@@ -303,7 +333,7 @@ P_UseSpecialLine
       if (!thing->player)
         if (!(line->special & CrusherMonster))
           return false; // monsters disallowed
-      if (!line->tag && ((line->special&6)!=6)) //jff 2/27/98 all non-manual
+      if (!compbad_get(&comperr_zerotag) && !line->tag && ((line->special&6)!=6)) //e6y //jff 2/27/98 all non-manual
         return false;                         // generalized types require tag
       linefunc = EV_DoGenCrusher;
     }

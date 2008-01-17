@@ -23,10 +23,6 @@ void (*P_Checksum)(int) = p_checksum_nop;
 static FILE *outfile = NULL;
 static struct MD5Context md5global;
 
-#ifndef MIN
-# define MIN(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
 void P_RecordChecksum(const char *file) {
     size_t fnsize;
 
@@ -85,11 +81,7 @@ void checksum_gamestate(int tic) {
     for (i=0 ; i<MAXPLAYERS ; i++) {
         if (!playeringame[i]) continue;
 
-#ifdef HAVE_SNPRINTF
-        snprintf (buffer, sizeof(buffer), "%d", players[i].health);
-#else
-        sprintf (buffer, "%d", players[i].health);
-#endif
+        SNPRINTF(buffer, sizeof(buffer), "%d", players[i].health);
         buffer[sizeof(buffer)-1] = 0;
 
         MD5Update(&md5ctx, (md5byte const *)&buffer, strlen(buffer));

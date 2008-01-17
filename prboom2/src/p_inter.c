@@ -49,6 +49,7 @@
 #pragma implementation "p_inter.h"
 #endif
 #include "p_inter.h"
+#include "e6y.h"//e6y
 
 #define BONUSADD        6
 
@@ -331,15 +332,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
         // bonus items
     case SPR_BON1:
       player->health++;               // can go over 100%
-      if (player->health > (maxhealth * 2))
-        player->health = (maxhealth * 2);
+      if (player->health > (maxhealthbonus))//e6y
+        player->health = (maxhealthbonus);//e6y
       player->mo->health = player->health;
       player->message = s_GOTHTHBONUS; // Ty 03/22/98 - externalized
       break;
 
     case SPR_BON2:
       player->armorpoints++;          // can go over 100%
-      if (player->armorpoints > max_armor)
+      // e6y
+      // Doom 1.2 does not do check of armor points on overflow.
+      // If you set the "IDKFA Armor" to MAX_INT (DWORD at 0x00064B5A -> FFFFFF7F)
+      // and pick up one or more armor bonuses, your armor becomes negative
+      // and you will die after reception of any damage since this moment.
+      // It happens because the taken health damage depends from armor points 
+      // if they are present and becomes equal to very large value in this case
+      if (player->armorpoints > max_armor && compatibility_level != doom_12_compatibility)
         player->armorpoints = max_armor;
       if (!player->armortype)
         player->armortype = green_armor_class;
@@ -606,6 +614,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
   P_RemoveMobj (special);
   player->bonuscount += BONUSADD;
 
+  CheckThingsPickupTracer(special);//e6y
+
   /* cph 20028/10 - for old-school DM addicts, allow old behavior
    * where only consoleplayer's pickup sounds are heard */
   if (!comp[comp_sound] || player == &players[consoleplayer])
@@ -636,7 +646,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
     {
       // count for intermission
       if (target->flags & MF_COUNTKILL)
+      {//e6y
         source->player->killcount++;
+        //e6y
+        if (target->flags & MF_RESSURECTED)
+          source->player->resurectedkillcount++;
+      }//e6y
       if (target->player)
         source->player->frags[target->player-players]++;
     }
@@ -644,9 +659,41 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
       if (target->flags & MF_COUNTKILL) { /* Add to kills tally */
   if ((compatibility_level < lxdoom_1_compatibility) || !netgame) {
     if (!netgame)
+    {//e6y
       // count all monster deaths,
       // even those caused by other monsters
       players[0].killcount++;
+      //e6y
+      if (target->flags & MF_RESSURECTED)
+        players[0].resurectedkillcount++;
+    //e6y
+    }
+    else
+    {
+      if (!deathmatch) {
+        if (target->lastenemy && target->lastenemy->health > 0 && target->lastenemy->player)
+        {
+          target->lastenemy->player->killcount++;
+          if (target->flags & MF_RESSURECTED)
+            target->lastenemy->player->resurectedkillcount++;
+        }
+        else
+        {
+          unsigned int player;
+          for (player = 0; player<MAXPLAYERS; player++)
+          {
+            if (playeringame[player])
+            {
+              players[player].killcount++;
+              if (target->flags & MF_RESSURECTED)
+                players[player].resurectedkillcount++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
   } else
     if (!deathmatch) {
       // try and find a player to give the kill to, otherwise give the
@@ -655,7 +702,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
       // CPhipps - not a bug as such, but certainly an inconsistency.
       if (target->lastenemy && target->lastenemy->health > 0
     && target->lastenemy->player) // Fighting a player
+        {//e6y
           target->lastenemy->player->killcount++;
+         //e6y
+          if (target->flags & MF_RESSURECTED)
+            target->lastenemy->player->resurectedkillcount++;
+        }//e6y
         else {
         // cph - randomely choose a player in the game to be credited
         //  and do it uniformly between the active players
@@ -671,7 +723,12 @@ static void P_KillMobj(mobj_t *source, mobj_t *target)
     for (i=0; i<MAXPLAYERS; i++)
       if (playeringame[i])
         if (!player--)
+        {//e6y
           players[i].killcount++;
+          //e6y
+          if (target->flags & MF_RESSURECTED)
+            players[i].resurectedkillcount++;
+        }//e6y
         }
       }
     }
@@ -869,14 +926,23 @@ void P_DamageMobj(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage)
     else
       target->flags |= MF_JUSTHIT;    // fight back!
 
-    P_SetMobjState(target, target->info->painstate);
+  //e6y
+  {
+    if(demo_compatibility)
+      if ((target->target == source || !target->target ||
+         !(target->flags & target->target->flags & MF_FRIEND)))
+        target->flags |= MF_JUSTHIT;    // fight back!
   }
+
+  P_SetMobjState(target, target->info->painstate);
+  }//e6y
 
   target->reactiontime = 0;           // we're awake now...
 
   /* killough 9/9/98: cleaned up, made more consistent: */
-
-  if (source && source != target && source->type != MT_VILE &&
+  //e6y: Monsters could commit suicide in Doom v1.2 if they damaged themselves by exploding a barrel
+  if (source && (source != target || compatibility_level == doom_12_compatibility) &&
+      source->type != MT_VILE &&
       (!target->threshold || target->type == MT_VILE) &&
       ((source->flags ^ target->flags) & MF_FRIEND ||
        monster_infighting ||
@@ -905,6 +971,7 @@ void P_DamageMobj(mobj_t *target,mobj_t *inflictor, mobj_t *source, int damage)
 
   /* killough 11/98: Don't attack a friend, unless hit by that friend.
    * cph 2006/04/01 - implicitly this is only if mbf_features */
+  if(!demo_compatibility) //e6y
   if (justhit && (target->target == source || !target->target ||
       !(target->flags & target->target->flags & MF_FRIEND)))
     target->flags |= MF_JUSTHIT;    // fight back!

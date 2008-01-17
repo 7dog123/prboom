@@ -73,6 +73,7 @@
 #include "doomdef.h"
 #include "lprintf.h"
 #ifndef PRBOOM_SERVER
+#include "d_player.h"
 #include "m_fixed.h"
 #include "r_fps.h"
 #endif
@@ -87,14 +88,46 @@
 #include "config.h"
 #endif
 
+void I_uSleep(unsigned long usecs)
+{
+    SDL_Delay(usecs/1000);
+}
+
+int ms_to_next_tick;
+
+static int basetime = 0;
+int I_GetTime_RealTime (void)
+{
+  int i;
+  int t = SDL_GetTicks();
+  
+  //e6y: removing startup delay
+  if (basetime == 0)
+    basetime = t;
+  t -= basetime;
+
+  i = t*(TICRATE/5)/200;
+  ms_to_next_tick = (i+1)*200/(TICRATE/5) - t;
+  if (ms_to_next_tick > 1000/TICRATE || ms_to_next_tick<1) ms_to_next_tick = 1;
+  return i;
+}
+
+#ifndef PRBOOM_SERVER
 static unsigned int start_displaytime;
 static unsigned int displaytime;
 static boolean InDisplay = false;
+static int saved_gametic = -1;
+boolean realframe = false;
 
 boolean I_StartDisplay(void)
 {
   if (InDisplay)
     return false;
+
+  realframe = (!movement_smooth) || (gametic > saved_gametic);
+  
+  if (realframe)
+    saved_gametic = gametic;
 
   start_displaytime = SDL_GetTicks();
   InDisplay = true;
@@ -107,23 +140,6 @@ void I_EndDisplay(void)
   InDisplay = false;
 }
 
-void I_uSleep(unsigned long usecs)
-{
-    SDL_Delay(usecs/1000);
-}
-
-int ms_to_next_tick;
-
-int I_GetTime_RealTime (void)
-{
-  int t = SDL_GetTicks();
-  int i = t*(TICRATE/5)/200;
-  ms_to_next_tick = (i+1)*200/(TICRATE/5) - t;
-  if (ms_to_next_tick > 1000/TICRATE || ms_to_next_tick<1) ms_to_next_tick = 1;
-  return i;
-}
-
-#ifndef PRBOOM_SERVER
 fixed_t I_GetTimeFrac (void)
 {
   unsigned long now;
@@ -172,9 +188,9 @@ unsigned long I_GetRandomTimeSeed(void)
 const char* I_GetVersionString(char* buf, size_t sz)
 {
 #ifdef HAVE_SNPRINTF
-  snprintf(buf,sz,"%s v%s (http://prboom.sourceforge.net/)",PACKAGE,VERSION);
+  snprintf(buf,sz,"%s v%s (http://prboom-plus.sourceforge.net/)",PACKAGE,VERSION);
 #else
-  sprintf(buf,"%s v%s (http://prboom.sourceforge.net/)",PACKAGE,VERSION);
+  sprintf(buf,"%s v%s (http://prboom-plus.sourceforge.net/)",PACKAGE,VERSION);
 #endif
   return buf;
 }
@@ -274,7 +290,8 @@ const char *I_DoomExeDir(void)
 #else
 // cph - V.Aguilar (5/30/99) suggested return ~/.lxdoom/, creating
 //  if non-existant
-static const char prboom_dir[] = {"/.prboom"}; // Mead rem extra slash 8/21/03
+// cph 2006/07/23 - give prboom+ its own dir
+static const char prboom_dir[] = {"/.prboom-plus"}; // Mead rem extra slash 8/21/03
 
 const char *I_DoomExeDir(void)
 {
@@ -322,7 +339,8 @@ boolean HasTrailingSlash(const char* dn)
  */
 
 #ifndef MACOSX /* OSX defines its search paths elsewhere. */
-char* I_FindFile(const char* wfname, const char* ext)
+
+char* I_FindFileInternal(const char* wfname, const char* ext, boolean isStatic)
 {
   // lookup table of directories to search
   static const struct {
@@ -331,12 +349,12 @@ char* I_FindFile(const char* wfname, const char* ext)
     const char *env; // environment variable
     const char *(*func)(void); // for I_DoomExeDir
   } search[] = {
+    {NULL, NULL, NULL, I_DoomExeDir}, // config directory
     {NULL}, // current working directory
     {NULL, NULL, "DOOMWADDIR"}, // run-time $DOOMWADDIR
     {DOOMWADDIR}, // build-time configured DOOMWADDIR
     {NULL, "doom", "HOME"}, // ~/doom
     {NULL, NULL, "HOME"}, // ~
-    {NULL, NULL, NULL, I_DoomExeDir}, // config directory
     {"/usr/local/share/games/doom"},
     {"/usr/share/games/doom"},
     {"/usr/local/share/doom"},
@@ -344,11 +362,19 @@ char* I_FindFile(const char* wfname, const char* ext)
   };
 
   int   i;
+  size_t  pl;
+
+  char static_p[PATH_MAX];
+  char * dinamic_p = NULL;
+  char *p = (isStatic ? static_p : dinamic_p);
+
+  if (!wfname)
+    return NULL;
+
   /* Precalculate a length we will need in the loop */
-  size_t  pl = strlen(wfname) + strlen(ext) + 4;
+  pl = strlen(wfname) + (ext ? strlen(ext) : 0) + 4;
 
   for (i = 0; i < sizeof(search)/sizeof(*search); i++) {
-    char  * p;
     const char  * d = NULL;
     const char  * s = NULL;
     /* Each entry in the switch sets d to the directory to look in,
@@ -363,21 +389,35 @@ char* I_FindFile(const char* wfname, const char* ext)
       d = search[i].dir;
     s = search[i].sub;
 
-    p = malloc((d ? strlen(d) : 0) + (s ? strlen(s) : 0) + pl);
+    if (!isStatic)
+      p = malloc((d ? strlen(d) : 0) + (s ? strlen(s) : 0) + pl);
     sprintf(p, "%s%s%s%s%s", d ? d : "", (d && !HasTrailingSlash(d)) ? "/" : "",
                              s ? s : "", (s && !HasTrailingSlash(s)) ? "/" : "",
                              wfname);
 
-    if (access(p,F_OK))
+    if (ext && access(p,F_OK))
       strcat(p, ext);
     if (!access(p,F_OK)) {
-      lprintf(LO_INFO, " found %s\n", p);
+      if (!isStatic)
+        lprintf(LO_INFO, " found %s\n", p);
       return p;
     }
-    free(p);
+    if (!isStatic)
+      free(p);
   }
   return NULL;
 }
+
+char* I_FindFile(const char* wfname, const char* ext)
+{
+  return I_FindFileInternal(wfname, ext, false);
+}
+
+const char* I_FindFile2(const char* wfname, const char* ext)
+{
+  return (const char*) I_FindFileInternal(wfname, ext, true);
+}
+
 #endif
 
 #endif // PRBOOM_SERVER

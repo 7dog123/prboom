@@ -68,6 +68,8 @@ extern  boolean modifiedgame;
 // CPhipps - new compatibility handling
 extern complevel_t compatibility_level, default_compatibility_level;
 
+extern int demover; //e6y
+
 // CPhipps - old compatibility testing flags aliased to new handling
 #define compatibility (compatibility_level<=boom_compatibility_compatibility)
 #define demo_compatibility (compatibility_level < boom_compatibility_compatibility)
@@ -110,6 +112,12 @@ enum {
   comp_666,
   comp_soul,
   comp_maskedanim,
+
+  //e6y
+  comp_ouchface,
+  comp_maxhealth,
+  comp_translucency,
+
   COMP_NUM,      /* cph - should be last in sequence */
   COMP_TOTAL=32  // Some extra room for additional variables
 };
@@ -207,7 +215,6 @@ extern  int leveltime;  // tics in game play for par
 extern  boolean usergame;
 extern  boolean demoplayback;
 extern  boolean demorecording;
-extern  int demover;
 
 // Quit after playing a demo from cmdline.
 extern  boolean   singledemo;
@@ -226,6 +233,8 @@ extern  gamestate_t  gamestate;
 
 extern  int   gametic;
 
+//e6y
+extern  boolean realframe;
 
 // Bookkeeping on players - state.
 extern  player_t  players[MAXPLAYERS];
@@ -298,10 +307,8 @@ extern int default_weapon_recoil;
 extern int player_bobbing;  // whether player bobs or not   // phares 2/25/98
 extern int default_player_bobbing;  // killough 3/1/98: make local to each game
 
-#ifdef DOGS
 extern int dogs, default_dogs;     // killough 7/19/98: Marine's best friend :)
 extern int dog_jumping, default_dog_jumping;   // killough 10/98
-#endif
 
 /* killough 8/8/98: distance friendly monsters tend to stay from player */
 extern int distfriend, default_distfriend;

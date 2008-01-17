@@ -287,6 +287,61 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
 }
 
 //
+// e6y: Check whether the player can look beyond this line
+//
+
+static boolean CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector)
+{
+  // check for closed sectors!
+  if (backsector->ceilingheight <= frontsector->floorheight) 
+  {
+    if (seg->sidedef->toptexture == NO_TEXTURE)
+      return false;
+
+    if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+      return false;
+
+    return true;
+  }
+
+  if (frontsector->ceilingheight <= backsector->floorheight) 
+  {
+    if (seg->sidedef->bottomtexture == NO_TEXTURE)
+      return false;
+
+    // properly render skies (consider door "open" if both floors are sky):
+    if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+      return false;
+
+    return true;
+  }
+
+  if (backsector->ceilingheight <= backsector->floorheight)
+  {
+    // preserve a kind of transparent door/lift special effect:
+    if (backsector->ceilingheight < frontsector->ceilingheight) 
+    {
+      if (seg->sidedef->toptexture == NO_TEXTURE)
+        return false;
+    }
+    if (backsector->floorheight > frontsector->floorheight)
+    {
+      if (seg->sidedef->bottomtexture == NO_TEXTURE)
+        return false;
+    }
+    if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+      return false;
+
+    if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum)
+      return false;
+
+    return true;
+  }
+
+  return false;
+}
+
+//
 // R_AddLine
 // Clips the given segment
 // and adds any visible pieces to the line list.
@@ -304,8 +359,52 @@ static void R_AddLine (seg_t *line)
 
   curline = line;
 
-  angle1 = R_PointToAngle (line->v1->x, line->v1->y);
-  angle2 = R_PointToAngle (line->v2->x, line->v2->y);
+  angle1 = R_PointToAngleEx (line->v1->x, line->v1->y);
+  angle2 = R_PointToAngleEx (line->v2->x, line->v2->y);
+
+#ifdef GL_DOOM
+  if (V_GetMode() == VID_MODEGL)
+  {
+    // Back side, i.e. backface culling	- read: endAngle >= startAngle!
+    if (angle2 - angle1 < ANG180 || !line->linedef)  
+    {
+      return;
+    }
+    if (!gld_clipper_SafeCheckRange(angle2, angle1)) 
+    {
+      return;
+    }
+    if (!line->backsector)
+    {
+      gld_clipper_SafeAddClipRange(angle2, angle1);
+    }
+    else
+    {
+      if (CheckClip(line, line->frontsector, line->backsector))
+      {
+        gld_clipper_SafeAddClipRange(angle2, angle1);
+      }
+    }
+    
+    if (ds_p == drawsegs+maxdrawsegs)   // killough 1/98 -- fix 2s line HOM
+    {
+      unsigned pos = ds_p - drawsegs; // jff 8/9/98 fix from ZDOOM1.14a
+      unsigned newmax = maxdrawsegs ? maxdrawsegs*2 : 128; // killough
+      drawsegs = realloc(drawsegs,newmax*sizeof(*drawsegs));
+      ds_p = drawsegs + pos;          // jff 8/9/98 fix from ZDOOM1.14a
+      maxdrawsegs = newmax;
+    }
+    
+    if(curline->miniseg == false) // figgi -- skip minisegs
+      curline->linedef->flags |= ML_MAPPED;
+    
+    // proff 11/99: the rest of the calculations is not needed for OpenGL
+    ds_p++->curline = curline;
+    gld_AddWall(curline);
+
+    return;
+  }
+#endif
 
   // Clip to view edges.
   span = angle1 - angle2;
@@ -352,34 +451,9 @@ static void R_AddLine (seg_t *line)
   x1 = viewangletox[angle1];
   x2 = viewangletox[angle2];
 
-#ifdef GL_DOOM
-  // proff 11/99: we have to add these segs to avoid gaps in OpenGL
-  if (x1 >= x2)       // killough 1/31/98 -- change == to >= for robustness
-  {
-    if (V_GetMode() == VID_MODEGL)
-    {
-      if (ds_p == drawsegs+maxdrawsegs)   // killough 1/98 -- fix 2s line HOM
-      {
-        unsigned pos = ds_p - drawsegs; // jff 8/9/98 fix from ZDOOM1.14a
-        unsigned newmax = maxdrawsegs ? maxdrawsegs*2 : 128; // killough
-        drawsegs = realloc(drawsegs,newmax*sizeof(*drawsegs));
-        //ds_p = drawsegs+maxdrawsegs;
-        ds_p = drawsegs + pos;          // jff 8/9/98 fix from ZDOOM1.14a
-        maxdrawsegs = newmax;
-      }
-      ds_p->curline = curline;
-      ds_p++;
-      gld_AddWall(curline);
-      return;
-    }
-    else
-      return;
-  }
-#else
   // Does not cross a pixel?
   if (x1 >= x2)       // killough 1/31/98 -- change == to >= for robustness
     return;
-#endif
 
   backsector = line->backsector;
 
@@ -440,9 +514,16 @@ static boolean R_CheckBBox(const fixed_t *bspcoord)
       return true;
 
     check = checkcoord[boxpos];
-    angle1 = R_PointToAngle (bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
-    angle2 = R_PointToAngle (bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
+    angle1 = R_PointToAngleEx (bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
+    angle2 = R_PointToAngleEx (bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
   }
+
+#ifdef GL_DOOM
+  if (V_GetMode() == VID_MODEGL)
+  {
+    return gld_clipper_SafeCheckRange(angle2 + viewangle, angle1 + viewangle);
+  }
+#endif
 
   // cph - replaced old code, which was unclear and badly commented
   // Much more efficient code now
@@ -554,6 +635,16 @@ static void R_Subsector(int num)
     if ((frontsector->no_bottomtextures) || (!floorplane))
     {
       int i=frontsector->linecount;
+      
+      //e6y: this gives a huge speedup on levels with sectors which have many lines
+      if(frontsector->floor_validcount == validcount)
+      {
+        dummyfloorplane.height = frontsector->highestfloor_height;
+        dummyfloorplane.lightlevel = frontsector->highestfloor_lightlevel;
+      }
+      else
+      {
+      frontsector->floor_validcount = validcount;
 
       dummyfloorplane.height=INT_MIN;
       while (i--)
@@ -574,6 +665,12 @@ static void R_Subsector(int num)
               dummyfloorplane.lightlevel=tmpline->frontsector->lightlevel;
             }
       }
+      
+      //e6y
+      frontsector->highestfloor_height = dummyfloorplane.height;
+      frontsector->highestfloor_lightlevel = dummyfloorplane.lightlevel;
+      }
+
       if (dummyfloorplane.height!=INT_MIN)
         floorplane=&dummyfloorplane;
     }
@@ -581,6 +678,16 @@ static void R_Subsector(int num)
     if ((frontsector->no_toptextures) || (!ceilingplane))
     {
       int i=frontsector->linecount;
+
+      //e6y: this gives a huge speedup on levels with sectors which have many lines
+      if(frontsector->ceil_validcount == validcount)
+      {
+        dummyceilingplane.height = frontsector->lowestceil_height;
+        dummyceilingplane.lightlevel = frontsector->lowestceil_lightlevel;
+      }
+      else
+      {
+      frontsector->ceil_validcount = validcount;
 
       dummyceilingplane.height=INT_MAX;
       while (i--)
@@ -601,6 +708,12 @@ static void R_Subsector(int num)
               dummyceilingplane.lightlevel=tmpline->frontsector->lightlevel;
             }
       }
+      
+      //e6y
+      frontsector->lowestceil_height = dummyceilingplane.height;
+      frontsector->lowestceil_lightlevel = dummyceilingplane.lightlevel;
+      }
+
       if (dummyceilingplane.height!=INT_MAX)
         ceilingplane=&dummyceilingplane;
     }

@@ -6,16 +6,16 @@
 #
 #
 
-SUBDIRS = SDL POSIX MAC
+SUBDIRS = SDL POSIX MAC PCSOUND
 
 gamesdir=$(prefix)/games
-EXTRA_PROGRAMS = prboom
-games_PROGRAMS = @BUILD_DOOM@ prboom-game-server
+EXTRA_PROGRAMS = prboom-plus
+games_PROGRAMS = @BUILD_DOOM@ prboom-plus-game-server
 
 CFLAGS = @CFLAGS@ @SDL_CFLAGS@
 
-prboom_game_server_SOURCES = d_server.c protocol.h
-prboom_game_server_LDADD = POSIX/libposixdoom.a SDL/i_network.o @NET_LIBS@ @SDL_LIBS@
+prboom_plus_game_server_SOURCES = d_server.c protocol.h
+prboom_plus_game_server_LDADD = POSIX/libposixdoom.a SDL/i_network.o @NET_LIBS@ @SDL_LIBS@
 
 COMMON_SRC = \
  am_map.c       g_game.c           p_maputl.h       r_plane.h   \
@@ -50,14 +50,18 @@ COMMON_SRC = \
  f_wipe.h       p_maputl.c         r_plane.c        z_zone.h	\
  md5.c          md5.h              p_checksum.h     p_checksum.c \
  r_patch.c      r_patch.h          r_fps.c          r_fps.h \
- r_filter.c     r_filter.h
+ e6y.c          e6y.h              i_simd.c         i_simd.h \
+ r_filter.c     r_filter.h         r_drawcolumn.inl r_drawflush.inl \
+ r_drawspan.inl i_pcsound.c        i_pcsound.h
 
 NET_CLIENT_SRC = d_client.c
 
 if BUILD_GL
-USE_GL_SRC = gl_intern.h  gl_main.c  gl_struct.h  gl_texture.c
+USE_GL_SRC = \
+  gl_detail.c  gl_intern.h  gl_main.c  gl_struct.h  gl_texture.c  gl_vertex.c \
+  gl_wipe.c gl_hires.c gl_clipper.c
 else
-USE_GL_SRC = 
+USE_GL_SRC =
 endif
 
 if WAD_MMAP
@@ -66,8 +70,7 @@ else
 WAD_SRC = w_memcache.c
 endif
 
-prboom_SOURCES = mmus2mid.c mmus2mid.h $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC) $(WAD_SRC)
-prboom_LDADD = SDL/libsdldoom.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @MATH_LIB@
+MUS2MID_SRC = memio.c memio.h mus2mid.c mus2mid.h
 
-EXTRA_DIST = \
- r_drawcolumn.inl r_drawflush.inl r_drawspan.inl r_drawcolpipeline.inl
+prboom_plus_SOURCES = $(COMMON_SRC) $(NET_CLIENT_SRC) $(USE_GL_SRC) $(WAD_SRC) $(MUS2MID_SRC)
+prboom_plus_LDADD = SDL/libsdldoom.a PCSOUND/libpcsound.a @MIXER_LIBS@ @NET_LIBS@ @SDL_LIBS@ @GL_LIBS@ @MATH_LIB@

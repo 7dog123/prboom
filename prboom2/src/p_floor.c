@@ -39,6 +39,11 @@
 #include "p_tick.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "lprintf.h"//e6y
+#include "e6y.h"//e6y
+
+//e6y
+#define STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE 10
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -74,6 +79,11 @@ result_e T_MovePlane
   fixed_t       lastpos;
   fixed_t       destheight; //jff 02/04/98 used to keep floors/ceilings
                             // from moving thru each other
+
+#ifdef GL_DOOM
+  if (gl_seamless)
+    gld_UpdateSplitData(sector);
+#endif
 
   switch(floorOrCeiling)
   {
@@ -139,6 +149,14 @@ result_e T_MovePlane
             {
         /* jff 1/25/98 fix floor crusher */
               if (comp[comp_floors]) {
+                
+                //e6y: warning about potential desynch
+                if (crush == STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE)
+                {
+                  lprintf(LO_WARN, "T_MovePlane: Stairs which can potentially crush may lead to desynch in compatibility mode.\n");
+                  lprintf(LO_WARN, " gametic: %d, sector: %d, complevel: %d\n", gametic, sector->iSectorID, compatibility_level);
+                }
+
                 if (crush == true)
                   return crushed;
               }
@@ -433,14 +451,17 @@ int EV_DoFloor
 
   secnum = -1;
   rtn = 0;
+  
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) goto manual_floor; else return rtn;//e6y
   // move all floors with the same tag as the linedef
   while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
   {
     sec = &sectors[secnum];
 
+manual_floor://e6y
     // Don't start a second thinker on the same floor
     if (P_SectorActive(floor_special,sec)) //jff 2/23/98
-      continue;
+      if (!zerotag_manual) continue; else  return rtn;//e6y
 
     // new floor thinker
     rtn = 1;
@@ -630,6 +651,7 @@ int EV_DoFloor
       default:
         break;
     }
+    if (zerotag_manual) return rtn; //e6y
   }
   return rtn;
 }
@@ -732,13 +754,21 @@ int EV_BuildStairs
   int                   minssec = -1;
   int                   rtn = 0;
 
+  //e6y
+  int           secnum = -1;
+  sector_t*     sec;
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) goto manual_stair; else return rtn;//e6y
+
   // start a stair at each sector tagged the same as the linedef
   while ((ssec = P_FindSectorFromLineTagWithLowerBound(line,ssec,minssec)) >= 0)
   {
-   int           secnum = ssec;
-   sector_t*     sec = &sectors[secnum];
+   //e6y int           
+   secnum = ssec;
+   //e6y sector_t*     
+   sec = &sectors[secnum];
 
-    // don't start a stair if the first step's floor is already moving
+manual_stair://e6y
+   // don't start a stair if the first step's floor is already moving
    if (!P_SectorActive(floor_special,sec)) { //jff 2/22/98
     floormove_t*  floor;
     int           texture, height;
@@ -766,12 +796,33 @@ int EV_BuildStairs
         stairsize = 8*FRACUNIT;
         if (!demo_compatibility)
           floor->crush = false; //jff 2/27/98 fix uninitialized crush field
+        // e6y
+        // Uninitialized crush field will not be equal to 0 or 1 (true)
+        // with high probability. So, initialize it with any other value
+        // There is no more desync on icarus.wad/ic29uv.lmp
+        // http://competn.doom2.net/pub/sda/i-o/icuvlmps.zip
+        // http://www.doomworld.com/idgames/index.php?id=5191
+        else
+        {
+          if (!prboom_comp[PC_UNINITIALIZE_CRUSH_FIELD_FOR_STAIRS].state)
+            floor->crush = STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE;
+        }
+
         break;
       case turbo16:
         speed = FLOORSPEED*4;
         stairsize = 16*FRACUNIT;
         if (!demo_compatibility)
           floor->crush = true;  //jff 2/27/98 fix uninitialized crush field
+        // e6y
+        // Uninitialized crush field will not be equal to 0 or 1 (true)
+        // with high probability. So, initialize it with any other value
+        else
+        {
+          if (!prboom_comp[PC_UNINITIALIZE_CRUSH_FIELD_FOR_STAIRS].state)
+            floor->crush = STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE;
+        }
+
         break;
     }
     floor->speed = speed;
@@ -843,6 +894,15 @@ int EV_BuildStairs
         //jff 2/27/98 fix uninitialized crush field
         if (!demo_compatibility)
           floor->crush = type==build8? false : true;
+        // e6y
+        // Uninitialized crush field will not be equal to 0 or 1 (true)
+        // with high probability. So, initialize it with any other value
+        else
+        {
+          if (!prboom_comp[PC_UNINITIALIZE_CRUSH_FIELD_FOR_STAIRS].state)
+            floor->crush = STAIRS_UNINITIALIZED_CRUSH_FIELD_VALUE;
+        }
+
         ok = 1;
         break;
       }
@@ -865,6 +925,7 @@ int EV_BuildStairs
        ssec = -1; minssec = secnum;
      }
    }
+    if (zerotag_manual) return rtn; //e6y
   }
   return rtn;
 }

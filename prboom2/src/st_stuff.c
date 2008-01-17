@@ -47,6 +47,7 @@
 #include "sounds.h"
 #include "dstrings.h"
 #include "r_draw.h"
+#include "e6y.h"//e6y
 
 //
 // STATUS BAR DATA
@@ -305,7 +306,10 @@ static patchnum_t faces[ST_NUMFACES];
 // face background
 static patchnum_t faceback; // CPhipps - single background, translated for different players
 
- // main bar right
+//e6y: status bar background
+static patchnum_t stbarbg;
+
+// main bar right
 static patchnum_t armsbg;
 
 // weapon ownership patches
@@ -383,13 +387,18 @@ static void ST_Stop(void);
 static void ST_refreshBackground(void)
 {
   int y=0;
+  int screen=BG;
 
   if (st_statusbaron)
     {
       // proff 05/17/2000: draw to the frontbuffer in OpenGL
       if (V_GetMode() == VID_MODEGL)
         y=ST_Y;
-      V_DrawNamePatch(ST_X, y, BG, "STBAR", CR_DEFAULT, VPT_STRETCH);
+      V_DrawNumPatch(ST_X, y, screen, stbarbg.lumpnum, CR_DEFAULT, VPT_STRETCH);
+      if (!deathmatch)
+      {
+        V_DrawNumPatch(ST_ARMSBGX, y, screen, armsbg.lumpnum, CR_DEFAULT, VPT_STRETCH);
+      }
 
       // killough 3/7/98: make face background change with displayplayer
       if (netgame)
@@ -398,8 +407,7 @@ static void ST_refreshBackground(void)
            displayplayer ? CR_LIMIT+displayplayer : CR_DEFAULT,
            displayplayer ? (VPT_TRANS | VPT_STRETCH) : VPT_STRETCH);
       }
-
-      V_CopyRect(ST_X, y, BG, ST_SCALED_WIDTH, ST_SCALED_HEIGHT, ST_X, ST_SCALED_Y, FG, VPT_NONE);
+      V_CopyRect(ST_X, y, screen, ST_SCALED_WIDTH, ST_SCALED_HEIGHT, ST_X, ST_SCALED_Y, FG, VPT_NONE);
     }
 }
 
@@ -503,11 +511,21 @@ static void ST_updateFaceWidget(void)
           // being attacked
           priority = 7;
 
-          // haleyjd 10/12/03: classic DOOM problem of missing OUCH face
-          // was due to inversion of this test:
-          // if(plyr->health - st_oldhealth > ST_MUCHPAIN)
-          if(st_oldhealth - plyr->health > ST_MUCHPAIN)
+           // haleyjd 10/12/03: classic DOOM problem of missing OUCH face
+           // was due to inversion of this test:
+           // if(plyr->health - st_oldhealth > ST_MUCHPAIN)
+           // e6y: compatibility optioned
+           if((comp[comp_ouchface]?
+              (plyr->health - st_oldhealth):
+              (st_oldhealth - plyr->health)) > ST_MUCHPAIN)
             {
+              // e6y
+              // There are TWO bugs in the ouch face code.
+              // Not only was the condition reversed, but the priority system is
+              // broken in a way that makes the face not work with monster damage.
+              if(!comp[comp_ouchface])
+                priority = 8;
+
               st_facecount = ST_TURNCOUNT;
               st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
             }
@@ -559,10 +577,13 @@ static void ST_updateFaceWidget(void)
       // getting hurt because of your own damn stupidity
       if (plyr->damagecount)
         {
-          // haleyjd 10/12/03: classic DOOM problem of missing OUCH face
-          // was due to inversion of this test:
-          // if(plyr->health - st_oldhealth > ST_MUCHPAIN)
-          if(st_oldhealth - plyr->health > ST_MUCHPAIN)
+           // haleyjd 10/12/03: classic DOOM problem of missing OUCH face
+           // was due to inversion of this test:
+           // if(plyr->health - st_oldhealth > ST_MUCHPAIN)
+           // e6y: compatibility optioned
+           if((comp[comp_ouchface]?
+              (plyr->health - st_oldhealth):
+              (st_oldhealth - plyr->health)) > ST_MUCHPAIN)
             {
               priority = 7;
               st_facecount = ST_TURNCOUNT;
@@ -744,14 +765,17 @@ static void ST_doPaletteStuff(void)
       else
         palette = 0;
 
-  if (palette != st_palette) {
-    V_SetPalette(st_palette = palette); // CPhipps - use new palette function
+  //e6y
+  if ((palette != st_palette) && (
+      (palette == 0) || 
+      (palette_ondamage && plyr->damagecount > 0) ||
+      (palette_onbonus && !cnt && plyr->bonuscount > 0) ||
+      (palette_onpowers &&
+        ((plyr->powers[pw_strength] && palette <= STARTREDPALS + 2) ||
+         (plyr->powers[pw_ironfeet] && palette == RADIATIONPAL)))
+     ))
 
-    // have to redraw the entire status bar when the palette changes
-    // in truecolor modes - POPE
-    if (V_GetMode() == VID_MODE15 || V_GetMode() == VID_MODE16 || V_GetMode() == VID_MODE32)
-      st_firsttime = true;
-  }
+    V_SetPalette(st_palette = palette); // CPhipps - use new palette function
 }
 
 static void ST_drawWidgets(boolean refresh)
@@ -800,7 +824,8 @@ static void ST_drawWidgets(boolean refresh)
   else
     STlib_updatePercent(&w_armor, CR_BLUE2, refresh); //killough 2/28/98
 
-  STlib_updateBinIcon(&w_armsbg, refresh);
+  //e6y: moved to ST_refreshBackground() for correct single-pass stretching
+  //STlib_updateBinIcon(&w_armsbg, refresh);
 
   for (i=0;i<6;i++)
     STlib_updateMultIcon(&w_arms[i], refresh);
@@ -884,6 +909,9 @@ static void ST_loadGraphics(boolean doload)
       sprintf(namebuf, "STKEYS%d", i);
       R_SetPatchNum(&keys[i], namebuf);
     }
+
+  //e6y: status bar background
+  R_SetPatchNum(&stbarbg, "STBAR");
 
   // arms background
   R_SetPatchNum(&armsbg, "STARMS");

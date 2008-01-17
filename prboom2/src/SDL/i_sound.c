@@ -68,6 +68,12 @@
 
 #include "d_main.h"
 
+//e6y
+#include "i_pcsound.h"
+#include "e6y.h"
+
+int snd_pcspeaker;
+
 // The number of internal mixing channels,
 //  the samples calculated for each mixing step,
 //  the size of the 16bit, 2 hardware channel (stereo)
@@ -176,6 +182,10 @@ static void updateSoundParams(int handle, int volume, int seperation, int pitch)
   if ((handle < 0) || (handle >= MAX_CHANNELS))
     I_Error("I_UpdateSoundParams: handle out of range");
 #endif
+
+  if (snd_pcspeaker)
+    return;
+
   // Set stepping
   // MWM 2000-12-24: Calculates proportion of channel samplerate
   // to global samplerate for mixing purposes.
@@ -267,9 +277,14 @@ void I_SetChannels(void)
 //
 int I_GetSfxLumpNum(sfxinfo_t* sfx)
 {
-    char namebuf[9];
-    sprintf(namebuf, "ds%s", sfx->name);
-    return W_GetNumForName(namebuf);
+  char namebuf[9];
+  char *prefix;
+
+  // Different prefix for PC speaker sound effects.
+  prefix = (snd_pcspeaker ? "dp" : "ds");
+
+  sprintf(namebuf, "%s%s", prefix, sfx->name);
+  return W_GetNumForName(namebuf);
 }
 
 //
@@ -295,6 +310,11 @@ int I_StartSound(int id, int channel, int vol, int sep, int pitch, int priority)
     I_Error("I_StartSound: handle out of range");
 #else
     return -1;
+#endif
+
+#ifdef HAVE_MIXER
+  if (snd_pcspeaker)
+    return I_PCS_StartSound(id, channel, vol, sep, pitch, priority);
 #endif
 
   lump = S_sfx[id].lumpnum;
@@ -335,6 +355,15 @@ void I_StopSound (int handle)
   if ((handle < 0) || (handle >= MAX_CHANNELS))
     I_Error("I_StopSound: handle out of range");
 #endif
+
+#ifdef HAVE_MIXER
+  if (snd_pcspeaker)
+  {
+    I_PCS_StopSound(handle);
+    return;
+  }
+#endif
+
   SDL_LockAudio();
   stopchan(handle);
   SDL_UnlockAudio();
@@ -347,6 +376,12 @@ boolean I_SoundIsPlaying(int handle)
   if ((handle < 0) || (handle >= MAX_CHANNELS))
     I_Error("I_SoundIsPlaying: handle out of range");
 #endif
+
+#ifdef HAVE_MIXER
+  if (snd_pcspeaker)
+    return I_PCS_SoundIsPlaying(handle);
+#endif
+
   return channelinfo[handle].data != NULL;
 }
 
@@ -355,6 +390,9 @@ boolean I_AnySoundStillPlaying(void)
 {
   boolean result = false;
   int i;
+
+  if (snd_pcspeaker)
+    return false;
 
   for (i=0; i<MAX_CHANNELS; i++)
     result |= channelinfo[i].data != NULL;
@@ -392,6 +430,9 @@ static void I_UpdateSound(void *unused, Uint8 *stream, int len)
 
   // Mixing channel index.
   int       chan;
+
+  if (snd_pcspeaker)
+    return;
 
     // Left and right channel
     //  are in audio stream, alternating.
@@ -520,6 +561,7 @@ void I_InitSound(void)
     lprintf(LO_INFO,"couldn't open audio with desired format\n");
     return;
   }
+  sound_inited_once = true;//e6y
   sound_inited = true;
   SAMPLECOUNT = audio_buffers;
   Mix_SetPostMix(I_UpdateSound, NULL);
@@ -553,6 +595,12 @@ void I_InitSound(void)
     first_sound_init = false;
   }
 
+  // If we are using the PC speaker, we now need to initialise it.
+#ifdef HAVE_MIXER
+  if (snd_pcspeaker)
+    I_PCS_InitSound();
+#endif
+
   if (!nomusicparm)
     I_InitMusic();
 
@@ -574,7 +622,7 @@ void I_InitSound(void)
 
 #ifdef HAVE_MIXER
 #include "SDL_mixer.h"
-#include "mmus2mid.h"
+#include "mus2mid.h"
 
 static Mix_Music *music[2] = { NULL, NULL };
 
@@ -677,8 +725,8 @@ void I_UnRegisterSong(int handle)
 int I_RegisterSong(const void *data, size_t len)
 {
 #ifdef HAVE_MIXER
-  MIDI *mididata;
   FILE *midfile;
+  boolean MidiIsReady = false;
 
   if ( len < 32 )
     return 0; // the data should at least as big as the MUS header
@@ -692,20 +740,36 @@ int I_RegisterSong(const void *data, size_t len)
   /* Convert MUS chunk to MIDI? */
   if ( memcmp(data, "MUS", 3) == 0 )
   {
-    UBYTE *mid;
-    int midlen;
+    // e6y
+    // New mus -> mid conversion code thanks to Ben Ryves <benryves@benryves.com>
+    // This plays back a lot of music closer to Vanilla Doom - eg. tnt.wad map02
+    void *outbuf;
+    size_t outbuf_len;
+    int result;
+    
+    MEMFILE *instream = mem_fopen_read((void*)data, len);
+    MEMFILE *outstream = mem_fopen_write();
 
-    mididata = malloc(sizeof(MIDI));
-    mmus2mid(data, mididata, 89, 0);
-    MIDIToMidi(mididata,&mid,&midlen);
-    M_WriteFile(music_tmp,mid,midlen);
-    free(mid);
-    free_mididata(mididata);
-    free(mididata);
+    result = mus2mid(instream, outstream);
+
+    if (result == 0)
+    {
+      mem_get_buf(outstream, &outbuf, &outbuf_len);
+      MidiIsReady = M_WriteFile(music_tmp, outbuf, outbuf_len);
+    }
+
+    mem_fclose(instream);
+    mem_fclose(outstream);
   } else {
-    fwrite(data, len, 1, midfile);
+    MidiIsReady = fwrite(data, len, 1, midfile) == 1;
   }
   fclose(midfile);
+
+  if (!MidiIsReady)
+  {
+    lprintf(LO_ERROR,"Couldn't write MIDI to %s\n", music_tmp);
+    return 0;
+  }
 
   music[0] = Mix_LoadMUS(music_tmp);
   if ( music[0] == NULL ) {

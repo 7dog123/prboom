@@ -118,9 +118,6 @@
 #define HAVE_VSNPRINTF 1
 #define vsnprintf _vsnprintf
 
-/* Define for support for MBF helper dogs */
-#define DOGS 1
-
 /* Define if you want to compile with SDL  */
 #define USE_SDL 1
 
@@ -130,10 +127,16 @@
 #define USE_GLU_TESS 1
 
 /* Define if you want to use gluImageScale  */
-//#define USE_GLU_IMAGESCALE 1
+#define USE_GLU_IMAGESCALE 1
 
 /* Define if you want to use gluBuild2DMipmaps  */
 #define USE_GLU_MIPMAP 1
+
+/* Define if you want to use the Windows launcher */
+#define USE_WINDOWS_LAUNCHER 1
+
+/* Define if you want to use SIMD instructions */
+#undef SIMD_INSTRUCTIONS
 
 /* Set to the attribute to apply to struct definitions to make them packed.
  * For MSVC++ we can't do it like this, there are pragma's in the source
@@ -141,7 +144,47 @@
 #define PACKEDATTR
 
 /* Name of package */
-#define PACKAGE "prboom"
+#define PACKAGE "prboom-plus"
 
+//e6y
 /* Version number of package */
-#define VERSION "2.4.8"
+#define VERSION "2.4.8.3"
+
+/* Define if you have the SDL image library -lSDL_image */
+#define HAVE_LIBSDL_IMAGE
+
+/* Define if you want to use FBO for some tricks in OpenGL */
+#define USE_FBO_TECHNIQUE 1
+
+#ifdef _WIN32
+
+/* Define if you want to have PrBoom-Plus.wad in the exe  */
+//#define ALL_IN_ONE 1
+
+#ifdef _MSC_VER
+
+#ifdef _DEBUG
+  #define LINK_LIBRARY(x) comment(lib, x"_D.lib")
+#else
+  #define LINK_LIBRARY(x) comment(lib, x".lib")
+#endif
+
+#ifdef ALL_IN_ONE
+  #pragma LINK_LIBRARY("SDL_static" )
+  #pragma LINK_LIBRARY("SDL_mixer_static" )
+  #pragma LINK_LIBRARY("SDL_net_static" )
+#ifdef HAVE_LIBSDL_IMAGE
+  #pragma LINK_LIBRARY("SDL_image_static" )
+#endif // HAVE_LIBSDL_IMAGE
+#else // ALL_IN_ONE
+  #pragma comment( lib, "SDL.lib" )
+  #pragma comment( lib, "SDL_mixer.lib" )
+  #pragma comment( lib, "SDL_net.lib" )
+#ifdef HAVE_LIBSDL_IMAGE
+  #pragma comment( lib, "SDL_image.lib" )
+#endif // HAVE_LIBSDL_IMAGE
+#endif // ALL_IN_ONE
+
+#endif // _MSC_VER
+
+#endif // _WIN32

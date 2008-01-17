@@ -48,6 +48,7 @@
 #include "p_tick.h"
 #include "m_bbox.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 static mobj_t *current_actor;
 
@@ -431,6 +432,8 @@ static boolean P_SmartMove(mobj_t *actor)
 {
   mobj_t *target = actor->target;
   int on_lift, dropoff = false, under_damage;
+  int tmp_monster_avoid_hazards = (prboom_comp[PC_MONSTER_AVOID_HAZARDS].state ? 
+    true : (demo_compatibility ? false : monster_avoid_hazards));//e6y
 
   /* killough 9/12/98: Stay on a lift if target is on one */
   on_lift = !comp[comp_staylift]
@@ -438,13 +441,12 @@ static boolean P_SmartMove(mobj_t *actor)
     && target->subsector->sector->tag==actor->subsector->sector->tag &&
     P_IsOnLift(actor);
 
-  under_damage = monster_avoid_hazards && P_IsUnderDamage(actor);
+  under_damage = tmp_monster_avoid_hazards && P_IsUnderDamage(actor);//e6y
 
   // killough 10/98: allow dogs to drop off of taller ledges sometimes.
   // dropoff==1 means always allow it, dropoff==2 means only up to 128 high,
   // and only if the target is immediately on the other side of the line.
 
-#ifdef DOGS
   // haleyjd: allow all friends of HelperType to also jump down
 
   if ((actor->type == MT_DOGS || (actor->type == (HelperThing-1) && actor->flags&MF_FRIEND))
@@ -454,7 +456,6 @@ static boolean P_SmartMove(mobj_t *actor)
           actor->y - target->y) < FRACUNIT*144 &&
       P_Random(pr_dropoff) < 235)
     dropoff = 2;
-#endif
 
   if (!P_Move(actor, dropoff))
     return false;
@@ -464,7 +465,7 @@ static boolean P_SmartMove(mobj_t *actor)
       (on_lift && P_Random(pr_stayonlift) < 230 &&      // Stay on lift
        !P_IsOnLift(actor))
       ||
-      (monster_avoid_hazards && !under_damage &&  // Get away from damage
+      (tmp_monster_avoid_hazards && !under_damage &&//e6y  // Get away from damage
        (under_damage = P_IsUnderDamage(actor)) &&
        (under_damage < 0 || P_Random(pr_avoidcrush) < 200))
       )
@@ -827,7 +828,24 @@ static boolean P_LookForPlayers(mobj_t *actor, boolean allaround)
 
       // killough 2/15/98, 9/9/98:
       if (c++ == stopc || actor->lastlook == stop)  // done looking
-  return false;
+      {
+        // e6y
+        // Fixed Boom incompatibilities. The following code was missed.
+        // There are no more desyncs on Donce's demos on horror.wad
+
+        // Use last known enemy if no players sighted -- killough 2/15/98:
+        if (!mbf_features && !demo_compatibility && monsters_remember)
+        {
+          if (actor->lastenemy && actor->lastenemy->health > 0)
+          {
+            actor->target = actor->lastenemy;
+            actor->lastenemy = NULL;
+            return true;
+          }
+        }
+
+        return false;
+      }
 
       player = &players[actor->lastlook];
 
@@ -1671,6 +1689,7 @@ void A_VileChase(mobj_t* actor)
        */
       corpsehit->flags =
         (info->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND);
+      corpsehit->flags = corpsehit->flags | MF_RESSURECTED;//e6y
 
 		  if (!((corpsehit->flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))
 		    totallive++;
@@ -2307,6 +2326,13 @@ void P_SpawnBrainTargets(void)  // killough 3/26/98: renamed old function
 
 void A_BrainAwake(mobj_t *mo)
 {
+  //e6y
+  if (demo_compatibility && !prboom_comp[PC_BOOM_BRAINAWAKE].state)
+  {
+    brain.targeton = 0;
+    brain.easy = 0;
+  }
+
   S_StartSound(NULL,sfx_bossit); // killough 3/26/98: only generates sound now
 }
 
@@ -2435,6 +2461,9 @@ void A_SpawnFly(mobj_t *mo)
 
   /* killough 7/18/98: brain friendliness is transferred */
   newmobj->flags = (newmobj->flags & ~MF_FRIEND) | (mo->flags & MF_FRIEND);
+
+  //e6y: monsters spawned by Icon of Sin should not be countable for total killed.
+  newmobj->flags |= MF_RESSURECTED;
 
   /* killough 8/29/98: add to appropriate thread */
   P_UpdateThinker(&newmobj->thinker);

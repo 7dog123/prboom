@@ -1,6 +1,6 @@
 /**/
-#define PACKAGE "prboom"
-#define VERSION "2.4.8"
+#define PACKAGE "prboom-plus"
+#define VERSION "2.4.8.3"
 
 #ifdef DEBUG
 
@@ -39,7 +39,6 @@
 
 #endif // DEBUG
 
-#define DOGS 1
 #define MONITOR_VISIBILITY 1
 /*#define DISABLE_LUMP_CACHING*/
 
@@ -48,6 +47,9 @@
 /*#define HAVE_MIXER 1*/
 #define HAVE_NET 1
 #define USE_SDL_NET 1
+
+/* Define if you have the SDL image library -lSDL_image */
+#define HAVE_LIBSDL_IMAGE
 
 /**/
 #define HIGHRES 1

@@ -58,20 +58,7 @@
 #include "d_deh.h"
 #include "r_plane.h"
 #include "lprintf.h"
-
-//
-// Animating textures and planes
-// There is another anim_t used in wi_stuff, unrelated.
-//
-typedef struct
-{
-    boolean     istexture;
-    int         picnum;
-    int         basepic;
-    int         numpics;
-    int         speed;
-
-} anim_t;
+#include "e6y.h"//e6y
 
 //
 //      source animation definition
@@ -113,6 +100,35 @@ static void P_SpawnScrollers(void);
 
 static void P_SpawnFriction(void);    // phares 3/16/98
 static void P_SpawnPushers(void);     // phares 3/20/98
+
+//e6y
+void MarkAnimatedTextures(void)
+{
+#ifdef GL_DOOM
+  anim_t* anim;
+
+  anim_textures = calloc(numtextures, sizeof(TAnimItemParam));
+  anim_flats = calloc(numflats, sizeof(TAnimItemParam));
+
+  for (anim = anims ; anim < lastanim ; anim++)
+  {
+    int i;
+    for (i = 0; i < anim->numpics ; i++)
+    {
+      if (anim->istexture)
+      {
+        anim_textures[anim->basepic + i].anim = anim;
+        anim_textures[anim->basepic + i].index = i + 1;
+      }
+      else
+      {
+        anim_flats[anim->basepic + i].anim = anim;
+        anim_flats[anim->basepic + i].index = i + 1;
+      }
+    }
+  }
+#endif GL_DOOM
+}
 
 //
 // P_InitPicAnims
@@ -188,6 +204,7 @@ void P_InitPicAnims (void)
     lastanim++;
   }
   W_UnlockLumpNum(lump);
+  MarkAnimatedTextures();//e6y
 }
 
 ///////////////////////////////////////////////////////////////
@@ -364,6 +381,82 @@ fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight)
 {
   sector_t *other;
   int i;
+
+  // e6y
+  // Original P_FindNextHighestFloor() is restored for demo_compatibility
+  // Adapted for prboom's complevels
+  if (demo_compatibility && !prboom_comp[PC_FORCE_BOOM_FINDNEXTHIGHESTFLOOR].state)
+  {
+    int h;
+    int min;
+    static int MAX_ADJOINING_SECTORS = 0;
+    static fixed_t *heightlist = NULL;
+    static int heightlist_size = 0;
+    line_t* check;
+    fixed_t height = currentheight;
+
+    // 20 adjoining sectors max!
+    if (!MAX_ADJOINING_SECTORS)
+      MAX_ADJOINING_SECTORS = M_CheckParm("-doom95") ? 500 : 20;
+
+    if (sec->linecount > heightlist_size)
+    {
+      do
+      {
+        heightlist_size = heightlist_size ? heightlist_size * 2 : 128;
+      } while (sec->linecount > heightlist_size);
+      heightlist = realloc(heightlist, heightlist_size * sizeof(heightlist[0]));
+    }
+    
+    for (i=0, h=0 ;i < sec->linecount ; i++)
+    {
+      check = sec->lines[i];
+      other = getNextSector(check,sec);
+      
+      if (!other)
+        continue;
+      
+      if (other->floorheight > height)
+      {
+        if (compatibility_level < dosdoom_compatibility)
+        {
+          // Emulation of memory (stack) overflow.
+          if (h == MAX_ADJOINING_SECTORS + 1)
+            height = other->floorheight;
+          // Check for fatal overflow. Warning.
+          if (h == MAX_ADJOINING_SECTORS + 2)
+            lprintf(LO_WARN, "Sector with more than 20+2 adjoining sectors. Vanilla will crash here");
+
+        }
+        heightlist[h++] = other->floorheight;
+      }
+      
+      // Check for overflow. Warning.
+      if ( compatibility_level >= dosdoom_compatibility && h >= MAX_ADJOINING_SECTORS )
+      {
+        lprintf( LO_WARN, "Sector with more than 20 adjoining sectors\n" );
+        break;
+      }
+    }
+    
+    // Find lowest height in list
+    if (!h)
+    {
+      return (compatibility_level < doom_1666_compatibility ? 0 : currentheight);
+    }
+    
+    min = heightlist[0];
+    
+    // Range checking? 
+    for (i = 1;i < h;i++)
+    {
+      if (heightlist[i] < min)
+        min = heightlist[i];
+    }
+      
+    return min;
+  }
+
 
   for (i=0 ;i < sec->linecount ; i++)
     if ((other = getNextSector(sec->lines[i],sec)) &&
@@ -931,8 +1024,15 @@ boolean P_CanUnlockGenDoor
             !player->cards[it_redskull]) ||
           (!player->cards[it_bluecard] &&
             !player->cards[it_blueskull]) ||
+          // e6y
+          // Compatibility with buggy MBF behavior when 3-key door works with only 2 keys
+          // There is no more desync on 10sector.wad\ts27-137.lmp
+          // http://www.doomworld.com/tas/ts27-137.zip
           (!player->cards[it_yellowcard] &&
-            !player->cards[it_yellowskull])
+            (compatibility_level == mbf_compatibility && 
+             !prboom_comp[PC_FORCE_CORRECT_CODE_FOR_3_KEYS_DOORS_IN_MBF].state ? 
+             player->cards[it_yellowskull] :
+             !player->cards[it_yellowskull]))
         )
       )
       {
@@ -991,7 +1091,7 @@ int P_CheckTag(line_t *line)
 {
   /* tag not zero, allowed, or
    * killough 11/98: compatibility option */
-  if (comp[comp_zerotags] || line->tag)
+  if (comp[comp_zerotags] || line->tag || compbad_get(&comperr_zerotag))//e6y
     return 1;
 
   switch(line->special)
@@ -1113,7 +1213,9 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
   int         ok;
 
   //  Things that should never trigger lines
-  if (!thing->player)
+  //
+  // e6y: Improved support for Doom v1.2
+  if (!thing->player && compatibility_level > doom_12_compatibility)
   {
     // Things that should NOT trigger specials...
     switch(thing->type)
@@ -1148,7 +1250,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       if (!thing->player)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
           return;     // FloorModel is "Allow Monsters" if FloorChange is 0
-      if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all walk generalized types require tag
         return;
       linefunc = EV_DoGenFloor;
     }
@@ -1157,7 +1259,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       if (!thing->player)
         if ((line->special & CeilingChange) || !(line->special & CeilingModel))
           return;     // CeilingModel is "Allow Monsters" if CeilingChange is 0
-      if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all walk generalized types require tag
         return;
       linefunc = EV_DoGenCeiling;
     }
@@ -1170,7 +1272,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         if (line->flags & ML_SECRET) // they can't open secret doors either
           return;
       }
-      if (!line->tag) //3/2/98 move outside the monster check
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //3/2/98 move outside the monster check
         return;
       linefunc = EV_DoGenDoor;
     }
@@ -1192,7 +1294,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       if (!thing->player)
         if (!(line->special & LiftMonster))
           return; // monsters disallowed
-      if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all walk generalized types require tag
         return;
       linefunc = EV_DoGenLift;
     }
@@ -1201,7 +1303,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
       if (!thing->player)
         if (!(line->special & StairMonster))
           return; // monsters disallowed
-      if (!line->tag) //jff 2/27/98 all walk generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all walk generalized types require tag
         return;
       linefunc = EV_DoGenStairs;
     }
@@ -2021,7 +2123,7 @@ void P_ShootSpecialLine
       if (!thing->player)
         if ((line->special & FloorChange) || !(line->special & FloorModel))
           return;   // FloorModel is "Allow Monsters" if FloorChange is 0
-      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all gun generalized types require tag
         return;
 
       linefunc = EV_DoGenFloor;
@@ -2031,7 +2133,7 @@ void P_ShootSpecialLine
       if (!thing->player)
         if ((line->special & CeilingChange) || !(line->special & CeilingModel))
           return;   // CeilingModel is "Allow Monsters" if CeilingChange is 0
-      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all gun generalized types require tag
         return;
       linefunc = EV_DoGenCeiling;
     }
@@ -2044,7 +2146,7 @@ void P_ShootSpecialLine
         if (line->flags & ML_SECRET) // they can't open secret doors either
           return;
       }
-      if (!line->tag) //jff 3/2/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 3/2/98 all gun generalized types require tag
         return;
       linefunc = EV_DoGenDoor;
     }
@@ -2059,7 +2161,7 @@ void P_ShootSpecialLine
       }
       else
         return;
-      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all gun generalized types require tag
         return;
 
       linefunc = EV_DoGenLockedDoor;
@@ -2076,7 +2178,7 @@ void P_ShootSpecialLine
       if (!thing->player)
         if (!(line->special & StairMonster))
           return; // monsters disallowed
-      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all gun generalized types require tag
         return;
       linefunc = EV_DoGenStairs;
     }
@@ -2085,7 +2187,7 @@ void P_ShootSpecialLine
       if (!thing->player)
         if (!(line->special & StairMonster))
           return; // monsters disallowed
-      if (!line->tag) //jff 2/27/98 all gun generalized types require tag
+      if (!compbad_get(&comperr_zerotag) && !line->tag) //e6y //jff 2/27/98 all gun generalized types require tag
         return;
       linefunc = EV_DoGenCrusher;
     }
@@ -2230,6 +2332,13 @@ void P_PlayerInSpecialSector (player_t* player)
         // Tally player in secret sector, clear secret special
         player->secretcount++;
         sector->special = 0;
+        //e6y
+        if (hudadd_secretarea)
+        {
+          player->centermessage = STSTR_SECRETFOUND;
+          S_StartSound(NULL,sfx_itmbk);
+        }
+
         break;
 
       case 11:
@@ -2280,6 +2389,12 @@ void P_PlayerInSpecialSector (player_t* player)
       sector->special &= ~SECRET_MASK;
       if (sector->special<32) // if all extended bits clear,
         sector->special=0;    // sector is not special anymore
+      //e6y
+      if (hudadd_secretarea)
+      {
+        player->centermessage = STSTR_SECRETFOUND;
+        S_StartSound(NULL,sfx_itmbk);
+      }
     }
 
     // phares 3/19/98:
@@ -2313,7 +2428,6 @@ void P_UpdateSpecials (void)
   anim_t*     anim;
   int         pic;
   int         i;
-
   // Downcount level timer, exit level if elapsed
   if (levelTimer == true)
   {
@@ -2461,7 +2575,8 @@ void P_SpawnSpecials (void)
     if (sector->special&SECRET_MASK) //jff 3/15/98 count extended
       totalsecret++;                 // secret sectors too
 
-    switch (sector->special&31)
+    switch ((demo_compatibility && !prboom_comp[PC_TRUNCATED_SECTOR_SPECIALS].state) ? 
+      sector->special : sector->special&31)
     {
       case 1:
         // random off
@@ -2535,6 +2650,10 @@ void P_SpawnSpecials (void)
 
   P_SpawnScrollers(); // killough 3/7/98: Add generalized scrollers
 
+  // e6y
+  if (demo_compatibility)
+    return;
+
   P_SpawnFriction();  // phares 3/12/98: New friction model using linedefs
 
   P_SpawnPushers();   // phares 3/20/98: New pusher model using linedefs
@@ -2579,8 +2698,13 @@ void P_SpawnSpecials (void)
 
       case 271:   // Regular sky
       case 272:   // Same, only flipped
-        for (s = -1; (s = P_FindSectorFromLineTag(lines+i,s)) >= 0;)
-          sectors[s].sky = i | PL_SKYFLAT;
+        // e6y: sky property-transfer linedef types should be applied only for MBF and above
+        if (compatibility_level >= mbf_compatibility ||
+          prboom_comp[PC_ALLOW_SKY_TRANSFER_IN_BOOM].state)
+        {
+          for (s = -1; (s = P_FindSectorFromLineTag(lines+i,s)) >= 0;)
+            sectors[s].sky = i | PL_SKYFLAT;
+        }
         break;
    }
 }
@@ -2768,6 +2892,7 @@ static void P_SpawnScrollers(void)
       fixed_t dy = l->dy >> SCROLL_SHIFT;
       int control = -1, accel = 0;         // no control sector or acceleration
       int special = l->special;
+      if (demo_compatibility && special!=48) continue;//e6y
 
       // killough 3/7/98: Types 245-249 are same as 250-254 except that the
       // first side's sector's heights cause scrolling when they change, and
@@ -2837,6 +2962,81 @@ static void P_SpawnScrollers(void)
         }
     }
 }
+
+// e6y
+// restored boom's friction code
+
+/////////////////////////////
+//
+// Add a friction thinker to the thinker list
+//
+// Add_Friction adds a new friction thinker to the list of active thinkers.
+//
+
+static void Add_Friction(int friction, int movefactor, int affectee)
+    {
+    friction_t *f = Z_Malloc(sizeof *f, PU_LEVSPEC, 0);
+
+    f->thinker.function/*.acp1*/ = /*(actionf_p1) */T_Friction;
+    f->friction = friction;
+    f->movefactor = movefactor;
+    f->affectee = affectee;
+    P_AddThinker(&f->thinker);
+    }
+
+/////////////////////////////
+//
+// This is where abnormal friction is applied to objects in the sectors.
+// A friction thinker has been spawned for each sector where less or
+// more friction should be applied. The amount applied is proportional to
+// the length of the controlling linedef.
+
+void T_Friction(friction_t *f)
+    {
+    sector_t *sec;
+    mobj_t   *thing;
+    msecnode_t* node;
+
+    if (compatibility || !variable_friction)
+        return;
+
+    sec = sectors + f->affectee;
+
+    // Be sure the special sector type is still turned on. If so, proceed.
+    // Else, bail out; the sector type has been changed on us.
+
+    if (!(sec->special & FRICTION_MASK))
+        return;
+
+    // Assign the friction value to players on the floor, non-floating,
+    // and clipped. Normally the object's friction value is kept at
+    // ORIG_FRICTION and this thinker changes it for icy or muddy floors.
+
+    // In Phase II, you can apply friction to Things other than players.
+
+    // When the object is straddling sectors with the same
+    // floorheight that have different frictions, use the lowest
+    // friction value (muddy has precedence over icy).
+
+    node = sec->touching_thinglist; // things touching this sector
+    while (node)
+        {
+        thing = node->m_thing;
+        if (thing->player &&
+            !(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) &&
+            thing->z <= sec->floorheight)
+            {
+            if ((thing->friction == ORIG_FRICTION) ||     // normal friction?
+              (f->friction < thing->friction))
+                {
+                thing->friction   = f->friction;
+                thing->movefactor = f->movefactor;
+                }
+            }
+        node = node->m_snext;
+        }
+    }
+
 
 // killough 3/7/98 -- end generalized scroll effects
 
@@ -2938,6 +3138,10 @@ static void P_SpawnFriction(void)
             // on every tic, adjusting its friction, putting unnecessary
             // drag on CPU. New code adjusts friction of sector only once
             // at level startup, and then uses this friction value.
+
+            //e6y: boom's friction code for boom compatibility
+            if (!demo_compatibility && !mbf_features && !prboom_comp[PC_PRBOOM_FRICTION].state)
+              Add_Friction(friction,movefactor,s);
 
             sectors[s].friction = friction;
             sectors[s].movefactor = movefactor;

@@ -47,6 +47,7 @@
 #include "p_inter.h"
 #include "lprintf.h"
 #include "r_demo.h"
+#include "e6y.h"//e6y
 
 //
 // P_SetMobjState
@@ -139,6 +140,10 @@ static void P_XYMovement (mobj_t* mo)
   {
   player_t *player;
   fixed_t xmove, ymove;
+
+  //e6y
+  fixed_t   oldx,oldy; // phares 9/10/98: reducing bobbing/momentum on ice
+
 #if 0
   fixed_t   ptryx;
   fixed_t   ptryy;
@@ -177,11 +182,9 @@ static void P_XYMovement (mobj_t* mo)
   xmove = mo->momx;
   ymove = mo->momy;
 
-#if 0
   oldx = mo->x; // phares 9/10/98: new code to reduce bobbing/momentum
   oldy = mo->y; // when on ice & up against wall. These will be compared
                 // to your x,y values later to see if you were able to move
-#endif
 
   do
     {
@@ -351,6 +354,38 @@ static void P_XYMovement (mobj_t* mo)
        * cph - DEMOSYNC - need old code for Boom demos?
        */
 
+      //e6y
+      if (compatibility_level <= boom_201_compatibility && !prboom_comp[PC_PRBOOM_FRICTION].state)
+      {
+        // phares 3/17/98
+        // Friction will have been adjusted by friction thinkers for icy
+        // or muddy floors. Otherwise it was never touched and
+        // remained set at ORIG_FRICTION
+        mo->momx = FixedMul(mo->momx,mo->friction);
+        mo->momy = FixedMul(mo->momy,mo->friction);
+        mo->friction = ORIG_FRICTION; // reset to normal for next tic
+      }
+      else if (compatibility_level <= lxdoom_1_compatibility && !prboom_comp[PC_PRBOOM_FRICTION].state)
+      {
+        // phares 9/10/98: reduce bobbing/momentum when on ice & up against wall
+
+        if ((oldx == mo->x) && (oldy == mo->y)) // Did you go anywhere?
+          { // No. Use original friction. This allows you to not bob so much
+            // if you're on ice, but keeps enough momentum around to break free
+            // when you're mildly stuck in a wall.
+          mo->momx = FixedMul(mo->momx,ORIG_FRICTION);
+          mo->momy = FixedMul(mo->momy,ORIG_FRICTION);
+          }
+        else
+          { // Yes. Use stored friction.
+          mo->momx = FixedMul(mo->momx,mo->friction);
+          mo->momy = FixedMul(mo->momy,mo->friction);
+          }
+        mo->friction = ORIG_FRICTION; // reset to normal for next tic
+      }
+      else
+      {
+
       fixed_t friction = P_GetFriction(mo, NULL);
 
       mo->momx = FixedMul(mo->momx, friction);
@@ -366,6 +401,8 @@ static void P_XYMovement (mobj_t* mo)
     player->momx = FixedMul(player->momx, ORIG_FRICTION);
     player->momy = FixedMul(player->momy, ORIG_FRICTION);
   }
+
+      }
 
     }
   }
@@ -529,7 +566,8 @@ floater:
         // and utter appropriate sound.
 
         mo->player->deltaviewheight = mo->momz>>3;
-        if (mo->health > 0) /* cph - prevent "oof" when dead */
+        //e6y: compatibility optioned
+        if (comp[comp_sound] || (mo->health>0)) /* cph - prevent "oof" when dead */
     S_StartSound (mo, sfx_oof);
       }
   mo->momz = 0;
@@ -671,6 +709,7 @@ static void P_NightmareRespawn(mobj_t* mobj)
 
   /* killough 11/98: transfer friendliness from deceased */
   mo->flags = (mo->flags & ~MF_FRIEND) | (mobj->flags & MF_FRIEND);
+  mo->flags = mo->flags | MF_RESSURECTED;//e6y
 
   mo->reactiontime = 18;
 
@@ -693,6 +732,8 @@ void P_MobjThinker (mobj_t* mobj)
   mobj->PrevX = mobj->x;
   mobj->PrevY = mobj->y;
   mobj->PrevZ = mobj->z;
+
+  CheckThingsHealthTracer(mobj);  //e6y
 
   // momentum movement
   if (mobj->momx | mobj->momy || mobj->flags & MF_SKULLFLY)
@@ -820,12 +861,15 @@ mobj_t* P_SpawnMobj(fixed_t x,fixed_t y,fixed_t z,mobjtype_t type)
 
   mobj->z = z == ONFLOORZ ? mobj->floorz : z == ONCEILINGZ ?
     mobj->ceilingz - mobj->height : z;
-
+  
   mobj->PrevX = mobj->x;
   mobj->PrevY = mobj->y;
   mobj->PrevZ = mobj->z;
 
   mobj->thinker.function = P_MobjThinker;
+
+  //e6y
+  mobj->friction    = ORIG_FRICTION;                        // phares 3/17/98
 
   mobj->target = mobj->tracer = mobj->lastenemy = NULL;
   P_AddThinker (&mobj->thinker);
@@ -1012,6 +1056,13 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
   mobj_t*   mobj;
   int       i;
 
+  // e6y
+  // playeringame overflow detection
+  // it detects and emulates overflows on vex6d.wad\bug_wald(toke).lmp, etc.
+  // http://www.doom2.net/doom2/research/runningbody.zip
+  if (PlayeringameOverrun(mthing))
+    return;
+                                                                
   // not playing?
 
   if (!playeringame[n])
@@ -1020,7 +1071,7 @@ void P_SpawnPlayer (int n, const mapthing_t* mthing)
   p = &players[n];
 
   if (p->playerstate == PST_REBORN)
-    G_PlayerReborn (mthing->type-1);
+    G_PlayerReborn (n);
 
   /* cph 2001/08/14 - use the options field of memorised player starts to
    * indicate whether the start really exists in the level.
@@ -1105,7 +1156,7 @@ boolean P_IsDoomnumAllowed(int doomnum)
 // already be in host byte order.
 //
 
-void P_SpawnMapThing (const mapthing_t* mthing)
+void P_SpawnMapThing (const mapthing_t* mthing, int index)//e6y
   {
   int     i;
   //int     bit;
@@ -1148,7 +1199,7 @@ void P_SpawnMapThing (const mapthing_t* mthing)
   // count deathmatch start positions
 
   // doom2.exe has at most 10 deathmatch starts
-  if (mthing->type == 11)
+  if (mthing->type == 11) // e6y
     {
     if (!(!compatibility || deathmatch_p-deathmatchstarts < 10)) {
 		return;
@@ -1157,6 +1208,7 @@ void P_SpawnMapThing (const mapthing_t* mthing)
 
     size_t offset = deathmatch_p - deathmatchstarts;
 
+    if (compatibility && deathmatch_p-deathmatchstarts >= 10) return; //e6y
     if (offset >= num_deathmatchstarts)
       {
       num_deathmatchstarts = num_deathmatchstarts ?
@@ -1176,7 +1228,6 @@ void P_SpawnMapThing (const mapthing_t* mthing)
 
   if (mthing->type <= 4 && mthing->type > 0)  // killough 2/26/98 -- fix crashes
     {
-#ifdef DOGS
       // killough 7/19/98: Marine's best friend :)
       if (!netgame && mthing->type > 1 && mthing->type <= dogs+1 &&
     !players[mthing->type-1].secretcount)
@@ -1203,7 +1254,7 @@ void P_SpawnMapThing (const mapthing_t* mthing)
     }
     goto spawnit;
   }
-#endif
+
 
     // save spots for respawning in coop games
     playerstarts[mthing->type-1] = *mthing;
@@ -1267,9 +1318,7 @@ void P_SpawnMapThing (const mapthing_t* mthing)
     return;
 
   // spawn it
-#ifdef DOGS
 spawnit:
-#endif
 
   x = mthing->x << FRACBITS;
   y = mthing->y << FRACBITS;
@@ -1281,6 +1330,7 @@ spawnit:
 
   mobj = P_SpawnMobj (x,y,z, i);
   mobj->spawnpoint = *mthing;
+  mobj->index = index;//e6y
 
   if (mobj->tics > 0)
     mobj->tics = 1 + (P_Random (pr_spawnthing) % mobj->tics);
@@ -1303,8 +1353,20 @@ spawnit:
   mobj->angle = ANG45 * (mthing->angle/45);
   if (options & MTF_AMBUSH)
     mobj->flags |= MF_AMBUSH;
+
+  // RjY
+  // Print a warning when a solid hanging body is used in a sector where
+  // the player can walk under it, to help people with map debugging
+  if (!((~mobj->flags) & (MF_SOLID | MF_SPAWNCEILING)) // solid and hanging
+      // invert everything, then both bits should be clear
+      && mobj->floorz + mobjinfo[MT_PLAYER].height <= mobj->z) // head <= base
+      // player under body's head height <= bottom of body
+  {
+    lprintf(LO_WARN, "P_SpawnMapThing: solid hanging body in tall sector at "
+        "%d,%d (type=%d)\n", mthing->x, mthing->y, mthing->type);
   }
 
+  }
 
 //
 // GAME SPAWN FUNCTIONS

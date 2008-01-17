@@ -53,6 +53,8 @@
 #include "r_demo.h"
 #include "r_fps.h"
 #include "SDL.h"
+#include <math.h>
+#include "e6y.h"//e6y
 
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW 2048
@@ -66,6 +68,7 @@ int validcount = 1;         // increment every time a check is made
 const lighttable_t *fixedcolormap;
 int      centerx, centery;
 fixed_t  centerxfrac, centeryfrac;
+fixed_t  viewheightfrac; //e6y: for correct cliping of things
 fixed_t  projection;
 // proff 11/06/98: Added for high-res
 fixed_t  projectiony;
@@ -99,6 +102,9 @@ angle_t xtoviewangle[MAX_SCREENWIDTH+1];   // killough 2/8/98
 // killough 3/20/98: Support dynamic colormaps, e.g. deep water
 // killough 4/4/98: support dynamic number of them as well
 
+//e6y
+int scalelight_offset[LIGHTLEVELS][MAXLIGHTSCALE];
+
 int numcolormaps;
 const lighttable_t *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
 const lighttable_t *(*zlight)[MAXLIGHTZ];
@@ -106,6 +112,13 @@ const lighttable_t *fullcolormap;
 const lighttable_t **colormaps;
 
 // killough 3/20/98, 4/4/98: end dynamic colormaps
+
+//e6y: for Boom colormaps in OpenGL mode
+boolean use_boom_cm;
+int boom_cm;         // current colormap
+int last_boom_cm=-1; // previous colormap
+int last_fixedcolormap=-1;
+int frame_fixedcolormap = 0;
 
 int extralight;                           // bumped light from gun blasts
 
@@ -202,6 +215,27 @@ angle_t R_PointToAngle2(fixed_t viewx, fixed_t viewy, fixed_t x, fixed_t y)
         (x = -x) > (y = -y) ? ANG180+tantoangle[ SlopeDiv(y,x)] :  // octant 4
                               ANG270-1-tantoangle[SlopeDiv(x,y)] : // octant 5
     0;
+}
+
+// e6y
+// The precision of the code above is abysmal so use the CRT atan2 function instead!
+angle_t R_PointToAngleEx(fixed_t x, fixed_t y)
+{
+  static int old_y_viewy;
+  static int old_x_viewx;
+  static int old_result;
+
+  int y_viewy = y - viewy;
+  int x_viewx = x - viewx;
+
+  if (old_y_viewy != y_viewy || old_x_viewx != x_viewx)
+  {
+    old_y_viewy = y_viewy;
+    old_x_viewx = x_viewx;
+
+    old_result = (int)(atan2(y_viewy, x_viewx) * ANG180/M_PI);
+  }
+  return old_result;
 }
 
 //
@@ -351,6 +385,8 @@ void R_ExecuteSetViewSize (void)
 
   viewwidth = scaledviewwidth;
 
+  viewheightfrac = viewheight<<FRACBITS;//e6y
+
   centery = viewheight/2;
   centerx = viewwidth/2;
   centerxfrac = centerx<<FRACBITS;
@@ -368,6 +404,7 @@ void R_ExecuteSetViewSize (void)
   pspritescale = FRACUNIT*viewwidth/320;
   pspriteiscale = FRACUNIT*320/viewwidth;
 // proff 11/06/98: Added for high-res
+  pspritexscale = (centerx << FRACBITS) / 160;
   pspriteyscale = (((SCREENHEIGHT*viewwidth)/SCREENWIDTH) << FRACBITS) / 200;
 
   // thing clipping
@@ -387,6 +424,20 @@ void R_ExecuteSetViewSize (void)
       fixed_t cosadj = D_abs(finecosine[xtoviewangle[i]>>ANGLETOFINESHIFT]);
       distscale[i] = FixedDiv(FRACUNIT,cosadj);
     }
+
+  // e6y
+  // Calculate the light levels to use
+  //  for each level / scale combination.
+  for (i=0 ; i< LIGHTLEVELS ; i++)
+  {
+    int j, startmap, level;
+    startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+    for (j=0 ; j<MAXLIGHTSCALE ; j++)
+    {
+      level = BETWEEN(0, NUMCOLORMAPS - 1, startmap - j*SCREENWIDTH/(viewwidth)/DISTMAP);
+      scalelight_offset[i][j] = level*256;
+    }
+  }
 
 }
 
@@ -438,16 +489,17 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 static void R_SetupFrame (player_t *player)
 {
   int cm;
+  boolean NoInterpolate = paused || (menuactive && !demoplayback);
 
   viewplayer = player;
 
-  if (player->mo != oviewer || r_NoInterpolate)
+  if (player->mo != oviewer || NoInterpolate)
   {
     R_ResetViewInterpolation ();
     oviewer = player->mo;
   }
   tic_vars.frac = I_GetTimeFrac ();
-  if (r_NoInterpolate)
+  if (NoInterpolate)
     tic_vars.frac = FRACUNIT;
   R_InterpolateView (player, tic_vars.frac);
 
@@ -471,8 +523,19 @@ static void R_SetupFrame (player_t *player)
   else
     cm = 0;
 
+  //e6y: save previous and current colormap
+  last_boom_cm = boom_cm;
+  boom_cm = cm;
+
   fullcolormap = colormaps[cm];
   zlight = c_zlight[cm];
+
+  //e6y
+  frame_fixedcolormap = player->fixedcolormap;
+  if (frame_fixedcolormap < 0 || frame_fixedcolormap > NUMCOLORMAPS)
+  {
+    I_Error("<fixedcolormap> value out of range: %d\n", player->fixedcolormap);
+  }
 
   if (player->fixedcolormap)
     {
@@ -492,6 +555,7 @@ int autodetect_hom = 0;       // killough 2/7/98: HOM autodetection flag
 //
 int rendered_visplanes, rendered_segs, rendered_vissprites;
 boolean rendering_stats;
+int renderer_fps = 0;
 
 static void R_ShowStats(void)
 {
@@ -502,11 +566,14 @@ static void R_ShowStats(void)
   FPS_FrameCount++;
   if(tick >= FPS_SavedTick + 1000)
   {
-    doom_printf((V_GetMode() == VID_MODEGL)
-                ?"Frame rate %d fps\nWalls %d, Flats %d, Sprites %d"
-                :"Frame rate %d fps\nSegs %d, Visplanes %d, Sprites %d",
-    1000 * FPS_FrameCount / (tick - FPS_SavedTick), rendered_segs,
-    rendered_visplanes, rendered_vissprites);
+    renderer_fps = 1000 * FPS_FrameCount / (tick - FPS_SavedTick);
+    if (rendering_stats)
+    {
+      doom_printf((V_GetMode() == VID_MODEGL)
+                  ?"Frame rate %d fps\nWalls %d, Flats %d, Sprites %d"
+                  :"Frame rate %d fps\nSegs %d, Visplanes %d, Sprites %d",
+      renderer_fps, rendered_segs, rendered_visplanes, rendered_vissprites);
+    }
     FPS_SavedTick = tick;
     FPS_FrameCount = 0;
   }
@@ -555,8 +622,10 @@ void R_RenderPlayerView (player_t* player)
   } else {
     if (autodetect_hom)
     { // killough 2/10/98: add flashing red HOM indicators
-      unsigned char color=(gametic % 20) < 9 ? 0xb0 : 0;
-      V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, color);
+      int color=(gametic % 20) < 9 ? 0xb0 : 0;
+      int h=viewheight;
+      for (; h>0; h--)
+        memset(screens[0].data+(viewwindowy+h)*screens[0].pitch,color,SCREENWIDTH);
       R_DrawViewBorder();
     }
   }
@@ -564,6 +633,16 @@ void R_RenderPlayerView (player_t* player)
   // check for new console commands.
 #ifdef HAVE_NET
   NetUpdate ();
+#endif
+
+#ifdef GL_DOOM
+  if (V_GetMode() == VID_MODEGL) {
+    {
+      angle_t a1 = gld_FrustumAngle();
+      gld_clipper_Clear();
+      gld_clipper_SafeAddClipRange(viewangle + a1, viewangle - a1);
+    }
+  }
 #endif
 
   // The head node is the last node output.
@@ -602,7 +681,8 @@ void R_RenderPlayerView (player_t* player)
 #endif
   }
 
-  if (rendering_stats) R_ShowStats();
+  //e6y if (rendering_stats) 
+  R_ShowStats();
 
   R_RestoreInterpolations();
 }

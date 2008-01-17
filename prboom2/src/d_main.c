@@ -37,9 +37,6 @@
 
 
 #ifdef _MSC_VER
-#define    F_OK    0    /* Check for file existence */
-#define    W_OK    2    /* Check for write permission */
-#define    R_OK    4    /* Check for read permission */
 #include <io.h>
 #include <direct.h>
 #else
@@ -82,6 +79,12 @@
 #include "d_deh.h"  // Ty 04/08/98 - Externalizations
 #include "lprintf.h"  // jff 08/03/98 - declaration of lprintf
 #include "am_map.h"
+
+//e6y
+#include "e6y.h"
+#ifdef _WIN32
+#include "e6y_launcher.h"
+#endif
 
 void GetFirstMap(int *ep, int *map); // Ty 08/29/98 - add "-warp x" functionality
 static void D_PageDrawer(void);
@@ -135,7 +138,8 @@ const char *const standard_iwads[]=
   "doomu.wad", /* CPhipps - alow doomu.wad */
   "freedoom.wad", /* wart@kobold.org:  added freedoom for Fedora Extras */
 };
-static const int nstandard_iwads = sizeof standard_iwads/sizeof*standard_iwads;
+//e6y static 
+const int nstandard_iwads = sizeof standard_iwads/sizeof*standard_iwads;
 
 /*
  * D_PostEvent - Event handling
@@ -150,7 +154,12 @@ void D_PostEvent(event_t *ev)
 {
   /* cph - suppress all input events at game start
    * FIXME: This is a lousy kludge */
-  if (gametic < 3) return;
+  
+  // e6y
+  // Is this condition needed here?
+  // Moved to I_StartTic()
+  // if (gametic < 3) return;
+
   M_Responder(ev) ||
 	  (gamestate == GS_LEVEL && (
 				     HU_Responder(ev) ||
@@ -173,6 +182,7 @@ static void D_Wipe(void)
   boolean done;
   int wipestart = I_GetTime () - 1;
 
+  if (!render_wipescreen) return;//e6y
   do
     {
       int nowtime, tics;
@@ -211,6 +221,23 @@ void D_Display (void)
   boolean wipe;
   boolean viewactive = false, isborder = false;
 
+  // e6y
+  extern boolean gamekeydown[];
+  if (doSkip)
+  {
+    static unsigned int DemoProgressLastUpdate = 0;
+    unsigned int tick = SDL_GetTicks();
+    if (DemoProgressLastUpdate == 0 || tick - DemoProgressLastUpdate > 500)
+    {
+      DemoProgressLastUpdate = tick;
+      if (HU_DrawDemoProgress())
+        I_FinishUpdate();
+    }
+    if (!gamekeydown[key_use])
+      return;
+  }
+  if (!doSkip || !gamekeydown[key_use])
+
   if (nodrawers)                    // for comparative timing / profiling
     return;
 
@@ -218,7 +245,7 @@ void D_Display (void)
     return;
 
   // save the current screen if about to wipe
-  if ((wipe = gamestate != wipegamestate) && (V_GetMode() != VID_MODEGL))
+  if (wipe = gamestate != wipegamestate)
     wipe_StartScreen();
 
   if (gamestate != GS_LEVEL) { // Not a level
@@ -268,15 +295,30 @@ void D_Display (void)
       // The border may need redrawing next time if the border surrounds the screen,
       // and there is a menu being displayed
       borderwillneedredraw = menuactive && isborder && viewactive && (viewwidth != SCREENWIDTH);
+      // e6y
+      // I should do it because I call R_RenderPlayerView in all cases,
+      // not only if viewactive is true
+      borderwillneedredraw |= ((automapmode & am_active) && !(automapmode & am_overlay));
     }
     if (redrawborderstuff || (V_GetMode() == VID_MODEGL))
       R_DrawViewBorder();
 
+    // e6y
+    // Boom colormaps should be applied for everything in R_RenderPlayerView
+    use_boom_cm=true;
+
     // Now do the drawing
-    if (viewactive)
-      R_RenderPlayerView (&players[displayplayer]);
+    //e6y if (viewactive)
+    R_RenderPlayerView (&players[displayplayer]);
+
+    // e6y
+    // but should NOT be applied for automap, statusbar and HUD
+    use_boom_cm=false;
+    frame_fixedcolormap = 0;
+
     if (automapmode & am_active)
       AM_Drawer();
+
     ST_Drawer((viewheight != SCREENHEIGHT) || ((automapmode & am_active) && !(automapmode & am_overlay)), redrawborderstuff);
     if (V_GetMode() != VID_MODEGL)
       R_DrawViewBorder();
@@ -302,13 +344,21 @@ void D_Display (void)
   D_BuildNewTiccmds();
 #endif
 
+  HU_DrawDemoProgress(); //e6y
+
   // normal update
-  if (!wipe || (V_GetMode() == VID_MODEGL))
+  if (!wipe)
     I_FinishUpdate ();              // page flip or blit buffer
   else {
     // wipe update
     wipe_EndScreen();
     D_Wipe();
+  }
+
+  // e6y
+  // Don't thrash cpu during pausing or if the window doesnt have focus
+  if ( (paused && !walkcamera.type) || (!window_focused) ) {
+    I_uSleep(5000);
   }
 
   I_EndDisplay();
@@ -332,6 +382,14 @@ static const char *auto_shot_fname;
 
 static void D_DoomLoop(void)
 {
+#ifdef GL_DOOM
+  // Precache patches.
+  if (V_GetMode() == VID_MODEGL)
+  {
+    gld_PrecachePatches();
+  }
+#endif
+
   for (;;)
     {
       WasRenderedInTryRunTics = false;
@@ -358,12 +416,9 @@ static void D_DoomLoop(void)
 
       // killough 3/16/98: change consoleplayer to displayplayer
       if (players[displayplayer].mo) // cph 2002/08/10
-	S_UpdateSounds(players[displayplayer].mo);// move positional sounds
+        S_UpdateSounds(players[displayplayer].mo);// move positional sounds
 
-      if (V_GetMode() == VID_MODEGL ? 
-        !movement_smooth || !WasRenderedInTryRunTics :
-        !movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate
-      )
+      if (!movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate)
         {
         // Update display, next frame, with current state.
         D_Display();
@@ -374,6 +429,14 @@ static void D_DoomLoop(void)
   auto_shot_count = auto_shot_time;
   M_DoScreenShot(auto_shot_fname);
       }
+//e6y
+      if (avi_shot_fname && !doSkip)
+      {
+        avi_shot_num++;
+        sprintf(avi_shot_curr_fname, "%s%06.6i.tga", avi_shot_fname, avi_shot_num);
+        M_DoScreenShot(avi_shot_curr_fname);
+      }
+
     }
 }
 
@@ -583,7 +646,8 @@ void D_AddFile (const char *file, wad_source_t source)
 
 // killough 10/98: support -dehout filename
 // cph - made const, don't cache results
-static const char *D_dehout(void)
+//e6y static 
+const char *D_dehout(void)
 {
   int p = M_CheckParm("-dehout");
   if (!p)
@@ -604,7 +668,8 @@ static const char *D_dehout(void)
 // jff 4/19/98 Add routine to test IWAD for validity and determine
 // the gamemode from it. Also note if DOOM II, whether secret levels exist
 // CPhipps - const char* for iwadname, made static
-static void CheckIWAD(const char *iwadname,GameMode_t *gmode,boolean *hassec)
+//e6y static 
+void CheckIWAD(const char *iwadname,GameMode_t *gmode,boolean *hassec)
 {
   if ( !access (iwadname,R_OK) )
   {
@@ -1159,8 +1224,11 @@ static void D_DoomMainSetup(void)
     } while (rsp_found==true);
   }
 
+  // e6y: moved to main()
+  /*
   lprintf(LO_INFO,"M_LoadDefaults: Load system defaults.\n");
   M_LoadDefaults();              // load before initing other systems
+  */
 
   // figgi 09/18/00-- added switch to force classic bsp nodes
   if (M_CheckParm ("-forceoldbsp"))
@@ -1413,12 +1481,18 @@ static void D_DoomMainSetup(void)
           ProcessDehFile(fpath, D_dehout(), 0);
         else {
           D_AddFile(fpath,source_auto_load);
+          if (i != MAXLOADFILES - 1)
+            modifiedgame = true;
         }
-        modifiedgame = true;
         free(fpath);
       }
     }
   }
+
+//e6y
+#ifdef ALL_IN_ONE
+  D_AddFile("$$$all_in_one_lump$$$", source_pre);
+#endif
 
   // e6y: DEH files preloaded in wrong order
   // http://sourceforge.net/tracker/index.php?func=detail&aid=1418158&group_id=148658&atid=772943
@@ -1434,25 +1508,30 @@ static void D_DoomMainSetup(void)
 
   p = M_CheckParm ("-deh");
   if (p)
+  {
+    // the parms after p are deh/bex file names,
+    // until end of parms or another - preceded parm
+    // Ty 04/11/98 - Allow multiple -deh files in a row
+    //
+    // e6y
+    // reorganization of the code for looking for bex/deh patches
+    // in all standard dirs (%DOOMWADDIR%, etc)
+    while (++p != myargc && *myargv[p] != '-')
     {
-      char file[PATH_MAX+1];      // cph - localised
-      // the parms after p are deh/bex file names,
-      // until end of parms or another - preceded parm
-      // Ty 04/11/98 - Allow multiple -deh files in a row
-
-      while (++p != myargc && *myargv[p] != '-')
-        {
-          AddDefaultExtension(strcpy(file, myargv[p]), ".bex");
-          if (access(file, F_OK))  // nope
-            {
-              AddDefaultExtension(strcpy(file, myargv[p]), ".deh");
-              if (access(file, F_OK))  // still nope
-                I_Error("D_DoomMainSetup: Cannot find .deh or .bex file named %s",myargv[p]);
-            }
-          // during the beta we have debug output to dehout.txt
-          ProcessDehFile(file,D_dehout(),0);
-        }
+      char *file = NULL;
+      if ((file = I_FindFile(myargv[p], ".bex")) ||
+          (file = I_FindFile(myargv[p], ".deh")))
+      {
+        // during the beta we have debug output to dehout.txt
+        ProcessDehFile(file,D_dehout(),0);
+        free(file);
+      }
+      else
+      {
+        I_Error("D_DoomMainSetup: Cannot find .deh or .bex file named %s",myargv[p]);
+      }
     }
+  }
   // ty 03/09/98 end of do dehacked stuff
 
   // add any files specified on the command line with -file wadfile
@@ -1466,7 +1545,17 @@ static void D_DoomMainSetup(void)
       // until end of parms or another - preceded parm
       modifiedgame = true;            // homebrew levels
       while (++p != myargc && *myargv[p] != '-')
-        D_AddFile(myargv[p],source_pwad);
+      {
+        // e6y
+        // reorganization of the code for looking for wads
+        // in all standard dirs (%DOOMWADDIR%, etc)
+        char *file = I_FindFile(myargv[p], ".wad");
+        if (file)
+        {
+          D_AddFile(file,source_pwad);
+          free(file);
+        }
+      }
     }
 
   if (!(p = M_CheckParm("-playdemo")) || p >= myargc-1) {   /* killough */
@@ -1499,6 +1588,13 @@ static void D_DoomMainSetup(void)
   //jff 9/3/98 use logical output routine
   lprintf(LO_INFO,"D_InitNetGame: Checking for network game.\n");
   D_InitNetGame();
+
+  //e6y
+  e6y_InitCommandLine();
+#ifdef _WIN32
+  LauncherShow();
+#endif
+  CheckAutoDemo();
 
   //jff 9/3/98 use logical output routine
   lprintf(LO_INFO,"W_Init: Init WADfiles.\n");
@@ -1612,6 +1708,8 @@ static void D_DoomMainSetup(void)
     G_DeferedPlayDemo(myargv[p]);
     singledemo = true;          // quit after one demo
   }
+
+  G_CheckDemoContinue(); //e6y
 
   if (slot && ++slot < myargc)
     {

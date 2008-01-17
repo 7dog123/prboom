@@ -46,6 +46,18 @@ typedef enum {false, true} boolean;
 typedef unsigned char byte;
 #endif
 
+//e6y
+#ifndef MAX
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+#ifndef BETWEEN
+#define BETWEEN(l,u,x) ((l)>(x)?(l):(x)>(u)?(u):(x))
+#endif
+
+
 /* cph - Wrapper for the long long type, as Win32 used a different name.
  * Except I don't know what to test as it's compiler specific
  * Proff - I fixed it */
@@ -84,13 +96,13 @@ typedef enum {
   doom_12_compatibility,   /* Doom v1.2 */
   doom_1666_compatibility, /* Doom v1.666 */
   doom2_19_compatibility,  /* Doom & Doom 2 v1.9 */
-  ultdoom_compatibility,   /* Doom 2 v1.9 */
-  finaldoom_compatibility,     /* Final & Ultimate Doom v1.9, and Doom95 */
-  dosdoom_compatibility,     /* Early dosdoom & tasdoom */
-  tasdoom_compatibility,     /* Early dosdoom & tasdoom */
+  ultdoom_compatibility,   /* Ultimate Doom and Doom95 */
+  finaldoom_compatibility,     /* Final Doom */
+  dosdoom_compatibility,     /* DosDoom 0.47 */
+  tasdoom_compatibility,     /* TASDoom */
   boom_compatibility_compatibility,      /* Boom's compatibility mode */
-  boom_201_compatibility,                /* Compatible with Boom v2.01 */
-  boom_202_compatibility,                /* Compatible with Boom v2.01 */
+  boom_201_compatibility,                /* Boom v2.01 */
+  boom_202_compatibility,                /* Boom v2.02 */
   lxdoom_1_compatibility,                /* LxDoom v1.3.2+ */
   mbf_compatibility,                     /* MBF */
   prboom_1_compatibility,                /* PrBoom 2.03beta? */

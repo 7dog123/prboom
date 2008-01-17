@@ -1,30 +1,30 @@
 # Microsoft Developer Studio Project File - Name="Doom" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
-# ** NICHT BEARBEITEN **
+# ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
 CFG=Doom - Win32 Debug OpenGL NOASM
-!MESSAGE Dies ist kein gültiges Makefile. Zum Erstellen dieses Projekts mit NMAKE
-!MESSAGE verwenden Sie den Befehl "Makefile exportieren" und führen Sie den Befehl
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
 !MESSAGE 
 !MESSAGE NMAKE /f "Doom.mak".
 !MESSAGE 
-!MESSAGE Sie können beim Ausführen von NMAKE eine Konfiguration angeben
-!MESSAGE durch Definieren des Makros CFG in der Befehlszeile. Zum Beispiel:
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
 !MESSAGE NMAKE /f "Doom.mak" CFG="Doom - Win32 Debug OpenGL NOASM"
 !MESSAGE 
-!MESSAGE Für die Konfiguration stehen zur Auswahl:
+!MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "Doom - Win32 Release" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Debug" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Release OpenGL" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Debug OpenGL" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Release NOASM" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Release OpenGL NOASM" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Debug NOASM" (basierend auf  "Win32 (x86) Application")
-!MESSAGE "Doom - Win32 Debug OpenGL NOASM" (basierend auf  "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release OpenGL" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug OpenGL" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release NOASM" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Release OpenGL NOASM" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug NOASM" (based on "Win32 (x86) Application")
+!MESSAGE "Doom - Win32 Debug OpenGL NOASM" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -49,17 +49,17 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
-# ADD RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"Release/prboom.exe"
+# ADD LINK32 user32.lib gdi32.lib /nologo /subsystem:windows /machine:I386 /out:"Release/prboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
@@ -76,17 +76,17 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
-# ADD RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom.exe" /pdbtype:sept
+# ADD LINK32 user32.lib gdi32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom-plus.exe" /pdbtype:sept /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
@@ -104,18 +104,19 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "USE_SDL" /D "HIGHRES" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
-# ADD RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /profile /machine:I386 /out:"ReleaseGL/glboom.exe"
-# SUBTRACT LINK32 /debug
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib /nologo /subsystem:windows /profile /machine:I386 /out:"ReleaseGL/glboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
+# SUBTRACT LINK32 /debug /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
 
@@ -132,18 +133,18 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "USE_SDL" /D "HIGHRES" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
-# ADD RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugGL/glboom.exe"
-# SUBTRACT LINK32 /profile
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugGL/glboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
+# SUBTRACT LINK32 /profile /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
 
@@ -160,17 +161,17 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
-# ADD RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASM/prboom.exe"
+# ADD LINK32 user32.lib gdi32.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASM/prboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
@@ -188,18 +189,18 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /WX /GX /O2 /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "NDEBUG" /D "GL_DOOM" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
-# ADD RSC /l 0x407 /d "NDEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib sdl.lib opengl32.lib glu32.lib /nologo /subsystem:windows /machine:I386
 # SUBTRACT BASE LINK32 /profile /debug
-# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASMGL/glboom.exe"
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib /nologo /subsystem:windows /machine:I386 /out:"ReleaseNOASMGL/glboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile /debug
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
@@ -216,19 +217,19 @@ LINK32=link.exe
 # PROP Intermediate_Dir "DebugNOASM"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD BASE CPP /nologo /MD /W3 /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
-# ADD RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/prboom.exe" /pdbtype:sept
 # SUBTRACT BASE LINK32 /profile
-# ADD LINK32 user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASM/prboom.exe" /pdbtype:sept
+# ADD LINK32 user32.lib gdi32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASM/prboom-plus.exe" /pdbtype:sept /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
@@ -246,18 +247,18 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /D "I386_ASM" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /WX /Gm /GX /ZI /Od /I "../VisualC6" /I "../src" /I "../src/PCRELIB" /D "GL_DOOM" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "INSTRUMENTED" /D "RANGECHECK" /D "SIMPLECHECKS" /D "TIMEDIAG" /D "HEAPDUMP" /D "HAVE_CONFIG_H" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
-# ADD RSC /l 0x407 /d "_DEBUG"
+# ADD RSC /l 0x409 /i "./../VisualC6" /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugGL/glboom.exe"
 # SUBTRACT BASE LINK32 /profile
-# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib sdl.lib sdl_mixer.lib sdl_net.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASMGL/glboom.exe"
+# ADD LINK32 opengl32.lib glu32.lib user32.lib gdi32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"DebugNOASMGL/glboom-plus.exe" /libpath:"../src/PCRELIB/VisualC6/lib"
 # SUBTRACT LINK32 /profile
 
 !ENDIF 
@@ -377,6 +378,22 @@ SOURCE=..\src\dstrings.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\e6y.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\e6y.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\e6y_launcher.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\e6y_launcher.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\f_finale.c
 # End Source File
 # Begin Source File
@@ -475,7 +492,27 @@ SOURCE=..\src\i_main.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\SDL\i_network.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\i_network.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\i_pcsound.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\i_pcsound.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\i_simd.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\i_simd.h
 # End Source File
 # Begin Source File
 
@@ -492,10 +529,6 @@ SOURCE=..\src\SDL\i_system.c
 # Begin Source File
 
 SOURCE=..\src\i_system.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\SDL\i_network.c
 # End Source File
 # Begin Source File
 
@@ -587,11 +620,19 @@ SOURCE=..\src\md5.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\Mmus2mid.c
+SOURCE=..\src\memio.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\Mmus2mid.h
+SOURCE=..\src\memio.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\mus2mid.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\mus2mid.h
 # End Source File
 # Begin Source File
 
@@ -767,14 +808,6 @@ SOURCE=..\src\r_draw.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\r_drawcolumn.inl
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\r_drawspan.inl
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\r_filter.c
 # End Source File
 # Begin Source File
@@ -939,6 +972,99 @@ SOURCE=..\src\z_zone.h
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\src\gl_clipper.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\gl_detail.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\gl_hires.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\gl_intern.h
 
 !IF  "$(CFG)" == "Doom - Win32 Release"
@@ -1069,6 +1195,68 @@ SOURCE=..\src\gl_texture.c
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\gl_vertex.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\gl_wipe.c
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+!ENDIF 
+
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 
@@ -1092,6 +1280,69 @@ SOURCE=..\Icons\heada1.ico
 # Begin Source File
 
 SOURCE=..\Icons\icons.rc
+
+!IF  "$(CFG)" == "Doom - Win32 Release"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release NOASM"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Release OpenGL NOASM"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug NOASM"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ELSEIF  "$(CFG)" == "Doom - Win32 Debug OpenGL NOASM"
+
+# ADD BASE RSC /l 0x419 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT BASE RSC /i "./../VisualC6"
+# ADD RSC /l 0x409 /i "\andre\prg\doom\prboom-plus\branches\prboom-plus-24\Icons" /i "\andre\prg\prboom-plus\branches\prboom-plus-24\Icons"
+# SUBTRACT RSC /i "./../VisualC6"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\ICONS\prboom.exe.manifest
 # End Source File
 # Begin Source File
 
@@ -1100,6 +1351,30 @@ SOURCE=..\Icons\resource.h
 # Begin Source File
 
 SOURCE=..\Icons\skull.ico
+# End Source File
+# End Group
+# Begin Group "PCSound Source Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pcsound\pcsound.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pcsound\pcsound.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pcsound\pcsound_linux.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pcsound\pcsound_sdl.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pcsound\pcsound_win32.c
 # End Source File
 # End Group
 # Begin Source File

@@ -41,6 +41,7 @@
 #include "r_fps.h"
 #include "v_video.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 #define MINZ        (FRACUNIT*4)
 #define BASEYCENTER 100
@@ -64,6 +65,7 @@ typedef struct {
 fixed_t pspritescale;
 fixed_t pspriteiscale;
 // proff 11/06/98: Added for high-res
+fixed_t pspritexscale;
 fixed_t pspriteyscale;
 
 // constant arrays
@@ -467,11 +469,13 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
   int heightsec;      // killough 3/27/98
 
   // transform the origin point
+  //e6y
   fixed_t tr_x, tr_y;
   fixed_t fx, fy, fz;
   fixed_t gxt, gyt;
   fixed_t tz;
   int width;
+  boolean mlook = GetMouseLook() || (render_fov > FOV90);
 
   if (movement_smooth)
   {
@@ -493,6 +497,13 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
 
   tz = gxt-gyt;
 
+//e6y
+  if (V_GetMode() == VID_MODEGL && !render_paperitems && mlook)
+  {
+    if (tz < -(FRACUNIT*64))
+      return;
+  } else
+
     // thing is behind view plane?
   if (tz < MINZ)
     return;
@@ -502,6 +513,13 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
   gxt = -FixedMul(tr_x,viewsin);
   gyt = FixedMul(tr_y,viewcos);
   tx = -(gyt+gxt);
+
+//e6y
+  if (V_GetMode() == VID_MODEGL && !render_paperitems && mlook)
+  {
+    if (tz >= MINZ && (D_abs(tx)>>5) > tz)
+      return;
+  } else
 
   // too far off the side?
   if (D_abs(tx)>(tz<<2))
@@ -565,12 +583,17 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
   }
 
   // off the side?
+  if(!mlook)//e6y
   if (x1 > viewwidth || x2 < 0)
     return;
 
   // killough 4/9/98: clip things which are out of view due to height
-  if (fz  > viewz + FixedDiv(centeryfrac, xscale) ||
-      gzt < viewz - FixedDiv(centeryfrac-viewheight, xscale))
+  if(!GetMouseLook() && render_fov <= FOV90)//e6y
+
+  // e6y: fix of hanging decoration disappearing in Batman Doom MAP02
+  // centeryfrac -> viewheightfrac
+  if (fz  > viewz + FixedDiv(viewheightfrac, xscale) ||
+      gzt < viewz - FixedDiv(viewheightfrac-viewheight, xscale))
     return;
 
     // killough 3/27/98: exclude things totally separated
@@ -592,6 +615,11 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
           fz >= sectors[heightsec].ceilingheight)
         return;
     }
+
+  //e6y FIXME!!!
+  if (thing == players[displayplayer].mo && walkcamera.type != 2)
+//  if (thing->player && thing->player == &players[displayplayer] && walkcamera.type != 2)
+    return;
 
   // store information in a vissprite
   vis = R_NewVisSprite ();
@@ -773,7 +801,62 @@ static void R_DrawPSprite (pspdef_t *psp, int lightlevel)
   else if (psp->state->frame & FF_FULLBRIGHT)
     vis->colormap = fullcolormap;            // full bright // killough 3/20/98
   else
-    vis->colormap = R_ColourMap(lightlevel,pspritescale);  // local light
+    // e6y
+    // In PRBoom the player's weapon is displayed much darker than in other ports.
+    // Eternity, Chocolate Doom, and ZDoom are all identical.
+    // This patch corrects the bug in software rendering.
+    //
+    // old code: vis->colormap = R_ColourMap(lightlevel,pspritescale);  // local light
+    //
+    // dynamic version of new code (slower):
+    // {
+    //   int lightnum = BETWEEN(0, LIGHTLEVELS-1, (lightlevel >> LIGHTSEGSHIFT)+extralight);
+    //   int level = ((LIGHTLEVELS-1-lightnum)*2)*NUMCOLORMAPS/LIGHTLEVELS -
+    //     (MAXLIGHTSCALE-1)*SCREENWIDTH/viewwidth/2;
+    //   vis->colormap = (fixedcolormap ? fixedcolormap : fullcolormap) +
+    //     BETWEEN(0, NUMCOLORMAPS-1, level) * 256;
+    // }
+    vis->colormap = (fixedcolormap ? fixedcolormap : fullcolormap) + 
+      scalelight_offset[BETWEEN(0, LIGHTLEVELS-1, 
+      (lightlevel >> LIGHTSEGSHIFT)+extralight)][MAXLIGHTSCALE-1];
+
+  //e6y: interpolation for weapon bobbing
+  if (movement_smooth)
+  {
+    typedef struct interpolate_s
+    {
+      int x1;
+      int x1_prev;
+      int texturemid;
+      int texturemid_prev;
+      int lump;
+    } psp_interpolate_t;
+
+    static psp_interpolate_t psp_inter;
+
+    if (realframe)
+    {
+      psp_inter.x1 = psp_inter.x1_prev;
+      psp_inter.texturemid = psp_inter.texturemid_prev;
+    }
+
+    psp_inter.x1_prev = vis->x1;
+    psp_inter.texturemid_prev = vis->texturemid;
+
+    if (lump == psp_inter.lump)
+    {
+      int deltax = vis->x2 - vis->x1;
+      vis->x1 = psp_inter.x1 + FixedMul (tic_vars.frac, (vis->x1 - psp_inter.x1));
+      vis->x2 = vis->x1 + deltax;
+      vis->texturemid = psp_inter.texturemid + FixedMul (tic_vars.frac, (vis->texturemid - psp_inter.texturemid));
+    }
+    else
+    {
+      psp_inter.x1 = vis->x1;
+      psp_inter.texturemid = vis->texturemid;
+      psp_inter.lump=lump;
+    }
+  }
 
   // proff 11/99: don't use software stuff in OpenGL
   if (V_GetMode() != VID_MODEGL)
@@ -814,6 +897,8 @@ void R_DrawPlayerSprites(void)
 {
   int i, lightlevel = viewplayer->mo->subsector->sector->lightlevel;
   pspdef_t *psp;
+
+  if (walkcamera.type != 0) return;//e6y
 
   // clip to screen bounds
   mfloorclip = screenheightarray;

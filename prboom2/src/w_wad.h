@@ -71,6 +71,12 @@ typedef enum {
   source_pwad,      // pwad file load
   source_lmp,       // lmp file load
   source_net        // CPhipps
+
+  //e6y
+//  ,source_deh_auto_load
+  ,source_deh
+  ,source_err
+
 } wad_source_t;
 
 // CPhipps - changed wad init
@@ -113,7 +119,12 @@ typedef struct
   wadfile_info_t *wadfile;
   int position;
   wad_source_t source;
+  int flags; //e6y
 } lumpinfo_t;
+
+// e6y: lump flags
+#define LUMP_STATIC 0x00000001 /* assigned gltexture should be static */
+#define LUMP_CM2RGB 0x00000002 /* for fake colormap for hires patches */
 
 extern lumpinfo_t *lumpinfo;
 extern int        numlumps;

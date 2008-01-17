@@ -52,6 +52,7 @@
 #include "doomtype.h"
 #include "lprintf.h"
 #include "i_main.h"
+#include "e6y.h"//e6y
 #include "m_argv.h"
 
 int cons_error_mask = -1-LO_INFO; /* all but LO_INFO when redir'd */
@@ -375,8 +376,23 @@ void I_Error(const char *error, ...)
 #ifdef _MSC_VER
   if (!M_CheckParm ("-nodraw")) {
     //Init_ConsoleWin();
-    MessageBox(con_hWnd,errmsg,"PrBoom",MB_OK | MB_TASKMODAL | MB_TOPMOST);
+    MessageBox(con_hWnd,errmsg,"PrBoom-Plus",MB_OK | MB_TASKMODAL | MB_TOPMOST);
   }
 #endif
   I_SafeExit(-1);
+}
+
+// e6y
+int SNPRINTF(char *s, size_t n, const char *format, ...)
+{
+  int result;
+  va_list argptr;
+  va_start(argptr, format);
+#ifdef HAVE_VSNPRINTF
+  result = vsnprintf(s, n, format, argptr);
+#else
+  result = vsprintf(s, format, argptr);
+#endif
+  va_end(argptr);
+  return result;
 }

@@ -339,6 +339,10 @@ typedef struct mobj_s
 
     // killough 8/2/98: friction properties part of sectors,
     // not objects -- removed friction properties from here
+    // e6y: restored friction properties here
+    // Friction values for the sector the object is in
+    int friction;                                           // phares 3/17/98
+    int movefactor;
 
     // a linked list of sectors where this object appears
     struct msecnode_s* touching_sectorlist;                 // phares 3/14/98
@@ -346,6 +350,10 @@ typedef struct mobj_s
     fixed_t             PrevX;
     fixed_t             PrevY;
     fixed_t             PrevZ;
+
+    //e6y
+    angle_t             pitch;  // orientation
+    int index;
 
     fixed_t             pad; // cph - needed so I can get the size unambiguously on amd64
 
@@ -391,7 +399,7 @@ void    P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage);
 mobj_t  *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 void    P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
 boolean P_IsDoomnumAllowed(int doomnum);
-void    P_SpawnMapThing (const mapthing_t*  mthing);
+void    P_SpawnMapThing (const mapthing_t*  mthing, int index);//e6y
 void    P_SpawnPlayer(int n, const mapthing_t *mthing);
 void    P_CheckMissileSpawn(mobj_t*);  // killough 8/2/98
 void    P_ExplodeMissile(mobj_t*);    // killough

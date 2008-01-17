@@ -62,11 +62,14 @@
 #include "lprintf.h"
 #include "gl_intern.h"
 #include "gl_struct.h"
+#include "p_spec.h"
+#include "e6y.h"
 
 /* TEXTURES */
 static GLTexture **gld_GLTextures=NULL;
 /* PATCHES FLATS SPRITES */
 static GLTexture **gld_GLPatchTextures=NULL;
+static GLTexture **gld_GLStaticPatchTextures=NULL;
 
 boolean use_mipmapping=false;
 
@@ -77,11 +80,21 @@ int gl_tex_format=GL_RGB5_A1;
 //int gl_tex_format=GL_RGBA4;
 //int gl_tex_format=GL_RGBA2;
 
+int gl_boom_colormaps = -1;
+int gl_boom_colormaps_default;
+
 GLTexture *last_gltexture=NULL;
 int last_cm=-1;
 
+int test_voodoo;
+
 int transparent_pal_index;
 unsigned char gld_palmap[256];
+
+void gld_ResetLastTexture(void)
+{
+  last_gltexture = NULL;
+}
 
 void gld_InitPalettedTextures(void)
 {
@@ -121,44 +134,97 @@ int gld_GetTexDimension(int value)
   return i;
 }
 
+// e6y
+// Creates TIntDynArray
+void* NewIntDynArray(int dimCount, int *dims)
+{
+  int i, dim;
+  int tableOffset;
+  int bufferSize = 0;
+  int tableSize = 1;
+  void* buffer;
+
+  for(dim = 0; dim < dimCount - 1; dim++)
+  {
+    tableSize *= dims[dim];
+    bufferSize += sizeof(int*) * tableSize;
+  }
+
+  bufferSize += sizeof(int) * tableSize * dims[dimCount - 1];
+
+  buffer = malloc(bufferSize);
+  memset(buffer, 0, bufferSize);
+
+  if(!buffer)
+  {
+    return 0;
+  }
+
+  tableOffset = 0;
+  tableSize = 1;
+
+  for(dim = 0; dim < dimCount - 1; dim++)
+  {
+    tableSize *= dims[dim];
+    tableOffset += tableSize;
+
+    for(i = 0; i < tableSize; i++)
+    {
+      if(dim < dimCount - 2)
+      {
+        *((int***)buffer + tableOffset - tableSize + i) =
+          (((int**)buffer + tableOffset + i*dims[dim + 1]));
+      }
+      else
+      {
+        *((int**)buffer + tableOffset - tableSize + i) =
+          ((int*)((int**)buffer + tableOffset) + i*dims[dim + 1]);
+      }
+    }
+  }
+
+  return buffer;
+}
+
+// e6y
+// The common function for adding textures and patches
+// Used by gld_AddNewGLTexture and gld_AddNewGLPatchTexture
+static GLTexture *gld_AddNewGLTexItem(int num, int count, GLTexture ***items)
+{
+  if (num<0)
+    return NULL;
+  if (num>=count)
+    return NULL;
+  if (!(*items))
+  {
+    (*items)=Z_Calloc(count, sizeof(GLTexture *),PU_STATIC,0);
+  }
+  if (!(*items)[num])
+  {
+    (*items)[num]=Z_Calloc(1, sizeof(GLTexture),PU_STATIC,0);
+    (*items)[num]->textype=GLDT_UNREGISTERED;
+
+    if (gl_boom_colormaps)
+    {
+      GLTexture *texture = (*items)[num];
+      int dims[3] = {(CR_LIMIT+MAXPLAYERS), (NUMCOLORMAPS+1), numcolormaps};
+      texture->glTexExID = NewIntDynArray(3, dims);
+    }
+  }
+  return (*items)[num];
+}
+
 static GLTexture *gld_AddNewGLTexture(int texture_num)
 {
-  if (texture_num<0)
-    return NULL;
-  if (texture_num>=numtextures)
-    return NULL;
-  if (!gld_GLTextures)
-  {
-    gld_GLTextures=Z_Malloc(numtextures*sizeof(GLTexture *),PU_STATIC,0);
-    memset(gld_GLTextures,0,numtextures*sizeof(GLTexture *));
-  }
-  if (!gld_GLTextures[texture_num])
-  {
-    gld_GLTextures[texture_num]=Z_Malloc(sizeof(GLTexture),PU_STATIC,0);
-    memset(gld_GLTextures[texture_num], 0, sizeof(GLTexture));
-    gld_GLTextures[texture_num]->textype=GLDT_UNREGISTERED;
-  }
-  return gld_GLTextures[texture_num];
+  return gld_AddNewGLTexItem(texture_num, numtextures, &gld_GLTextures);
 }
 
 static GLTexture *gld_AddNewGLPatchTexture(int lump)
 {
-  if (lump<0)
-    return NULL;
-  if (lump>=numlumps)
-    return NULL;
-  if (!gld_GLPatchTextures)
-  {
-    gld_GLPatchTextures=Z_Malloc(numlumps*sizeof(GLTexture *),PU_STATIC,0);
-    memset(gld_GLPatchTextures,0,numlumps*sizeof(GLTexture *));
-  }
-  if (!gld_GLPatchTextures[lump])
-  {
-    gld_GLPatchTextures[lump]=Z_Malloc(sizeof(GLTexture),PU_STATIC,0);
-    memset(gld_GLPatchTextures[lump], 0, sizeof(GLTexture));
-    gld_GLPatchTextures[lump]->textype=GLDT_UNREGISTERED;
-  }
-  return gld_GLPatchTextures[lump];
+  if (lumpinfo[lump].flags & LUMP_STATIC)
+    return gld_AddNewGLTexItem(lump, numlumps, &gld_GLStaticPatchTextures);
+  else
+    return gld_AddNewGLTexItem(lump, numlumps, &gld_GLPatchTextures);
 }
 
 void gld_SetTexturePalette(GLenum target)
@@ -207,6 +273,11 @@ static void gld_AddPatchToTexture_UnTranslated(GLTexture *gltexture, unsigned ch
     xs=-originx;
   if ((xe+originx)>gltexture->realtexwidth)
     xe+=(gltexture->realtexwidth-(xe+originx));
+  
+  //e6y
+  if (patch->flags&PATCH_HASHOLES)
+    gltexture->flags |= GLTEXTURE_HASHOLES;
+
   for (x=xs;x<xe;x++)
   {
 #ifdef RANGECHECK
@@ -255,9 +326,20 @@ static void gld_AddPatchToTexture_UnTranslated(GLTexture *gltexture, unsigned ch
             return;
           }
 #endif
-          buffer[pos]=playpal[source[j]*3];
-          buffer[pos+1]=playpal[source[j]*3+1];
-          buffer[pos+2]=playpal[source[j]*3+2];
+          //e6y: Boom's color maps
+          if (gl_boom_colormaps && use_boom_cm && !(comp[comp_skymap] && (gltexture->flags&GLTEXTURE_SKY)))
+          {
+            const lighttable_t *colormap = (fixedcolormap ? fixedcolormap : fullcolormap);
+            buffer[pos+0]=playpal[colormap[source[j]]*3+0];
+            buffer[pos+1]=playpal[colormap[source[j]]*3+1];
+            buffer[pos+2]=playpal[colormap[source[j]]*3+2];
+          }
+          else
+          {
+            buffer[pos+0]=playpal[source[j]*3+0];
+            buffer[pos+1]=playpal[source[j]*3+1];
+            buffer[pos+2]=playpal[source[j]*3+2];
+          }
           buffer[pos+3]=255;
         }
       }
@@ -301,6 +383,11 @@ void gld_AddPatchToTexture(GLTexture *gltexture, unsigned char *buffer, const rp
     xs=-originx;
   if ((xe+originx)>gltexture->realtexwidth)
     xe+=(gltexture->realtexwidth-(xe+originx));
+
+  //e6y
+  if (patch->flags&PATCH_HASHOLES)
+    gltexture->flags |= GLTEXTURE_HASHOLES;
+
   for (x=xs;x<xe;x++)
   {
 #ifdef RANGECHECK
@@ -349,9 +436,20 @@ void gld_AddPatchToTexture(GLTexture *gltexture, unsigned char *buffer, const rp
             return;
           }
 #endif
-          buffer[pos]=playpal[outr[source[j]]*3];
-          buffer[pos+1]=playpal[outr[source[j]]*3+1];
-          buffer[pos+2]=playpal[outr[source[j]]*3+2];
+          //e6y: Boom's color maps
+          if (gl_boom_colormaps && use_boom_cm)
+          {
+            const lighttable_t *colormap = (fixedcolormap ? fixedcolormap : fullcolormap);
+            buffer[pos+0]=playpal[colormap[outr[source[j]]]*3+0];
+            buffer[pos+1]=playpal[colormap[outr[source[j]]]*3+1];
+            buffer[pos+2]=playpal[colormap[outr[source[j]]]*3+2];
+          }
+          else
+          {
+            buffer[pos+0]=playpal[outr[source[j]]*3+0];
+            buffer[pos+1]=playpal[outr[source[j]]*3+1];
+            buffer[pos+2]=playpal[outr[source[j]]*3+2];
+          }
           buffer[pos+3]=255;
         }
       }
@@ -399,9 +497,20 @@ static void gld_AddFlatToTexture(GLTexture *gltexture, unsigned char *buffer, co
           return;
         }
 #endif
-        buffer[pos]=playpal[flat[y*64+x]*3];
-        buffer[pos+1]=playpal[flat[y*64+x]*3+1];
-        buffer[pos+2]=playpal[flat[y*64+x]*3+2];
+        //e6y: Boom's color maps
+        if (gl_boom_colormaps && use_boom_cm)
+        {
+          const lighttable_t *colormap = (fixedcolormap ? fixedcolormap : fullcolormap);
+          buffer[pos+0]=playpal[colormap[flat[y*64+x]]*3+0];
+          buffer[pos+1]=playpal[colormap[flat[y*64+x]]*3+1];
+          buffer[pos+2]=playpal[colormap[flat[y*64+x]]*3+2];
+        }
+        else
+        {
+          buffer[pos+0]=playpal[flat[y*64+x]*3+0];
+          buffer[pos+1]=playpal[flat[y*64+x]*3+1];
+          buffer[pos+2]=playpal[flat[y*64+x]*3+2];
+        }
         buffer[pos+3]=255;
       }
     }
@@ -409,21 +518,14 @@ static void gld_AddFlatToTexture(GLTexture *gltexture, unsigned char *buffer, co
   }
 }
 
-GLTexture *gld_RegisterTexture(int texture_num, boolean mipmap)
+//e6y: "force" flag for loading texture with zero index
+GLTexture *gld_RegisterTexture(int texture_num, boolean mipmap, boolean force)
 {
   GLTexture *gltexture;
 
-  if (texture_num==NO_TEXTURE)
-// e6y: about isskytexture hack
-// The sky in the third episode of Requiem was not drawn.
-// It did not work correctly because the SKY3 has a zero index in the TEXTURE1 table.
-// Textures with a zero (FALSE) index are not displayed in vanilla,
-// AASHITTY in doom2.wad for example.
-// But the sky textures are processed by different code in DOOM,
-// which does not have this bug.
-// This flag is set in SKYTEXTURE macro and checked here for skipping unnecessary return
-    if (!isskytexture || texture_num!=skytexture)
-      return NULL;
+  //e6y: textures with zero index should be loaded sometimes
+  if (texture_num==NO_TEXTURE && !force)
+    return NULL;
   gltexture=gld_AddNewGLTexture(texture_num);
   if (!gltexture)
     return NULL;
@@ -444,8 +546,8 @@ GLTexture *gld_RegisterTexture(int texture_num, boolean mipmap)
     gltexture->topoffset=0;
     gltexture->tex_width=gld_GetTexDimension(gltexture->realtexwidth);
     gltexture->tex_height=gld_GetTexDimension(gltexture->realtexheight);
-    gltexture->width=min(gltexture->realtexwidth, gltexture->tex_width);
-    gltexture->height=min(gltexture->realtexheight, gltexture->tex_height);
+    gltexture->width=MIN(gltexture->realtexwidth, gltexture->tex_width);
+    gltexture->height=MIN(gltexture->realtexheight, gltexture->tex_height);
     gltexture->buffer_width=gltexture->tex_width;
     gltexture->buffer_height=gltexture->tex_height;
 #ifdef USE_GLU_IMAGESCALE
@@ -461,12 +563,18 @@ GLTexture *gld_RegisterTexture(int texture_num, boolean mipmap)
       gltexture->buffer_width=gltexture->realtexwidth;
       gltexture->buffer_height=gltexture->realtexheight;
     }
+    
+    //e6y: right/bottom UV coordinates for texture drawing
+    gltexture->scalexfac=(float)gltexture->width/(float)gltexture->tex_width;
+    gltexture->scaleyfac=(float)gltexture->height/(float)gltexture->tex_height;
+
     gltexture->buffer_size=gltexture->buffer_width*gltexture->buffer_height*4;
     if (gltexture->realtexwidth>gltexture->buffer_width)
       return gltexture;
     if (gltexture->realtexheight>gltexture->buffer_height)
       return gltexture;
     gltexture->textype=GLDT_TEXTURE;
+    gltexture->flags = 0;//e6y
   }
   return gltexture;
 }
@@ -476,10 +584,12 @@ void gld_BindTexture(GLTexture *gltexture)
   const rpatch_t *patch;
   int i;
   unsigned char *buffer;
+  int *glTexID;
 
-  if (gltexture==last_gltexture)
+  if (gltexture==last_gltexture && boom_cm==last_boom_cm && frame_fixedcolormap==last_fixedcolormap)
     return;
   last_gltexture=gltexture;
+  last_fixedcolormap=frame_fixedcolormap;
   if (!gltexture) {
     glBindTexture(GL_TEXTURE_2D, 0);
     last_gltexture = NULL;
@@ -493,9 +603,21 @@ void gld_BindTexture(GLTexture *gltexture)
     last_cm = -1;
     return;
   }
-  if (gltexture->glTexID[CR_DEFAULT]!=0)
+
+  //e6y
+  if (gl_boom_colormaps)
+    glTexID = &gltexture->glTexExID[CR_DEFAULT][frame_fixedcolormap][boom_cm];
+  else
+    glTexID = &gltexture->glTexID[CR_DEFAULT];
+
+  if (*glTexID!=0)
   {
-    glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+    glBindTexture(GL_TEXTURE_2D, *glTexID);
+
+     // e6y: old unnecessary code under check now
+    if (!test_voodoo)
+      return;
+
     glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
@@ -504,6 +626,10 @@ void gld_BindTexture(GLTexture *gltexture)
     if (i==GL_TRUE)
       return;
   }
+
+  if (gld_LoadHiresTex(gltexture, glTexID, CR_DEFAULT))
+    return;
+
   buffer=(unsigned char*)Z_Malloc(gltexture->buffer_size,PU_STATIC,0);
   if (!(gltexture->mipmap & use_mipmapping) & gl_paletted_texture)
     memset(buffer,transparent_pal_index,gltexture->buffer_size);
@@ -514,9 +640,9 @@ void gld_BindTexture(GLTexture *gltexture)
                         0, 0,
                         CR_DEFAULT, !(gltexture->mipmap & use_mipmapping) & gl_paletted_texture);
   R_UnlockTextureCompositePatchNum(gltexture->index);
-  if (gltexture->glTexID[CR_DEFAULT]==0)
-    glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
-  glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+  if (*glTexID==0)
+    glGenTextures(1,glTexID);
+  glBindTexture(GL_TEXTURE_2D, *glTexID);
 #ifdef USE_GLU_MIPMAP
   if (gltexture->mipmap & use_mipmapping)
   {
@@ -527,8 +653,8 @@ void gld_BindTexture(GLTexture *gltexture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
-    if (gl_texture_filter_anisotropic)
-      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0);
+    if (gl_use_texture_filter_anisotropic)
+      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat)gl_texture_filter_anisotropic);
   }
   else
 #endif /* USE_GLU_MIPMAP */
@@ -593,22 +719,33 @@ GLTexture *gld_RegisterPatch(int lump, int cm)
     gltexture->textype=GLDT_BROKEN;
     gltexture->index=lump;
     gltexture->mipmap=false;
+    
+    //e6y
+    gltexture->wrap_mode = (patch->flags&PATCH_REPEAT?
+      (GL_REPEAT) :
+      (glversion >= OPENGL_VERSION_1_2 ? GL_CLAMP_TO_EDGE : GL_CLAMP));
+
     gltexture->realtexwidth=patch->width;
     gltexture->realtexheight=patch->height;
     gltexture->leftoffset=patch->leftoffset;
     gltexture->topoffset=patch->topoffset;
     gltexture->tex_width=gld_GetTexDimension(gltexture->realtexwidth);
     gltexture->tex_height=gld_GetTexDimension(gltexture->realtexheight);
-    gltexture->width=min(gltexture->realtexwidth, gltexture->tex_width);
-    gltexture->height=min(gltexture->realtexheight, gltexture->tex_height);
+    gltexture->width=MIN(gltexture->realtexwidth, gltexture->tex_width);
+    gltexture->height=MIN(gltexture->realtexheight, gltexture->tex_height);
     gltexture->buffer_width=gltexture->tex_width;
     gltexture->buffer_height=gltexture->tex_height;
 #ifdef USE_GLU_IMAGESCALE
-    gltexture->width=min(gltexture->realtexwidth, gltexture->tex_width);
-    gltexture->height=min(gltexture->realtexheight, gltexture->tex_height);
-    gltexture->buffer_width=max(gltexture->realtexwidth, gltexture->tex_width);
-    gltexture->buffer_height=max(gltexture->realtexheight, gltexture->tex_height);
+    gltexture->width=MIN(gltexture->realtexwidth, gltexture->tex_width);
+    gltexture->height=MIN(gltexture->realtexheight, gltexture->tex_height);
+    gltexture->buffer_width=MAX(gltexture->realtexwidth, gltexture->tex_width);
+    gltexture->buffer_height=MAX(gltexture->realtexheight, gltexture->tex_height);
 #endif
+
+    //e6y: right/bottom UV coordinates for patch drawing
+    gltexture->scalexfac=(float)gltexture->width/(float)gltexture->tex_width;
+    gltexture->scaleyfac=(float)gltexture->height/(float)gltexture->tex_height;
+
     gltexture->buffer_size=gltexture->buffer_width*gltexture->buffer_height*4;
     R_UnlockPatchNum(lump);
     if (gltexture->realtexwidth>gltexture->buffer_width)
@@ -625,11 +762,15 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
   const rpatch_t *patch;
   int i;
   unsigned char *buffer;
+  int *glTexID;
 
-  if ((gltexture==last_gltexture) && (cm==last_cm))
+  cm = ((gltexture->flags & GLTEXTURE_HIRES) ? CR_DEFAULT : cm);
+
+  if ((gltexture==last_gltexture) && (cm==last_cm) && (boom_cm==last_boom_cm) && (frame_fixedcolormap==last_fixedcolormap))
     return;
   last_gltexture=gltexture;
   last_cm=cm;
+  last_fixedcolormap=frame_fixedcolormap;
   if (!gltexture)
     return;
   if (gltexture->textype!=GLDT_PATCH)
@@ -639,9 +780,21 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
     last_cm = -1;
     return;
   }
-  if (gltexture->glTexID[cm]!=0)
+
+  //e6y
+  if (gl_boom_colormaps)
+    glTexID = &gltexture->glTexExID[cm][frame_fixedcolormap][boom_cm];
+  else
+    glTexID = &gltexture->glTexID[cm];
+
+  if (*glTexID!=0)
   {
-    glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+    glBindTexture(GL_TEXTURE_2D, *glTexID);
+
+    // e6y: old unnecessary code under check now
+    if (!test_voodoo)
+      return;
+
     glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
@@ -650,6 +803,10 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
     if (i==GL_TRUE)
       return;
   }
+
+  if (gld_LoadHiresTex(gltexture, glTexID, cm))
+    return;
+
   patch=R_CachePatchNum(gltexture->index);
   buffer=(unsigned char*)Z_Malloc(gltexture->buffer_size,PU_STATIC,0);
   if (gl_paletted_texture)
@@ -657,9 +814,26 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
   else
     memset(buffer,0,gltexture->buffer_size);
   gld_AddPatchToTexture(gltexture, buffer, patch, 0, 0, cm, gl_paletted_texture);
-  if (gltexture->glTexID[cm]==0)
-    glGenTextures(1,&gltexture->glTexID[cm]);
-  glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[cm]);
+
+  // e6y
+  // Post-process the texture data after the buffer has been created.
+  // Smooth the edges of transparent fields in the texture.
+  //
+  // It is a workaround to set the color of all transparent pixels
+  // that border on a non-transparent pixel to the color
+  // of one bordering non-transparent pixel.
+  // It is necessary for textures that are not power of two
+  // to avoid the lines (boxes) around the elements that change
+  // on the intermission screens in Doom1 (E2, E3)
+  if (gltexture->tex_width != gltexture->realtexwidth || 
+      gltexture->tex_height != gltexture->realtexheight)
+  {
+    SmoothEdges(buffer, gltexture->tex_width, gltexture->tex_height);
+  }
+
+  if (*glTexID==0)
+    glGenTextures(1,glTexID);
+  glBindTexture(GL_TEXTURE_2D, *glTexID);
 #ifdef USE_GLU_IMAGESCALE
   if ((gltexture->buffer_width>gltexture->tex_width) ||
       (gltexture->buffer_height>gltexture->tex_height)
@@ -696,8 +870,8 @@ void gld_BindPatch(GLTexture *gltexture, int cm)
                       0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
       }
   }
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gltexture->wrap_mode);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gltexture->wrap_mode);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_filter);
   Z_Free(buffer);
@@ -722,8 +896,8 @@ GLTexture *gld_RegisterFlat(int lump, boolean mipmap)
     gltexture->topoffset=0;
     gltexture->tex_width=gld_GetTexDimension(gltexture->realtexwidth);
     gltexture->tex_height=gld_GetTexDimension(gltexture->realtexheight);
-    gltexture->width=min(gltexture->realtexwidth, gltexture->tex_width);
-    gltexture->height=min(gltexture->realtexheight, gltexture->tex_height);
+    gltexture->width=MIN(gltexture->realtexwidth, gltexture->tex_width);
+    gltexture->height=MIN(gltexture->realtexheight, gltexture->tex_height);
     gltexture->buffer_width=gltexture->tex_width;
     gltexture->buffer_height=gltexture->tex_height;
 #ifdef USE_GLU_IMAGESCALE
@@ -739,6 +913,11 @@ GLTexture *gld_RegisterFlat(int lump, boolean mipmap)
       gltexture->buffer_width=gltexture->realtexwidth;
       gltexture->buffer_height=gltexture->realtexheight;
     }
+
+    //e6y: right/bottom UV coordinates for flat drawing
+    gltexture->scalexfac=(float)gltexture->width/(float)gltexture->tex_width;
+    gltexture->scaleyfac=(float)gltexture->height/(float)gltexture->tex_height;
+
     gltexture->buffer_size=gltexture->buffer_width*gltexture->buffer_height*4;
     if (gltexture->realtexwidth>gltexture->buffer_width)
       return gltexture;
@@ -754,10 +933,12 @@ void gld_BindFlat(GLTexture *gltexture)
   const unsigned char *flat;
   int i;
   unsigned char *buffer;
+  int *glTexID;
 
-  if (gltexture==last_gltexture)
+  if (gltexture==last_gltexture && boom_cm==last_boom_cm && frame_fixedcolormap==last_fixedcolormap)
     return;
   last_gltexture=gltexture;
+  last_fixedcolormap=frame_fixedcolormap;
   if (!gltexture)
     return;
   if (gltexture->textype!=GLDT_FLAT)
@@ -767,9 +948,21 @@ void gld_BindFlat(GLTexture *gltexture)
     last_cm = -1;
     return;
   }
-  if (gltexture->glTexID[CR_DEFAULT]!=0)
+
+  //e6y
+  if (gl_boom_colormaps)
+    glTexID = &gltexture->glTexExID[CR_DEFAULT][frame_fixedcolormap][boom_cm];
+  else
+    glTexID = &gltexture->glTexID[CR_DEFAULT];
+
+  if (*glTexID!=0)
   {
-    glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+    glBindTexture(GL_TEXTURE_2D, *glTexID);
+    
+    // e6y: old unnecessary code under check now
+    if (!test_voodoo)
+      return;
+
     glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
 #ifdef _DEBUG
     if (i!=GL_TRUE)
@@ -778,6 +971,10 @@ void gld_BindFlat(GLTexture *gltexture)
     if (i==GL_TRUE)
       return;
   }
+
+  if (gld_LoadHiresTex(gltexture, glTexID, CR_DEFAULT))
+    return;
+
   flat=W_CacheLumpNum(gltexture->index);
   buffer=(unsigned char*)Z_Malloc(gltexture->buffer_size,PU_STATIC,0);
   if (!(gltexture->mipmap & use_mipmapping) & gl_paletted_texture)
@@ -785,9 +982,9 @@ void gld_BindFlat(GLTexture *gltexture)
   else
     memset(buffer,0,gltexture->buffer_size);
   gld_AddFlatToTexture(gltexture, buffer, flat, !(gltexture->mipmap & use_mipmapping) & gl_paletted_texture);
-  if (gltexture->glTexID[CR_DEFAULT]==0)
-    glGenTextures(1,&gltexture->glTexID[CR_DEFAULT]);
-  glBindTexture(GL_TEXTURE_2D, gltexture->glTexID[CR_DEFAULT]);
+  if (*glTexID==0)
+    glGenTextures(1,glTexID);
+  glBindTexture(GL_TEXTURE_2D, *glTexID);
 #ifdef USE_GLU_MIPMAP
   if (gltexture->mipmap & use_mipmapping)
   {
@@ -798,8 +995,8 @@ void gld_BindFlat(GLTexture *gltexture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_mipmap_filter);
-    if (gl_texture_filter_anisotropic)
-      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0);
+    if (gl_use_texture_filter_anisotropic)
+      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat)gl_texture_filter_anisotropic);
   }
   else
 #endif /* USE_GLU_MIPMAP */
@@ -849,40 +1046,45 @@ void gld_BindFlat(GLTexture *gltexture)
   W_UnlockLumpNum(gltexture->index);
 }
 
-static void gld_CleanTextures(void)
+// e6y
+// The common function for cleaning textures and patches
+// gld_CleanTextures and gld_CleanPatchTextures are replaced with that
+static void gld_CleanTexItems(int count, GLTexture ***items)
 {
-  int i,j;
+  int i, j;
 
-  if (!gld_GLTextures)
+  if (!(*items))
     return;
-  for (i=0; i<numtextures; i++)
+  for (i=0; i<count; i++)
   {
-    if (gld_GLTextures[i])
+    if ((*items)[i])
     {
-      for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
-        glDeleteTextures(1,&(gld_GLTextures[i]->glTexID[j]));
-      Z_Free(gld_GLTextures[i]);
+      if (gl_boom_colormaps)
+      {
+        int cm, n;
+        for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
+        {
+          for (n=0; n<NUMCOLORMAPS+1; n++)
+          {
+            for (cm=0; cm<numcolormaps; cm++)
+            {
+              glDeleteTextures(1,&((*items)[i]->glTexExID[j][n][cm]));
+            }
+          }
+        }
+        Z_Free((*items)[i]->glTexExID);
+        (*items)[i]->glTexExID = NULL;
+      }
+      else
+      {
+        for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
+          glDeleteTextures(1,&((*items)[i]->glTexID[j]));
+      }
+
+      Z_Free((*items)[i]);
     }
   }
-  memset(gld_GLTextures,0,numtextures*sizeof(GLTexture *));
-}
-
-static void gld_CleanPatchTextures(void)
-{
-  int i,j;
-
-  if (!gld_GLPatchTextures)
-    return;
-  for (i=0; i<numlumps; i++)
-  {
-    if (gld_GLPatchTextures[i])
-    {
-      for (j=0; j<(CR_LIMIT+MAXPLAYERS); j++)
-        glDeleteTextures(1,&(gld_GLPatchTextures[i]->glTexID[j]));
-      Z_Free(gld_GLPatchTextures[i]);
-    }
-  }
-  memset(gld_GLPatchTextures,0,numlumps*sizeof(GLTexture *));
+  memset((*items),0,count*sizeof(GLTexture *));
 }
 
 void gld_Precache(void)
@@ -890,8 +1092,26 @@ void gld_Precache(void)
   register int i;
   register byte *hitlist;
 
-  if (demoplayback)
+  unsigned int tics = SDL_GetTicks();
+
+  int usehires = gl_texture_usehires || gl_patch_usehires;
+
+  if (doSkip)
     return;
+
+  if (!usehires)
+  {
+    if (!precache)
+      return;
+
+    if (demoplayback)
+      return;
+  }
+
+  if (gl_texture_usehires)
+  {
+    gld_ProgressStart();
+  }
 
   {
     size_t size = numflats > numsprites  ? numflats : numsprites;
@@ -903,20 +1123,79 @@ void gld_Precache(void)
   memset(hitlist, 0, numflats);
 
   for (i = numsectors; --i >= 0; )
-    hitlist[sectors[i].floorpic] = hitlist[sectors[i].ceilingpic] = 1;
+  {
+    int j,k;
+    
+    int floorpic = sectors[i].floorpic;
+    int ceilingpic = sectors[i].ceilingpic;
+    
+    anim_t *flatanims[2] = {
+      anim_flats[floorpic].anim,
+      anim_flats[ceilingpic].anim
+    };
+
+    hitlist[floorpic] = hitlist[ceilingpic] = 1;
+    
+    //e6y: animated flats
+    for (k = 0; k < 2; k++)
+    {
+      if (flatanims[k] && !flatanims[k]->istexture)
+      {
+        for (j = flatanims[k]->basepic; j < flatanims[k]->basepic + flatanims[k]->numpics; j++)
+          hitlist[j] = 1;
+      }
+    }
+  }
 
   for (i = numflats; --i >= 0; )
     if (hitlist[i])
-      gld_BindFlat(gld_RegisterFlat(i,true));
+    {
+      GLTexture *gltexture = gld_RegisterFlat(i,true);
+      gld_BindFlat(gltexture);
+      if (gltexture && (gltexture->flags & GLTEXTURE_HIRES))
+        gld_ProgressUpdate("Loading Flats...", numflats - i, numflats);
+    }
 
   // Precache textures.
 
   memset(hitlist, 0, numtextures);
 
   for (i = numsides; --i >= 0;)
-    hitlist[sides[i].bottomtexture] =
-      hitlist[sides[i].toptexture] =
-      hitlist[sides[i].midtexture] = 1;
+  {
+    int j, k;
+    
+    int bottomtexture = sides[i].bottomtexture;
+    int toptexture = sides[i].toptexture;
+    int midtexture = sides[i].midtexture;
+    
+    anim_t *textureanims[3] = {
+      anim_textures[bottomtexture].anim,
+      anim_textures[toptexture].anim,
+      anim_textures[midtexture].anim
+    };
+
+    hitlist[bottomtexture] =
+      hitlist[toptexture] =
+      hitlist[midtexture] = 1;
+
+    //e6y: animated textures
+    for (k = 0; k < 3; k++)
+    {
+      if (textureanims[k] && textureanims[k]->istexture)
+      {
+        for (j = textureanims[k]->basepic; j < textureanims[k]->basepic + textureanims[k]->numpics; j++)
+          hitlist[j] = 1;
+      }
+    }
+
+    //e6y: swithes
+    {
+      int GetPairForSwitchTexture(side_t *side);
+      int pair = GetPairForSwitchTexture(&sides[i]);
+      if (pair != -1)
+        hitlist[pair] = 1;
+    }
+  }
 
   // Sky texture is always present.
   // Note that F_SKY1 is the name used to
@@ -925,15 +1204,22 @@ void gld_Precache(void)
   //  a wall texture, with an episode dependend
   //  name.
 
-  hitlist[skytexture] = 0;
+  if (hitlist)
+    hitlist[skytexture] = gl_texture_usehires ? 1 : 0;
 
   for (i = numtextures; --i >= 0; )
     if (hitlist[i])
-      gld_BindTexture(gld_RegisterTexture(i,true));
+    {
+      GLTexture *gltexture = gld_RegisterTexture(i,true,false);
+      gld_BindTexture(gltexture);
+      if (gltexture && (gltexture->flags & GLTEXTURE_HIRES))
+        gld_ProgressUpdate("Loading Textures...", numtextures - i, numtextures);
+    }
 
   // Precache sprites.
   memset(hitlist, 0, numsprites);
 
+  if (hitlist)
   {
     thinker_t *th;
     for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
@@ -955,10 +1241,28 @@ void gld_Precache(void)
           }
       }
   Z_Free(hitlist);
+
+  if (gl_texture_usehires)
+  {
+    gld_ProgressEnd();
+  }
+
+  // e6y: some statistics.  make sense for hires
+  {
+    char map[8];
+
+    if (gamemode == commercial)
+      sprintf(map, "MAP%02i", gamemap);
+    else
+      sprintf(map, "E%iM%i", gameepisode, gamemap);
+    
+    lprintf(LO_INFO, "gld_Precache: %s done in %d ms\n", map, SDL_GetTicks() - tics);
+  }
 }
 
 void gld_CleanMemory(void)
 {
-  gld_CleanTextures();
-  gld_CleanPatchTextures();
+  gld_CleanVertexData();
+  gld_CleanTexItems(numtextures, &gld_GLTextures);
+  gld_CleanTexItems(numlumps, &gld_GLPatchTextures);
 }

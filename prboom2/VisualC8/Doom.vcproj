@@ -47,7 +47,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="GL_DOOM;_DEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -66,17 +66,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="DebugNOASMGL/glboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib"
+				OutputFile="DebugNOASMGL/glboom-plus.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\DebugNOASMGL/glboom.pdb"
 				SubSystem="2"
@@ -87,6 +89,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -143,7 +146,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="NDEBUG;GL_DOOM;WIN32;_WINDOWS;HAVE_CONFIG_H;I386_ASM;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -155,6 +158,7 @@
 				WarningLevel="3"
 				WarnAsError="false"
 				SuppressStartupBanner="true"
+				DebugInformationFormat="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -162,17 +166,20 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="ReleaseGL/glboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib"
+				OutputFile="ReleaseGL/glboom-plus.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
+				GenerateMapFile="true"
 				SubSystem="2"
 				TargetMachine="1"
 			/>
@@ -181,6 +188,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -237,7 +245,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -256,17 +264,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="ReleaseNOASM/prboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib"
+				OutputFile="ReleaseNOASM/prboom-plus.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				ProgramDatabaseFile=".\ReleaseNOASM/prboom.pdb"
 				SubSystem="2"
 				TargetMachine="1"
@@ -276,6 +286,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -331,7 +342,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -350,17 +361,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="DebugNOASM/prboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib"
+				OutputFile="DebugNOASM/prboom-plus.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\DebugNOASM/prboom.pdb"
 				SubSystem="2"
@@ -371,6 +384,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -427,7 +441,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="NDEBUG;GL_DOOM;WIN32;_WINDOWS;HAVE_CONFIG_H;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -446,17 +460,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="ReleaseNOASMGL/glboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib"
+				OutputFile="ReleaseNOASMGL/glboom-plus.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				ProgramDatabaseFile=".\ReleaseNOASMGL/glboom.pdb"
 				SubSystem="2"
 				TargetMachine="1"
@@ -466,6 +482,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -521,7 +538,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="GL_DOOM;_DEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;I386_ASM;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -540,17 +557,20 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="DebugGL/glboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib opengl32.lib glu32.lib"
+				OutputFile="DebugGL/glboom-plus.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
+				GenerateManifest="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\DebugGL/glboom.pdb"
 				SubSystem="2"
@@ -561,6 +581,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -616,7 +637,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../VisualC8,../src"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;I386_ASM;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -635,17 +656,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="Debug/prboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib"
+				OutputFile="Debug/prboom-plus.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/prboom.pdb"
 				SubSystem="2"
@@ -656,6 +679,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -712,8 +736,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../VisualC8,../src"
-				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;I386_ASM;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
+				AdditionalIncludeDirectories="../VisualC8;../src;../src/PCRELIB"
+				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;HAVE_CONFIG_H;I386_ASM;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -731,17 +755,19 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1031"
+				Culture="1033"
+				AdditionalIncludeDirectories="../VisualC8"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib sdl.lib sdl_mixer.lib sdl_net.lib"
-				OutputFile="Release/prboom.exe"
+				AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib"
+				OutputFile="Release/prboom-plus.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="../src/PCRELIB/VisualC8/Lib"
 				ProgramDatabaseFile=".\Release/prboom.pdb"
 				SubSystem="2"
 				TargetMachine="1"
@@ -751,6 +777,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -1457,6 +1484,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\e6y.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\e6y.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\e6y_launcher.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\e6y_launcher.h"
+				>
+			</File>
+			<File
 				RelativePath="..\src\f_finale.c"
 				>
 				<FileConfiguration
@@ -2150,6 +2193,22 @@
 			</File>
 			<File
 				RelativePath="..\src\i_network.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\i_pcsound.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\i_pcsound.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\i_simd.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\i_simd.h"
 				>
 			</File>
 			<File
@@ -3049,83 +3108,19 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\Mmus2mid.c"
+				RelativePath="..\src\memio.c"
 				>
-				<FileConfiguration
-					Name="Debug OpenGL NOASM|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release OpenGL|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release NOASM|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug NOASM|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release OpenGL NOASM|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug OpenGL|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\Mmus2mid.h"
+				RelativePath="..\src\memio.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\mus2mid.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\mus2mid.h"
 				>
 			</File>
 			<File
@@ -4698,10 +4693,6 @@
 			</File>
 			<File
 				RelativePath="..\src\p_user.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\protocol.h"
 				>
 			</File>
 			<File
@@ -6353,6 +6344,114 @@
 			Name="OpenGL Source Files"
 			>
 			<File
+				RelativePath="..\src\gl_clipper.c"
+				>
+				<FileConfiguration
+					Name="Release NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\gl_detail.c"
+				>
+				<FileConfiguration
+					Name="Release NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\gl_hires.c"
+				>
+				<FileConfiguration
+					Name="Release NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\src\gl_intern.h"
 				>
 				<FileConfiguration
@@ -6584,6 +6683,78 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\src\gl_vertex.c"
+				>
+				<FileConfiguration
+					Name="Release NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\gl_wipe.c"
+				>
+				<FileConfiguration
+					Name="Release NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug NOASM|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
@@ -6622,7 +6793,8 @@
 					<Tool
 						Name="VCResourceCompilerTool"
 						PreprocessorDefinitions=""
-						AdditionalIncludeDirectories="\Dokumente und Einstellungen\Admin\Eigene Dateien\prboom24\Icons"
+						Culture="1033"
+						AdditionalIncludeDirectories=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -6681,11 +6853,43 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\ICONS\prboom-plus.exe.manifest"
+				>
+			</File>
+			<File
 				RelativePath="..\Icons\resource.h"
 				>
 			</File>
 			<File
 				RelativePath="..\Icons\skull.ico"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="PCSound Source Files"
+			>
+			<File
+				RelativePath="..\src\pcsound\pcsound.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pcsound\pcsound.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pcsound\pcsound_linux.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pcsound\pcsound_sdl.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pcsound\pcsound_win32.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\protocol.h"
 				>
 			</File>
 		</Filter>

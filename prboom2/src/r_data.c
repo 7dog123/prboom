@@ -297,12 +297,15 @@ static void R_InitTextures (void)
 
   // Precalculate whatever possible.
   if (devparm) // cph - If in development mode, generate now so all errors are found at once
+  {
+    R_InitPatches(); //e6y
     for (i=0 ; i<numtextures ; i++)
     {
       // proff - This is for the new renderer now
       R_CacheTextureCompositePatchNum(i);
       R_UnlockTextureCompositePatchNum(i);
     }
+  }
 
   if (errors)
     I_Error("R_InitTextures: %d errors", errors);
@@ -405,9 +408,6 @@ int R_ColormapNumForName(const char *name)
  *  obsoletes old c_scalelight stuff
  */
 
-static inline int between(int l,int u,int x)
-{ return (l > x ? l : x > u ? u : x); }
-
 const lighttable_t* R_ColourMap(int lightlevel, fixed_t spryscale)
 {
   if (fixedcolormap) return fixedcolormap;
@@ -432,7 +432,7 @@ const lighttable_t* R_ColourMap(int lightlevel, fixed_t spryscale)
      * precision until the final step, so slight scale differences can count
      * against slight light level variations.
      */
-    return fullcolormap + between(0,NUMCOLORMAPS-1,
+    return fullcolormap + BETWEEN(0,NUMCOLORMAPS-1,
           ((256-lightlevel)*2*NUMCOLORMAPS/256) - 4
           - (FixedMul(spryscale,pspriteiscale)/2 >> LIGHTSCALESHIFT)
           )*256;

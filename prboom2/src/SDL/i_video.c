@@ -36,6 +36,11 @@
 #include "config.h"
 #endif
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif // _WIN32
+
 #include <stdlib.h>
 
 #ifdef HAVE_UNISTD_H
@@ -43,6 +48,10 @@
 #endif
 
 #include "SDL.h"
+//e6y
+#ifdef _WIN32
+#include <SDL_syswm.h>
+#endif
 
 #include "m_argv.h"
 #include "doomstat.h"
@@ -60,6 +69,22 @@
 #include "w_wad.h"
 #include "st_stuff.h"
 #include "lprintf.h"
+
+#include "i_simd.h"
+#include "e6y.h"//e6y
+
+//e6y: new mouse code
+static SDL_Cursor* cursors[2] = {NULL, NULL};
+
+boolean window_focused;
+
+static void ActivateMouse(void);
+static void DeactivateMouse(void);
+//static int AccelerateMouse(int val);
+static void CenterMouse(void);
+static void I_ReadMouse(void);
+static boolean MouseShouldBeGrabbed();
+static void UpdateFocus(void);
 
 int gl_colorbuffer_bits=16;
 int gl_depthbuffer_bits=16;
@@ -81,7 +106,6 @@ int             leds_always_off = 0; // Expected by m_misc, not relevant
 // Mouse handling
 extern int     usemouse;        // config file var
 static boolean grabMouse;       // internal var
-static int mouse_currently_grabbed;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Keyboard handling
@@ -160,7 +184,8 @@ static int I_TranslateKey(SDL_keysym* key)
 // Main input code
 
 /* cph - pulled out common button code logic */
-static int I_SDLtoDoomMouseState(Uint8 buttonstate)
+//e6y static 
+int I_SDLtoDoomMouseState(Uint8 buttonstate)
 {
   return 0
       | (buttonstate & SDL_BUTTON(1) ? 1 : 0)
@@ -189,7 +214,7 @@ static void I_GetEvent(SDL_Event *Event)
 
   case SDL_MOUSEBUTTONDOWN:
   case SDL_MOUSEBUTTONUP:
-  if (mouse_currently_grabbed)
+  if (window_focused)
   {
     event.type = ev_mouse;
     event.data1 = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
@@ -198,16 +223,10 @@ static void I_GetEvent(SDL_Event *Event)
   }
   break;
 
-  case SDL_MOUSEMOTION:
-  if (mouse_currently_grabbed) {
-    event.type = ev_mouse;
-    event.data1 = I_SDLtoDoomMouseState(Event->motion.state);
-    event.data2 = Event->motion.xrel << 5;
-    event.data3 = -Event->motion.yrel << 5;
-    D_PostEvent(&event);
-  }
-  break;
-
+  //e6y: new mouse code
+  case SDL_ACTIVEEVENT:
+    UpdateFocus();
+    break;
 
   case SDL_QUIT:
     S_StartSound(NULL, sfx_swtchn);
@@ -226,17 +245,12 @@ static void I_GetEvent(SDL_Event *Event)
 void I_StartTic (void)
 {
   SDL_Event Event;
-  {
-    int should_be_grabbed = grabMouse &&
-      !(paused || (gamestate != GS_LEVEL) || demoplayback);
-
-    if (mouse_currently_grabbed != should_be_grabbed)
-      SDL_WM_GrabInput((mouse_currently_grabbed = should_be_grabbed)
-          ? SDL_GRAB_ON : SDL_GRAB_OFF);
-  }
 
   while ( SDL_PollEvent(&Event) )
     I_GetEvent(&Event);
+
+  //e6y
+  I_ReadMouse();
 
   I_PollJoystick();
 }
@@ -256,9 +270,18 @@ static void I_InitInputs(void)
 {
   // check if the user wants to grab the mouse
   grabMouse = M_CheckParm("-nomouse") ? false : usemouse ? true : false;
-  // e6y: fix for turn-snapping bug on fullscreen in software mode
-  if (!M_CheckParm("-nomouse"))
-    SDL_WarpMouse((unsigned short)(SCREENWIDTH/2), (unsigned short)(SCREENHEIGHT/2));
+  
+  //e6y
+  if (grabMouse)
+  {
+    Uint8 data[1] = {0x00};
+    cursors[0] = SDL_GetCursor();
+    cursors[1] = SDL_CreateCursor(data, data, 8, 1, 0, 0);
+
+    CenterMouse();
+
+    MouseAccelChanging();
+  }
 
   I_InitJoystick();
 }
@@ -343,6 +366,8 @@ static void I_UploadNewPalette(int pal)
 
 void I_ShutdownGraphics(void)
 {
+  SDL_FreeCursor(cursors[1]);
+  DeactivateMouse();
 }
 
 //
@@ -360,6 +385,9 @@ static int newpal = 0;
 
 void I_FinishUpdate (void)
 {
+  //e6y: new mouse code
+  UpdateGrab();
+
   if (I_SkipFrame()) return;
 
 #ifdef MONITOR_VISIBILITY
@@ -375,7 +403,8 @@ void I_FinishUpdate (void)
     return;
   }
 #endif
-  if (SDL_MUSTLOCK(screen)) {
+
+  if ((screen_multiply > 1) || SDL_MUSTLOCK(screen)) {
       int h;
       byte *src;
       byte *dest;
@@ -384,17 +413,28 @@ void I_FinishUpdate (void)
         lprintf(LO_INFO,"I_FinishUpdate: %s\n", SDL_GetError());
         return;
       }
-      dest=screen->pixels;
-      src=screens[0].data;
-      h=screen->h;
-      for (; h>0; h--)
+
+      // e6y: processing of screen_multiply
+      if (screen_multiply > 1)
       {
-        memcpy(dest,src,SCREENWIDTH*V_GetPixelDepth());
-        dest+=screen->pitch;
-        src+=screens[0].byte_pitch;
+        R_ProcessScreenMultiply(screens[0].data, screen->pixels, screens[0].pitch, screen->pitch);
       }
+      else
+      {
+        dest=screen->pixels;
+        src=screens[0].data;
+        h=screen->h;
+        for (; h>0; h--)
+        {
+          memcpy_fast(dest,src,SCREENWIDTH); //e6y
+          dest+=screen->pitch;
+          src+=screens[0].pitch;
+        }
+      }
+
       SDL_UnlockSurface(screen);
   }
+
   /* Update the display buffer (flipping video pages if supported)
    * If we need to change palette, that implicitely does a flip */
   if (newpal != NO_PALETTE_CHANGE) {
@@ -407,21 +447,35 @@ void I_FinishUpdate (void)
 //
 // I_ReadScreen
 //
-#ifndef min
-#define min(a,b) ((a)<(b)?(a):(b))
-#endif
 void I_ReadScreen (screeninfo_t *dest)
 {
   int h;
-  byte *srcofs = screens[0].data;
-  byte *dstofs = dest->data;
+  boolean locked = false;
+  byte *srcofs;
+  byte *dstofs;
   int width, height;
-  width = min(screens[0].width, dest->width);
-  height = min(screens[0].height, dest->height);
+  if (SDL_MUSTLOCK(screen))
+  {
+    if (SDL_LockSurface(screen) < 0) {
+      lprintf(LO_INFO,"I_ReadScreen: %s\n", SDL_GetError());
+      return;
+    }
+    locked = true;
+  }
+  // e6y: processing of screen_multiply
+  // screen->pixels instead of screens[0].data should be used
+  srcofs = screen->pixels;
+  dstofs = dest->data;
+  width = MIN(screen->w, dest->width);
+  height = MIN(screen->h, dest->height);
   for (h=height; h>0; h--) {
     memcpy(dstofs, srcofs, width);
-    srcofs += screens[0].byte_pitch;
-    dstofs += dest->byte_pitch;
+    srcofs += screen->pitch;
+    dstofs += dest->pitch;
+  }
+  if (locked)
+  {
+    SDL_UnlockSurface(screen);
   }
 }
 
@@ -450,6 +504,39 @@ void I_PreInitGraphics(void)
 #ifdef _DEBUG
   flags |= SDL_INIT_NOPARACHUTE;
 #endif
+
+  // e6y: Forcing "directx" video driver for Win9x.
+  // The "windib" video driver is the default for SDL > 1.2.9, 
+  // to prevent problems with certain laptops, 64-bit Windows, and Windows Vista.  
+  // The DirectX driver is still available, and can be selected by setting 
+  // the environment variable SDL_VIDEODRIVER to "directx".
+  {
+    int p;
+    char *video_driver;
+    if ((p = M_CheckParm("-videodriver")) && (p < myargc - 1))
+      video_driver = strdup(myargv[p + 1]);
+    else
+      video_driver = strdup(sdl_videodriver);
+
+    if (strcasecmp(video_driver, "default"))
+    {
+      // videodriver != default
+      char buf[80];
+      strcpy(buf, "SDL_VIDEODRIVER=");
+      strncat(buf, video_driver, sizeof(buf) - sizeof(buf[0]) - strlen(buf));
+      putenv(buf);
+    }
+    else
+    {
+      // videodriver == default
+#ifdef _WIN32
+      if ((int)GetVersion() < 0 && V_GetMode() != VID_MODEGL ) // win9x
+        putenv("SDL_VIDEODRIVER=directx");
+#endif
+    }
+    free(video_driver);
+  }
+
   if ( SDL_Init(flags) < 0 ) {
     I_Error("Could not initialize SDL [%s]", SDL_GetError());
   }
@@ -536,16 +623,25 @@ void I_CalculateRes(unsigned int width, unsigned int height)
     SCREENWIDTH = (width+15) & ~15;
     SCREENHEIGHT = height;
     if (!(SCREENWIDTH % 1024)) {
-      SCREENPITCH = SCREENWIDTH*V_GetPixelDepth()+32;
+      SCREENPITCH = SCREENWIDTH+32;
     } else {
-      SCREENPITCH = SCREENWIDTH*V_GetPixelDepth();
+      SCREENPITCH = SCREENWIDTH;
     }
+  }
+
+  // e6y: processing of screen_multiply
+  {
+    int factor = ((V_GetMode() == VID_MODEGL) ? 1 : screen_multiply);
+    REAL_SCREENWIDTH = SCREENWIDTH * factor;
+    REAL_SCREENHEIGHT = SCREENHEIGHT * factor;
+    REAL_SCREENPITCH = SCREENPITCH * factor;
   }
 }
 
 // CPhipps -
 // I_SetRes
 // Sets the screen resolution
+// e6y: processing of screen_multiply
 void I_SetRes(void)
 {
   int i;
@@ -554,21 +650,17 @@ void I_SetRes(void)
 
   // set first three to standard values
   for (i=0; i<3; i++) {
-    screens[i].width = SCREENWIDTH;
-    screens[i].height = SCREENHEIGHT;
-    screens[i].byte_pitch = SCREENPITCH;
-    screens[i].short_pitch = SCREENPITCH / V_GetModePixelDepth(VID_MODE16);
-    screens[i].int_pitch = SCREENPITCH / V_GetModePixelDepth(VID_MODE32);
+    screens[i].width = REAL_SCREENWIDTH;
+    screens[i].height = REAL_SCREENHEIGHT;
+    screens[i].pitch = REAL_SCREENPITCH;
   }
 
   // statusbar
-  screens[4].width = SCREENWIDTH;
-  screens[4].height = (ST_SCALED_HEIGHT+1);
-  screens[4].byte_pitch = SCREENPITCH;
-  screens[4].short_pitch = SCREENPITCH / V_GetModePixelDepth(VID_MODE16);
-  screens[4].int_pitch = SCREENPITCH / V_GetModePixelDepth(VID_MODE32);
+  screens[4].width = REAL_SCREENWIDTH;
+  screens[4].height = (ST_SCALED_HEIGHT+1) * screen_multiply;
+  screens[4].pitch = REAL_SCREENPITCH;
 
-  lprintf(LO_INFO,"I_SetRes: Using resolution %dx%d\n", SCREENWIDTH, SCREENHEIGHT);
+  lprintf(LO_INFO,"I_SetRes: Using resolution %dx%d\n", REAL_SCREENWIDTH, REAL_SCREENHEIGHT);
 }
 
 void I_InitGraphics(void)
@@ -579,6 +671,9 @@ void I_InitGraphics(void)
   if (firsttime)
   {
     firsttime = 0;
+
+    // e6y: initialisation of screen_multiply
+    screen_multiply = render_screen_multiply;
 
     atexit(I_ShutdownGraphics);
     lprintf(LO_INFO, "I_InitGraphics: %dx%d\n", SCREENWIDTH, SCREENHEIGHT);
@@ -594,25 +689,11 @@ void I_InitGraphics(void)
 
     /* Initialize the input system */
     I_InitInputs();
-  }
-}
 
-int I_GetModeFromString(const char *modestr)
-{
-  video_mode_t mode;
-
-  if (!stricmp(modestr,"15")) {
-    mode = VID_MODE15;
-  } else if (!stricmp(modestr,"16")) {
-    mode = VID_MODE16;
-  } else if (!stricmp(modestr,"32")) {
-    mode = VID_MODE32;
-  } else if (!stricmp(modestr,"gl")) {
-    mode = VID_MODEGL;
-  } else {
-    mode = VID_MODE8;
+    //e6y: new mouse code
+    UpdateFocus();
+    UpdateGrab();
   }
-  return mode;
 }
 
 void I_UpdateVideoMode(void)
@@ -623,13 +704,20 @@ void I_UpdateVideoMode(void)
 
   lprintf(LO_INFO, "I_UpdateVideoMode: %dx%d (%s)\n", SCREENWIDTH, SCREENHEIGHT, desired_fullscreen ? "fullscreen" : "nofullscreen");
 
-  mode = I_GetModeFromString(default_videomode);
+  mode = default_videomode;
   if ((i=M_CheckParm("-vidmode")) && i<myargc-1) {
-    mode = I_GetModeFromString(myargv[i+1]);
+    /*if (!stricmp(myargv[i+1],"16")) {
+      mode = VID_MODE16;
+    } else if (!stricmp(myargv[i+1],"32")) {
+      mode = VID_MODE32;
+    } else*/ if (!stricmp(myargv[i+1],"gl")) {
+      mode = VID_MODEGL;
+    } else {
+      mode = VID_MODE8;
+    }
   }
-
   V_InitMode(mode);
-  V_DestroyUnusedTrueColorPalettes();
+
   V_FreeScreens();
 
   I_SetRes();
@@ -663,27 +751,30 @@ void I_UpdateVideoMode(void)
     SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
     SDL_GL_SetAttribute( SDL_GL_BUFFER_SIZE, gl_colorbuffer_bits );
     SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, gl_depthbuffer_bits );
-    screen = SDL_SetVideoMode(SCREENWIDTH, SCREENHEIGHT, gl_colorbuffer_bits, init_flags);
+    e6y_MultisamplingSet();//e6y
+    screen = SDL_SetVideoMode(REAL_SCREENWIDTH, REAL_SCREENHEIGHT, gl_colorbuffer_bits, init_flags);
+#ifdef GL_DOOM
+    gld_SaveGammaRamp();
+#endif
   } else {
-    screen = SDL_SetVideoMode(SCREENWIDTH, SCREENHEIGHT, V_GetNumPixelBits(), init_flags);
+    // e6y: processing of screen_multiply
+    screen = SDL_SetVideoMode(REAL_SCREENWIDTH, REAL_SCREENHEIGHT, 8, init_flags);
   }
 
   if(screen == NULL) {
-    I_Error("Couldn't set %dx%d video mode [%s]", SCREENWIDTH, SCREENHEIGHT, SDL_GetError());
+    I_Error("Couldn't set %dx%d video mode [%s]", REAL_SCREENWIDTH, REAL_SCREENHEIGHT, SDL_GetError());
   }
+  if (V_GetMode() == VID_MODEGL)
+    e6y_MultisamplingCheck();//e6y
 
   lprintf(LO_INFO, "I_UpdateVideoMode: 0x%x, %s, %s\n", init_flags, screen->pixels ? "SDL buffer" : "own buffer", SDL_MUSTLOCK(screen) ? "lock-and-copy": "direct access");
 
-  mouse_currently_grabbed = false;
-
   // Get the info needed to render to the display
-  if (!SDL_MUSTLOCK(screen))
+  if (screen_multiply==1 && !SDL_MUSTLOCK(screen))
   {
     screens[0].not_on_heap = true;
     screens[0].data = (unsigned char *) (screen->pixels);
-    screens[0].byte_pitch = screen->pitch;
-    screens[0].short_pitch = screen->pitch / V_GetModePixelDepth(VID_MODE16);
-    screens[0].int_pitch = screen->pitch / V_GetModePixelDepth(VID_MODE32);
+    screens[0].pitch = screen->pitch;
   }
   else
   {
@@ -691,9 +782,6 @@ void I_UpdateVideoMode(void)
   }
 
   V_AllocScreens();
-
-  // Hide pointer while over this window
-  SDL_ShowCursor(0);
 
   R_InitBuffer(SCREENWIDTH, SCREENHEIGHT);
 
@@ -723,7 +811,163 @@ void I_UpdateVideoMode(void)
     SDL_GL_GetAttribute( SDL_GL_DEPTH_SIZE, &temp );
     lprintf(LO_INFO,"    SDL_GL_DEPTH_SIZE: %i\n",temp);
 #ifdef GL_DOOM
+  e6y_MultisamplingPrint();//e6y
     gld_Init(SCREENWIDTH, SCREENHEIGHT);
 #endif
   }
+  I_AfterUpdateVideoMode();//e6y
+}
+
+static void ActivateMouse(void)
+{
+  SDL_SetCursor(cursors[1]);
+  SDL_WM_GrabInput(SDL_GRAB_ON);
+  SDL_ShowCursor(1);
+}
+
+static void DeactivateMouse(void)
+{
+  SDL_SetCursor(cursors[0]);
+  SDL_WM_GrabInput(SDL_GRAB_OFF);
+  SDL_ShowCursor(1);
+}
+
+// Warp the mouse back to the middle of the screen
+static void CenterMouse(void)
+{
+  // Warp the the screen center
+  SDL_WarpMouse((unsigned short)(REAL_SCREENWIDTH/2), (unsigned short)(REAL_SCREENHEIGHT/2));
+
+  // Clear any relative movement caused by warping
+  SDL_PumpEvents();
+  SDL_GetRelativeMouseState(NULL, NULL);
+}
+
+//
+// Read the change in mouse state to generate mouse motion events
+//
+// This is to combine all mouse movement for a tic into one mouse
+// motion event.
+static void I_ReadMouse(void)
+{
+  int x, y;
+  event_t ev;
+
+  if (!usemouse)
+    return;
+
+  if (!MouseShouldBeGrabbed())
+    return;
+
+  SDL_GetRelativeMouseState(&x, &y);
+
+  if (x != 0 || y != 0) 
+  {
+    ev.type = ev_mouse;
+    ev.data1 = I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
+    ev.data2 = x << 5;
+    ev.data3 = (-y) << 5;
+
+    D_PostEvent(&ev);
+  }
+
+  CenterMouse();
+}
+
+static boolean MouseShouldBeGrabbed()
+{
+  // never grab the mouse when in screensaver mode
+
+  //if (screensaver_mode)
+  //    return false;
+
+  // if the window doesnt have focus, never grab it
+  if (!window_focused)
+    return false;
+
+  // always grab the mouse when full screen (dont want to 
+  // see the mouse pointer)
+  if (desired_fullscreen)
+    return true;
+
+  // if we specify not to grab the mouse, never grab
+  if (!grabMouse)
+    return false;
+
+  // always grab the mouse in camera mode when playing levels 
+  // and menu is not active
+  if (walkcamera.type)
+    return (demoplayback && gamestate == GS_LEVEL && !menuactive);
+
+  // when menu is active or game is paused, release the mouse 
+  if (menuactive || paused)
+    return false;
+
+  // only grab mouse when playing levels (but not demos)
+  return (gamestate == GS_LEVEL) && !demoplayback;
+}
+
+// Update the value of window_focused when we get a focus event
+//
+// We try to make ourselves be well-behaved: the grab on the mouse
+// is removed if we lose focus (such as a popup window appearing),
+// and we dont move the mouse around if we aren't focused either.
+static void UpdateFocus(void)
+{
+  Uint8 state;
+
+  state = SDL_GetAppState();
+
+  // We should have input (keyboard) focus and be visible 
+  // (not minimised)
+  window_focused = (state & SDL_APPINPUTFOCUS) && (state & SDL_APPACTIVE);
+
+  // e6y
+  // Reuse of a current palette to avoid black screen at software fullscreen modes
+  // after switching to OS and back
+  if (desired_fullscreen && window_focused)
+  {
+    V_SetPalette(st_palette);
+  }
+
+#ifdef GL_DOOM
+  if (V_GetMode() == VID_MODEGL)
+  {
+    if (gl_lightmode == gl_lightmode_gzdoom)
+    {
+      if (!window_focused)
+      {
+        // e6y: Restore of startup gamma if window loses focus
+        gld_SetGammaRamp(-1);
+      }
+      else
+      {
+        gld_SetGammaRamp(useglgamma);
+      }
+    }
+  }
+#endif
+
+  // Should the screen be grabbed?
+  //    screenvisible = (state & SDL_APPACTIVE) != 0;
+}
+
+void UpdateGrab(void)
+{
+  static boolean currently_grabbed = false;
+  boolean grab;
+
+  grab = MouseShouldBeGrabbed();
+
+  if (grab && !currently_grabbed)
+  {
+    ActivateMouse();
+  }
+
+  if (!grab && currently_grabbed)
+  {
+    DeactivateMouse();
+  }
+
+  currently_grabbed = grab;
 }

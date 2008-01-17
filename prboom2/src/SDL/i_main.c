@@ -64,6 +64,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "i_simd.h"
+#include "e6y.h"
+
 /* Most of the following has been rewritten by Lee Killough
  *
  * I_GetTime
@@ -120,6 +123,30 @@ void I_Init(void)
   }
 
   R_InitInterpolation();
+
+  //e6y
+#ifdef SIMD_INSTRUCTIONS
+  I_InitSIMD();
+#endif
+}
+
+//e6y
+void I_Init2(void)
+{
+  if (fastdemo)
+    I_GetTime = I_GetTime_FastDemo;
+  else
+  {
+    if (realtic_clock_rate != 100)
+      {
+        I_GetTime_Scale = ((int_64_t) realtic_clock_rate << 24) / 100;
+        I_GetTime = I_GetTime_Scaled;
+      }
+    else
+      I_GetTime = I_GetTime_RealTime;
+  }
+  R_InitInterpolation();
+  force_singletics_to = gametic + BACKUPTICS;
 }
 
 /* cleanup handling -- killough:
@@ -200,6 +227,13 @@ static void PrintVer(void)
 static void I_EndDoom(void)
 {
   int lump_eb, lump_ed, lump = -1;
+
+  //e6y
+  if (misc_fastexit)
+  {
+    lprintf(LO_INFO,"I_EndDoom: All following output is skipped because of \"Fast Exit\" option\n");
+    return;
+  }
 
   /* CPhipps - ENDOOM/ENDBOOM selection */
   lump_eb = W_CheckNumForName("ENDBOOM");/* jff 4/1/98 sign our work    */
@@ -358,6 +392,18 @@ int main(int argc, char **argv)
   myargc = argc;
   myargv = argv;
 
+  // e6y: Check for conflicts.
+  // Conflicting command-line parameters could cause the engine to be confused 
+  // in some cases. Added checks to prevent this.
+  // Example: glboom.exe -record mydemo -playdemo demoname
+  ParamsMatchingCheck();
+
+  // e6y: was moved from D_DoomMainSetup
+  // init subsystems
+  //jff 9/3/98 use logical output routine
+  lprintf(LO_INFO,"M_LoadDefaults: Load system defaults.\n");
+  M_LoadDefaults();              // load before initing other systems
+
 #ifdef _WIN32
   if (!M_CheckParm("-nodraw")) {
     /* initialize the console window */
@@ -365,6 +411,10 @@ int main(int argc, char **argv)
     atexit(Done_ConsoleWin);
   }
 #endif
+
+  //e6y: ability to use only the allowed CPUs
+  I_SetAffinityMask();
+
   /* Version info */
   lprintf(LO_INFO,"\n");
   PrintVer();

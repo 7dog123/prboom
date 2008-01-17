@@ -47,6 +47,7 @@
 #include "g_game.h"
 #include "d_think.h"
 #include "w_wad.h"
+#include "e6y.h"//e6y
 
 // CPhipps - modify to use logical output routine
 #include "lprintf.h"
@@ -56,8 +57,7 @@
 
 #ifndef HAVE_STRLWR
 #include <ctype.h>
-
-static char* strlwr(char* str)
+char* strlwr(char* str)
 {
   char* p;
   for (p=str; *p; p++) *p = tolower(*p);
@@ -447,7 +447,7 @@ const char *startup5     = "";
 
 /* Ty 05/03/98 - externalized
  * cph - updated for prboom */
-const char *savegamename = "prbmsav";
+const char *savegamename = "prboom-plus-savegame";
 
 // end d_deh.h variable declarations
 // ====================================================================
@@ -1668,7 +1668,24 @@ static void setMobjInfoValue(int mobjInfoIndex, int keyIndex, uint_64_t value) {
     case 19: mi->damage = (int)value; return;
     case 20: mi->activesound = (int)value; return;
     case 21: mi->flags = value; return;
-    case 22: mi->raisestate = (int)value; return;
+    // e6y
+    // Correction of wrong processing of "Respawn frame" entry.
+    // There is no more synch on http://www.doomworld.com/sda/dwdemo/w303-115.zip
+    // (with correction in PIT_CheckThing)
+    case 22:
+      if (IsDemoPlayback() && prboom_comp[PC_FORCE_INCORRECT_PROCESSING_OF_RESPAWN_FRAME_ENTRY].state)
+      {
+        mi->raisestate = (int)value;
+        return;
+      }
+      break;
+    case 23:
+      if (IsDemoPlayback() && !prboom_comp[PC_FORCE_INCORRECT_PROCESSING_OF_RESPAWN_FRAME_ENTRY].state)
+      {
+        mi->raisestate = (int)value;
+        return;
+      }
+      break;
     default: return;
   }
 }
@@ -1755,6 +1772,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
           if (bGetData==1) { // proff
             value = getConvertedDEHBits(value);
             mobjinfo[indexnum].flags = value;
+            DEH_mobjinfo_bits[indexnum] = true; //e6y: changed by DEH
           }
           else {
             // figure out what the bits are
@@ -1792,6 +1810,7 @@ static void deh_procThing(DEHFILE *fpin, FILE* fpout, char *line)
               );
             }
             mobjinfo[indexnum].flags = value; // e6y
+            DEH_mobjinfo_bits[indexnum] = true; //e6y: changed by DEH
           }
         }
         if (fpout) {
@@ -2368,7 +2387,7 @@ static void deh_procMisc(DEHFILE *fpin, FILE* fpout, char *line) // done
           initial_bullets = (int)value;
         else
           if (!strcasecmp(key,deh_misc[2]))  // Max Health
-            maxhealth = (int)value;
+            IsDehMaxHealth = true, deh_maxhealth = (int)value; //e6y
           else
             if (!strcasecmp(key,deh_misc[3]))  // Max Armor
               max_armor = (int)value;
@@ -2380,13 +2399,13 @@ static void deh_procMisc(DEHFILE *fpin, FILE* fpout, char *line) // done
                   blue_armor_class = (int)value;
                 else
                   if (!strcasecmp(key,deh_misc[6]))  // Max Soulsphere
-                    max_soul = (int)value;
+                    IsDehMaxSoul = true, deh_max_soul = (int)value; //e6y
                   else
                     if (!strcasecmp(key,deh_misc[7]))  // Soulsphere Health
                       soul_health = (int)value;
                     else
                       if (!strcasecmp(key,deh_misc[8]))  // Megasphere Health
-                        mega_health = (int)value;
+                        IsDehMegaHealth = true, deh_mega_health = (int)value; //e6y
                       else
                         if (!strcasecmp(key,deh_misc[9]))  // God Mode Health
                           god_health = (int)value;
@@ -2442,6 +2461,16 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
   boolean found = FALSE;  // to allow early exit once found
   char* line2 = NULL;   // duplicate line for rerouting
 
+  // e6y
+  // Correction for DEHs which swap the values of two strings. For example:
+  // Text 4 4  Text 4 4;   Text 6 6      Text 6 6
+  // BOSSBOS2  BOS2BOSS;   RUNNINSTALKS  STALKSRUNNIN
+  // It corrects buggy behaviour on "All Hell is Breaking Loose" TC
+  // http://www.doomworld.com/idgames/index.php?id=6480 
+  static boolean sprnames_state[NUMSPRITES+1];
+  static boolean S_sfx_state[NUMMUSIC];
+  static boolean S_music_state[NUMSFX];
+
   // Ty 04/11/98 - Included file may have NOTEXT skip flag set
   if (includenotext) // flag to skip included deh-style text
     {
@@ -2478,7 +2507,7 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
       i=0;
       while (sprnames[i])  // null terminated list in info.c //jff 3/19/98
         {                                                      //check pointer
-          if (!strnicmp(sprnames[i],inbuffer,fromlen))         //not first char
+          if (!strnicmp(sprnames[i],inbuffer,fromlen) && !sprnames_state[i])         //not first char
             {
               if (fpout) fprintf(fpout,
                                  "Changing name of sprite at index %d from %s to %*s\n",
@@ -2491,6 +2520,9 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
     // CPhipps - fix constness problem
     char *s;
     sprnames[i] = s = strdup(sprnames[i]);
+    
+    //e6y: flag the sprite as changed
+    sprnames_state[i] = true;
 
     strncpy(s,&inbuffer[fromlen],tolen);
         }
@@ -2513,13 +2545,17 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
           {
             // avoid short prefix erroneous match
             if (strlen(S_sfx[i].name) != (size_t)fromlen) continue;
-            if (!strnicmp(S_sfx[i].name,inbuffer,fromlen))
+            if (!strnicmp(S_sfx[i].name,inbuffer,fromlen) && !S_sfx_state[i])
               {
                 if (fpout) fprintf(fpout,
                                    "Changing name of sfx from %s to %*s\n",
                                    S_sfx[i].name,usedlen,&inbuffer[fromlen]);
 
                 S_sfx[i].name = strdup(&inbuffer[fromlen]);
+
+                //e6y: flag the SFX as changed
+                S_sfx_state[i] = true;
+
                 found = TRUE;
                 break;  // only one matches, quit early
               }
@@ -2531,13 +2567,17 @@ static void deh_procText(DEHFILE *fpin, FILE* fpout, char *line)
               {
                 // avoid short prefix erroneous match
                 if (strlen(S_music[i].name) != (size_t)fromlen) continue;
-                if (!strnicmp(S_music[i].name,inbuffer,fromlen))
+                if (!strnicmp(S_music[i].name,inbuffer,fromlen) && !S_music_state[i])
                   {
                     if (fpout) fprintf(fpout,
                                        "Changing name of music from %s to %*s\n",
                                        S_music[i].name,usedlen,&inbuffer[fromlen]);
 
                     S_music[i].name = strdup(&inbuffer[fromlen]);
+
+                    //e6y: flag the music as changed
+                    S_music_state[i] = true;
+
                     found = TRUE;
                     break;  // only one matches, quit early
                   }
@@ -2666,6 +2706,7 @@ boolean deh_procStringSub(char *key, char *lookfor, char *newstring, FILE *fpout
   for (i=0;i<deh_numstrlookup;i++)
     {
       found = lookfor ?
+        //e6y !strnicmp(*deh_strlookup[i].ppstr,lookfor,strlen(lookfor)) :
         !stricmp(*deh_strlookup[i].ppstr,lookfor) :
         !stricmp(deh_strlookup[i].lookup,key);
 
@@ -3011,7 +3052,7 @@ char *ptr_lstrip(char *p)  // point past leading whitespace
 // e6y: Correction of wrong processing of Bits parameter if its value is equal to zero
 // No more desync on HACX demos.
 // FIXME!!! (lame)
-static boolean StrToInt(char *s, long *l)
+boolean StrToInt(const char *s, long *l)
 {      
   return (
     (sscanf(s, " 0x%lx", l) == 1) ||

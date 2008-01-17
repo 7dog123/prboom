@@ -52,6 +52,10 @@ boolean modifiedgame;
 // CPhipps - compatibility vars
 complevel_t compatibility_level, default_compatibility_level;
 
+// e6y
+// it's required for demos recorded in "demo compatibility" mode by boom201 for example
+int demover;
+
 int comp[COMP_TOTAL], default_comp[COMP_TOTAL];    // killough 10/98
 
 // v1.1-like pitched sounds
@@ -83,10 +87,8 @@ int default_monster_infighting=1;
 int monster_friction=1;       // killough 10/98: monsters affected by friction
 int default_monster_friction=1;
 
-#ifdef DOGS
 int dogs, default_dogs;         // killough 7/19/98: Marine's best friend :)
 int dog_jumping, default_dog_jumping;   // killough 10/98
-#endif
 
 // killough 8/8/98: distance friends tend to move towards players
 int distfriend = 128, default_distfriend = 128;

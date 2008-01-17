@@ -65,6 +65,7 @@
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
+#include "e6y.h" //e6y
 
 static boolean   server;
 static int       remotetic; // Tic expected from the remote
@@ -328,12 +329,18 @@ void NetUpdate(void)
   }
   { // Build new ticcmds
     int newtics = I_GetTime() - lastmadetic;
-    newtics = (newtics > 0 ? newtics : 0);
+//e6y    newtics = (newtics > 0 ? newtics : 0);
     lastmadetic += newtics;
     if (ffmap) newtics++;
     while (newtics--) {
       I_StartTic();
       if (maketic - gametic > BACKUPTICS/2) break;
+      
+      // e6y
+      // Eliminating the sudden jump of six frames(BACKUPTICS/2) 
+      // after change of realtic_clock_rate.
+      if (maketic - gametic && gametic <= force_singletics_to && realtic_clock_rate < 200) break;
+
       G_BuildTiccmd(&localcmds[maketic%BACKUPTICS]);
       maketic++;
     }
@@ -463,7 +470,7 @@ void TryRunTics (void)
 #endif
     runtics = (server ? remotetic : maketic) - gametic;
     if (!runtics) {
-      if (!movement_smooth) {
+      if (!movement_smooth || !window_focused) {
 #ifdef HAVE_NET
         if (server)
           I_WaitForPacket(ms_to_next_tick);
@@ -484,11 +491,10 @@ void TryRunTics (void)
         M_Ticker(); return;
       }
       //if ((displaytime) < (tic_vars.next-SDL_GetTicks()))
+      if (gametic > 0)
       {
         WasRenderedInTryRunTics = true;
-        if (V_GetMode() == VID_MODEGL ? 
-            movement_smooth : 
-            movement_smooth && gamestate==wipegamestate)
+        if (movement_smooth && gamestate==wipegamestate)
         {
           isExtraDDisplay = true;
           D_Display();

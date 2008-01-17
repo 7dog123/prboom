@@ -45,6 +45,7 @@
 #include "m_random.h"
 #include "m_bbox.h"
 #include "lprintf.h"
+#include "e6y.h"//e6y
 
 static mobj_t    *tmthing;
 static fixed_t   tmx;
@@ -182,6 +183,48 @@ int P_GetMoveFactor(const mobj_t *mo, int *frictionp)
 {
   int movefactor, friction;
 
+  //e6y
+  if (!mbf_features && !prboom_comp[PC_PRBOOM_FRICTION].state)
+  {
+    int momentum;
+
+    movefactor = ORIG_FRICTION_FACTOR;
+
+    if (!compatibility && variable_friction &&
+      !(mo->flags & (MF_NOGRAVITY | MF_NOCLIP)))
+    {
+      friction = mo->friction;
+      if (friction == ORIG_FRICTION)            // normal floor
+        ;
+      else if (friction > ORIG_FRICTION)        // ice
+      {
+        movefactor = mo->movefactor;
+        ((mobj_t*)mo)->movefactor = ORIG_FRICTION_FACTOR;  // reset
+      }
+      else                                      // sludge
+      {
+
+        // phares 3/11/98: you start off slowly, then increase as
+        // you get better footing
+
+        momentum = (P_AproxDistance(mo->momx,mo->momy));
+        movefactor = mo->movefactor;
+        if (momentum > MORE_FRICTION_MOMENTUM<<2)
+          movefactor <<= 3;
+
+        else if (momentum > MORE_FRICTION_MOMENTUM<<1)
+          movefactor <<= 2;
+
+        else if (momentum > MORE_FRICTION_MOMENTUM)
+          movefactor <<= 1;
+
+        ((mobj_t*)mo)->movefactor = ORIG_FRICTION_FACTOR;  // reset
+      }
+    }                                                       //     ^
+
+    return(movefactor);                                       //     |
+  }
+
   // If the floor is icy or muddy, it's harder to get moving. This is where
   // the different friction factors are applied to 'trying to move'. In
   // p_mobj.c, the friction factors are applied as you coast and slow down.
@@ -277,6 +320,10 @@ boolean P_TeleportMove (mobj_t* thing,fixed_t x,fixed_t y, boolean boss)
   thing->y = y;
 
   P_SetThingPosition (thing);
+//e6y
+  thing->PrevX = x;
+  thing->PrevY = y;
+  thing->PrevZ = thing->floorz;
 
   thing->PrevX = x;
   thing->PrevY = y;
@@ -413,6 +460,7 @@ boolean PIT_CheckLine (line_t* ld)
 
   // if contacted a special line, add it to the list
 
+  CheckLinesCrossTracer(ld);//e6y
   if (ld->special)
     {
       // 1/11/98 killough: remove limit on lines hit, by array doubling
@@ -422,7 +470,7 @@ boolean PIT_CheckLine (line_t* ld)
       }
       spechit[numspechit++] = ld;
       // e6y: Spechits overrun emulation code
-      if (numspechit >= 8 && demo_compatibility)
+      if (numspechit > 8 && demo_compatibility)
         SpechitOverrun(ld);
     }
 
@@ -568,10 +616,28 @@ static boolean PIT_CheckThing(mobj_t *thing) // killough 3/26/98: make static
       return !solid;
     }
 
+  // RjY
+  // comperr_hangsolid, an attempt to handle blocking hanging bodies
+  // A solid hanging body will allow sufficiently small things underneath it.
+  if (!((~thing->flags) & (MF_SOLID | MF_SPAWNCEILING)) // solid and hanging
+      // invert everything, then both bits should be clear
+      && tmthing->z + tmthing->height <= thing->z // head height <= base
+      // top of thing trying to move under the body <= bottom of body
+      && compbad_get(&comperr_hangsolid))
+    return true;
+
   // killough 3/16/98: Allow non-solid moving objects to move through solid
   // ones, by allowing the moving thing (tmthing) to move if it's non-solid,
   // despite another solid thing being in the way.
   // killough 4/11/98: Treat no-clipping things as not blocking
+
+  // e6y
+  // Correction of wrong return value with demo_compatibility.
+  // There is no more synch on http://www.doomworld.com/sda/dwdemo/w303-115.zip
+  // (with correction in setMobjInfoValue)
+  if (demo_compatibility && !prboom_comp[PC_TREAT_NO_CLIPPING_THINGS_AS_NOT_BLOCKING].state)
+    return !(thing->flags & MF_SOLID);
+  else
 
   return !((thing->flags & MF_SOLID && !(thing->flags & MF_NOCLIP))
            && (tmthing->flags & MF_SOLID || demo_compatibility));
@@ -723,7 +789,8 @@ boolean P_CheckPosition (mobj_t* thing,fixed_t x,fixed_t y)
     for (by=yl ; by<=yh ; by++)
       if (!P_BlockLinesIterator (bx,by,PIT_CheckLine))
         return false; // doesn't fit
-
+  
+  ClearLinesCrossTracer();//e6y
   return true;
   }
 
@@ -766,14 +833,22 @@ boolean P_TryMove(mobj_t* thing,fixed_t x,fixed_t y,
        * killough 10/98: Allow dropoffs in controlled circumstances
        * killough 11/98: Improve symmetry of clipping on stairs
        */
-
       if (!(thing->flags & (MF_DROPOFF|MF_FLOAT))) {
   if (comp[comp_dropoff])
     {
-      if ((compatibility || !dropoff
-            // fix demosync bug in mbf compatibility mode
-            || (mbf_features && compatibility_level <= prboom_2_compatibility))
-          && (tmfloorz - tmdropoffz > 24*FRACUNIT))
+      // e6y
+      // Fixed mbf_compatibility incompatibility.
+      // There is no more desync on v2-2822.lmp/vrack2.wad
+      // -force_no_dropoff command-line option is for mbf_compatibility demos 
+      // recorded with prboom 2.2.2 - 2.4.7
+      // Links:
+      // http://competn.doom2.net/pub/sda/t-z/v2-2822.zip
+      // http://www.doomworld.com/idgames/index.php?id=11138
+      boolean compatibility_no_dropoff = 
+        !prboom_comp[PC_NO_DROPOFF].state && 
+        compatibility_level >= mbf_compatibility && 
+        compatibility_level <= prboom_2_compatibility;
+      if ((compatibility || compatibility_no_dropoff || !dropoff) && (tmfloorz - tmdropoffz > 24*FRACUNIT))
         return false;                      // don't stand over a dropoff
     }
   else
@@ -1053,12 +1128,25 @@ void P_HitSlideLine (line_t* ld)
 
   /* killough 10/98: only bounce if hit hard (prevents wobbling)
    * cph - DEMOSYNC - should only affect players in Boom demos? */
-  icyfloor =
-    (mbf_features ?
-     P_AproxDistance(tmxmove, tmymove) > 4*FRACUNIT : !compatibility) &&
+
+  //e6y
+  if (mbf_features || prboom_comp[PC_PRBOOM_FRICTION].state)
+  {
+    icyfloor =
+    P_AproxDistance(tmxmove, tmymove) > 4*FRACUNIT &&
     variable_friction &&  // killough 8/28/98: calc friction on demand
     slidemo->z <= slidemo->floorz &&
     P_GetFriction(slidemo, NULL) > ORIG_FRICTION;
+  }
+  else
+  {
+    extern boolean onground;
+    icyfloor = !compatibility &&
+    variable_friction &&
+    slidemo->player &&
+    onground && 
+    slidemo->friction > ORIG_FRICTION;
+  }
 
   if (ld->slopetype == ST_HORIZONTAL)
     {
@@ -1638,7 +1726,7 @@ boolean PTR_UseTraverse (intercept_t* in)
   //WAS can't use for than one special line in a row
   //jff 3/21/98 NOW multiple use allowed with enabling line flag
 
-  return (!demo_compatibility && (in->d.line->flags&ML_PASSUSE))?
+  return (!demo_compatibility && ((in->d.line->flags&ML_PASSUSE) || compbad_get(&comperr_passuse)))?//e6y
           true : false;
 }
 
@@ -1703,8 +1791,10 @@ void P_UseLines (player_t*  player)
 // RADIUS ATTACK
 //
 
-static mobj_t *bombsource, *bombspot;
-static int bombdamage;
+//e6y static 
+mobj_t *bombsource, *bombspot;
+//e6y static 
+int bombdamage;
 
 
 //
@@ -2189,6 +2279,7 @@ void P_CreateSecNodeList(mobj_t* thing,fixed_t x,fixed_t y)
    * OTOH for Boom/MBF demos we have to preserve the buggy behavior.
    *  Fun. We restore its previous value unless we're in a Boom/MBF demo.
    */
+  if (!prboom_comp[PC_FORCE_LXDOOM_DEMO_COMPATIBILITY].state)
   if ((compatibility_level < boom_compatibility_compatibility) ||
       (compatibility_level >= prboom_3_compatibility))
     tmthing = saved_tmthing;
@@ -2222,57 +2313,77 @@ void P_MapEnd(void) {
 // http://www.doomworld.com/vb/showthread.php?s=&threadid=35214
 static void SpechitOverrun(line_t *ld)
 {
-  //int addr = 0x01C09C98 + (ld - lines) * 0x3E;
-  int addr = 0x00C09C98 + (ld - lines) * 0x3E;
-
-  if (compatibility_level == dosdoom_compatibility || compatibility_level == tasdoom_compatibility)
+  if (demo_compatibility && numspechit > 8)
   {
-    // e6y
-    // There are no more desyncs in the following dosdoom demos: 
-    // flsofdth.wad\fod3uv.lmp - http://www.doomworld.com/sda/flsofdth.htm
-    // hr.wad\hf181430.lmp - http://www.doomworld.com/tas/hf181430.zip
-    // hr.wad\hr181329.lmp - http://www.doomworld.com/tas/hr181329.zip
-    // icarus.wad\ic09uv.lmp - http://competn.doom2.net/pub/sda/i-o/icuvlmps.zip
+    if (overrun_spechit_warn)
+      ShowOverflowWarning(overrun_spechit_emulate, &overrun_spechit_promted, 
+        numspechit > 
+          (compatibility_level == dosdoom_compatibility || 
+          compatibility_level == tasdoom_compatibility ? 10 : 14), 
+        "SPECHITS",
+        "\n\nThe list of LinesID leading to overrun:\n%d, %d, %d, %d, %d, %d, %d, %d, %d.",
+        spechit[0]->iLineID, spechit[1]->iLineID, spechit[2]->iLineID,
+        spechit[3]->iLineID, spechit[4]->iLineID, spechit[5]->iLineID,
+        spechit[6]->iLineID, spechit[7]->iLineID, spechit[8]->iLineID);
 
-    switch(numspechit)
+    if (overrun_spechit_emulate)
     {
-    case 8: break; /* strange cph's code */
-    case 9: 
-      tmfloorz = addr;
-      break;
-    case 10:
-      tmceilingz = addr;
-      break;
+      // e6y
+      // There are no more desyncs in the following dosdoom demos: 
+      // flsofdth.wad\fod3uv.lmp - http://www.doomworld.com/sda/flsofdth.htm
+      // hr.wad\hf181430.lmp - http://www.doomworld.com/tas/hf181430.zip
+      // hr.wad\hr181329.lmp - http://www.doomworld.com/tas/hr181329.zip
+      // icarus.wad\ic09uv.lmp - http://competn.doom2.net/pub/sda/i-o/icuvlmps.zip
       
-    default:
-        lprintf(LO_ERROR, "SpechitOverrun: Warning: unable to emulate"
-                          " an overrun where numspechit=%i\n",
-                          numspechit);
-      break;
-    }
-  }
-  else
-  {
-    switch(numspechit)
-    {
-      case 8: break; /* numspechit, not significant it seems - cph */
-      case 9: 
-      case 10:
-      case 11:
-      case 12:
-        tmbbox[numspechit-9] = addr;
-        break;
-      case 13: 
-        nofit = addr;
-        break;
-      case 14: 
-        crushchange = addr;
-        break;
-      default:
-        lprintf(LO_ERROR, "SpechitOverrun: Warning: unable to emulate"
-                          " an overrun where numspechit=%i\n",
-                          numspechit);
-        break;
+      int addr = spechit_magic + (ld - lines) * 0x3E;
+      if (compatibility_level == dosdoom_compatibility || compatibility_level == tasdoom_compatibility)
+      {
+        extern fixed_t   tmfloorz;
+        extern fixed_t   tmceilingz;
+
+        switch(numspechit)
+        {
+        case 9: 
+          tmfloorz = addr;
+          break;
+        case 10:
+          tmceilingz = addr;
+          break;
+          
+        default:
+          fprintf(stderr, "SpechitOverrun: Warning: unable to emulate"
+                          "an overrun where numspechit=%i\n",
+                           numspechit);
+          break;
+        }
+      }
+      else
+      {
+        extern fixed_t tmbbox[4];
+        extern boolean crushchange, nofit;
+
+        switch(numspechit)
+        {
+        case 9: 
+        case 10:
+        case 11:
+        case 12:
+          tmbbox[numspechit-9] = addr;
+          break;
+        case 13:
+          nofit = addr;
+          break;
+        case 14:
+          crushchange = addr;
+          break;
+
+        default:
+          lprintf(LO_ERROR, "SpechitOverrun: Warning: unable to emulate"
+                            " an overrun where numspechit=%i\n",
+                            numspechit);
+          break;
+        }
+      }
     }
   }
 }

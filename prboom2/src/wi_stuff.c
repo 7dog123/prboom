@@ -1255,10 +1255,28 @@ void WI_drawDeathmatchStats(void)
 //
 // Note: The term "Netgame" means a coop game
 //
-static short *cnt_kills;
-static short *cnt_items;
-static short *cnt_secret;
-static short *cnt_frags;
+
+// e6y
+// 'short' => 'int' for cnt_kills, cnt_items and cnt_secret
+//
+// Original sources use 'int' type for cnt_kills instead of 'short'
+// I don't know who have made change of type, but this change
+// leads to desynch  if 'kills' percentage is more than 32767.
+// Actually PrBoom will be in an infinite cycle at calculation of
+// percentage if the player will not press <Use> for acceleration, because
+// the condition (cnt_kills[0] >= (plrs[me].skills * 100) / wbs->maxkills)
+// will be always false in this case.
+//
+// If you will kill 800 monsters on MAP30 on Ultra-Violence skill and 
+// will not press <Use>, vanilla will count up to 80000%, but PrBoom
+// will be in infinite cycle of counting:
+// (0, 1, 2, ..., 32766, 32767, -32768, -32767, ..., -1, 0, 1, ...)
+// Negative numbers will not be displayed.
+
+static int *cnt_kills;
+static int *cnt_items;
+static int *cnt_secret;
+static int *cnt_frags;
 static int    dofrags;
 static int    ng_state;
 
@@ -1583,6 +1601,9 @@ void WI_initStats(void)
 //
 void WI_updateStats(void)
 {
+  //e6y
+  static boolean play_early_explosion = true;
+
   WI_updateAnimatedBack();
 
   if (acceleratestage && sp_state != 10)
@@ -1650,7 +1671,7 @@ void WI_updateStats(void)
   }
   else if (sp_state == 8)
   {
-    if (!(bcnt&3))
+    if (!(bcnt&3) && play_early_explosion) //e6y: do not play count sound after explosion sound
       S_StartSound(0, sfx_pistol);
 
     cnt_time += 3;
@@ -1665,13 +1686,35 @@ void WI_updateStats(void)
 
     cnt_par += 3;
 
+    // e6y
+    // if par time is hidden (if modifiedgame is true)
+    // the game should play explosion sound immediately after
+    // the counter will reach level time instead of par time
+    if (modifiedgame && play_early_explosion)
+    {
+      if ((cnt_time >= plrs[me].stime / TICRATE) && (compatibility_level < lxdoom_1_compatibility || cnt_total_time >= wbs->totaltimes / TICRATE))
+      {
+        // for ExM8 levels if the player won't have pressed <Use>
+        if (compatibility_level < lxdoom_1_compatibility)
+          cnt_total_time = wbs->totaltimes / TICRATE;
+
+        S_StartSound(0, sfx_barexp);
+        play_early_explosion = false; // do not play it twice or more
+      }
+    }
+
     if (cnt_par >= wbs->partime / TICRATE)
     {
       cnt_par = wbs->partime / TICRATE;
 
       if ((cnt_time >= plrs[me].stime / TICRATE) && (compatibility_level < lxdoom_1_compatibility || cnt_total_time >= wbs->totaltimes / TICRATE))
       {
-        S_StartSound(0, sfx_barexp);
+        //e6y: for ExM8 levels
+        if (compatibility_level < lxdoom_1_compatibility)
+          cnt_total_time = wbs->totaltimes / TICRATE;
+
+        if (!modifiedgame) //e6y: do not play explosion sound if it was already played
+          S_StartSound(0, sfx_barexp);
         sp_state++;
       }
     }
@@ -1690,6 +1733,7 @@ void WI_updateStats(void)
   }
   else if (sp_state & 1)
   {
+    play_early_explosion = true; //e6y
     if (!--cnt_pause)
     {
       sp_state++;

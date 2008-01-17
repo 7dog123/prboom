@@ -40,7 +40,7 @@
 
 /* background and foreground screen numbers
  * different from other modules. */
-#define BG      1
+//e6y #define BG      1
 #define FG      0
 
 /* font stuff
@@ -243,5 +243,8 @@ void HUlib_drawIText(hu_itext_t* it);
 
 // erases all itext lines
 void HUlib_eraseIText(hu_itext_t* it);
+
+//e6y
+void HUlib_setTextXCenter(hu_textline_t* t);
 
 #endif

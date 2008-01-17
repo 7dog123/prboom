@@ -35,6 +35,10 @@
  *
  *-----------------------------------------------------------------------------*/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <fcntl.h>
 
@@ -60,6 +64,7 @@
 #include "i_sound.h"
 #include "r_demo.h"
 #include "r_fps.h"
+#include "e6y.h"//e6y
 
 extern patchnum_t hu_font[HU_FONTSIZE];
 extern boolean  message_dontfuckwithme;
@@ -74,8 +79,6 @@ int mouseSensitivity_horiz; // has default   //  killough
 int mouseSensitivity_vert;  // has default
 
 int showMessages;    // Show messages has default, 0 = off, 1 = on
-
-int traditional_menu;
 
 int hide_setup=1; // killough 5/15/98
 
@@ -289,6 +292,7 @@ void M_DrawMessages(void);
 void M_DrawChatStrings(void);
 void M_Compat(int);       // killough 10/98
 void M_ChangeDemoSmoothTurns(void);
+void M_ChangeAnisotropic(void);
 void M_General(int);      // killough 10/98
 void M_DrawCompat(void);  // killough 10/98
 void M_DrawGeneral(void); // killough 10/98
@@ -332,9 +336,9 @@ enum
 menuitem_t MainMenu[]=
 {
   {1,"M_NGAME", M_NewGame, 'n'},
+  {1,"M_OPTION",M_Options, 'o'},
   {1,"M_LOADG", M_LoadGame,'l'},
   {1,"M_SAVEG", M_SaveGame,'s'},
-  {1,"M_OPTION",M_Options, 'o'},
   // Another hickup with Special edition.
   {1,"M_RDTHIS",M_ReadThis,'r'},
   {1,"M_QUITG", M_QuitDOOM,'q'}
@@ -1041,7 +1045,9 @@ static void M_QuitResponse(int ch)
 {
   if (ch != 'y')
     return;
-  if ((!netgame || demoplayback) // killough 12/98
+  
+  //e6y: Optional removal of a quit sound
+  if ((!netgame && !misc_fastexit) // killough 12/98
       && !nosfxparm && snd_card) // avoid delay if no sound card
   {
     int i;
@@ -1182,6 +1188,13 @@ enum
   mouse_empty1,
   mouse_vert,
   mouse_empty2,
+
+//e6y
+  mouse_mlook,
+  mouse_empty3,
+  mouse_accel,
+  mouse_empty4,
+
   mouse_end
 } mouse_e;
 
@@ -1193,6 +1206,13 @@ menuitem_t MouseMenu[]=
   {-1,"",0},
   {2,"M_VERSEN",M_MouseVert,'v'},
   {-1,"",0}
+
+  //e6y
+  ,
+  {2,"M_LOKSEN",M_MouseMLook,'l'},
+  {-1,"",0},
+  {2,"M_ACCEL",M_MouseAccel,'a'},
+  {-1,"",0}
 };
 
 menu_t MouseDef =
@@ -1201,7 +1221,7 @@ menu_t MouseDef =
   &OptionsDef,
   MouseMenu,
   M_DrawMouse,
-  60,64,
+  60,37,//e6y
   0
 };
 
@@ -1219,7 +1239,7 @@ void M_DrawMouse(void)
   int mhmx,mvmx; /* jff 4/3/98 clamp drawn position    99max mead */
 
   // CPhipps - patch drawing updated
-  V_DrawNamePatch(60, 38, 0, "M_MSENS", CR_DEFAULT, VPT_STRETCH);
+  V_DrawNamePatch(60, 15, 0, "M_MSENS", CR_DEFAULT, VPT_STRETCH);//e6y
 
   //jff 4/3/98 clamp horizontal sensitivity display
   mhmx = mouseSensitivity_horiz>99? 99 : mouseSensitivity_horiz; /*mead*/
@@ -1227,6 +1247,15 @@ void M_DrawMouse(void)
   //jff 4/3/98 clamp vertical sensitivity display
   mvmx = mouseSensitivity_vert>99? 99 : mouseSensitivity_vert; /*mead*/
   M_DrawThermo(MouseDef.x,MouseDef.y+LINEHEIGHT*(mouse_vert+1),100,mvmx);
+
+  //e6y
+  {
+    int mpmx;
+    mpmx = mouseSensitivity_mlook>99? 99 : mouseSensitivity_mlook;
+    M_DrawThermo(MouseDef.x,MouseDef.y+LINEHEIGHT*(mouse_mlook+1),100,mpmx);
+    mpmx = mouse_acceleration>99? 99 : mouse_acceleration;
+    M_DrawThermo(MouseDef.x,MouseDef.y+LINEHEIGHT*(mouse_accel+1),100,mpmx);
+  }
 }
 
 void M_ChangeSensitivity(int choice)
@@ -1694,6 +1723,9 @@ void M_Setup(int choice)
 #define CR_HILITE CR_ORANGE
 #define CR_SELECT CR_GRAY
 
+//e6y
+#define CR_DISABLE CR_GRAY
+
 // Data used by the Automap color selection code
 
 #define CHIP_SIZE 7 // size of color block for colored items
@@ -1756,6 +1788,7 @@ static void M_DrawItem(const setup_menu_t* s)
     char *p, *t;
     int w = 0;
     int color =
+  flags & S_DISABLE ? CR_DISABLE : //e6y
   flags & S_SELECT ? CR_SELECT :
   flags & S_HILITE ? CR_HILITE :
   flags & (S_TITLE|S_NEXT|S_PREV) ? CR_TITLE : CR_ITEM; // killough 10/98
@@ -1802,7 +1835,9 @@ static void M_DrawSetting(const setup_menu_t* s)
   // Determine color of the text. This may or may not be used later,
   // depending on whether the item is a text string or not.
 
-  color = flags & S_SELECT ? CR_SELECT : flags & S_HILITE ? CR_HILITE : CR_SET;
+  color =
+    flags & S_DISABLE ? CR_DISABLE : //e6y
+    flags & S_SELECT ? CR_SELECT : flags & S_HILITE ? CR_HILITE : CR_SET;
 
   // Is the item a YES/NO item?
 
@@ -1975,6 +2010,16 @@ static void M_DrawSetting(const setup_menu_t* s)
 static void M_DrawScreenItems(const setup_menu_t* src)
 {
   if (print_warning_about_changes > 0) { /* killough 8/15/98: print warning */
+  //e6y
+    if (warning_about_changes & S_CANT_GL_ARB_MULTITEXTURE) {
+  strcpy(menu_buffer, "Extension GL_ARB_multitexture not found");
+  M_DrawMenuString(30,176,CR_RED);
+  } else
+    if (warning_about_changes & S_CANT_GL_ARB_MULTISAMPLEFACTOR) {
+  strcpy(menu_buffer, "Mast be even number like 0-none, 2, 4, 6");
+  M_DrawMenuString(30,176,CR_RED);
+  } else
+
     if (warning_about_changes & S_BADVAL) {
   strcpy(menu_buffer, "Value out of Range");
   M_DrawMenuString(100,176,CR_RED);
@@ -2120,6 +2165,7 @@ setup_menu_t keys_settings1[];
 setup_menu_t keys_settings2[];
 setup_menu_t keys_settings3[];
 setup_menu_t keys_settings4[];
+setup_menu_t keys_settings5[];//e6y
 
 // The table which gets you from one screen table to the next.
 
@@ -2129,6 +2175,7 @@ setup_menu_t* keys_settings[] =
   keys_settings2,
   keys_settings3,
   keys_settings4,
+  keys_settings5,//e6y
   NULL
 };
 
@@ -2295,11 +2342,32 @@ setup_menu_t keys_settings4[] =  // Key Binding screen strings
   {"ENTER"      ,S_KEY       ,m_scrn,KB_X,KB_Y+19*8,{&key_enter}},
 
   {"<- PREV" ,S_SKIP|S_PREV,m_null,KB_PREV,KB_Y+20*8, {keys_settings3}},
+//e6y
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,KB_Y+20*8, {keys_settings5}},
 
   // Final entry
 
   {0,S_SKIP|S_END,m_null}
 
+};
+
+//e6y
+setup_menu_t keys_settings5[] =  // Key Binding screen strings
+{
+  {"GAME SPEED"           ,S_SKIP|S_TITLE,m_null,KB_X,KB_Y},
+  {"SPEED UP"             ,S_KEY     ,m_scrn,KB_X,KB_Y+ 1*8,{&key_speed_up}},
+  {"SPEED DOWN"           ,S_KEY     ,m_scrn,KB_X,KB_Y+ 2*8,{&key_speed_down}},
+  {"RESET TO DEFAULT"     ,S_KEY     ,m_scrn,KB_X,KB_Y+ 3*8,{&key_speed_default}},
+  {"STEP OF CHANGE (0-AUTO)" ,S_NUM     ,m_null,KB_X,KB_Y+ 4*8, {"speed_step"}},
+  {"DEMOS"                ,S_SKIP|S_TITLE,m_null,KB_X,KB_Y+5*8},
+  {"NEXT LEVEL"           ,S_KEY     ,m_scrn,KB_X,KB_Y+ 6*8,{&key_demo_nextlevel}},
+  {"END LEVEL"            ,S_KEY     ,m_scrn,KB_X,KB_Y+ 7*8,{&key_demo_endlevel}},
+  {"CAMERA MODE"          ,S_KEY     ,m_scrn,KB_X,KB_Y+ 8*8,{&key_walkcamera}},
+  {"JOIN"                 ,S_KEY     ,m_scrn,KB_X,KB_Y+ 9*8,{&key_demo_jointogame}},
+
+  {"<- PREV",S_SKIP|S_PREV,m_null,KB_PREV,KB_Y+20*8, {keys_settings4}},
+  // Final entry
+  {0,S_SKIP|S_END,m_null}
 };
 
 // Setting up for the Key Binding screen. Turn on flags, set pointers,
@@ -2465,10 +2533,14 @@ void M_DrawWeapons(void)
 // Screen table definitions
 
 setup_menu_t stat_settings1[];
+//e6y
+setup_menu_t stat_settings2[];
 
 setup_menu_t* stat_settings[] =
 {
   stat_settings1,
+  //e6y
+  stat_settings2,
   NULL
 };
 
@@ -2495,7 +2567,26 @@ setup_menu_t stat_settings1[] =  // Status Bar and HUD Settings screen
   // Button for resetting to defaults
   {0,S_RESET,m_null,X_BUTTON,Y_BUTTON},
 
+  //e6y
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,ST_Y+20*8, {stat_settings2}},
   // Final entry
+  {0,S_SKIP|S_END,m_null}
+};
+
+//e6y
+#define ADVHUD_X 284
+setup_menu_t stat_settings2[] =
+{
+  {"ADVANCED HUD SETTINGS"       ,S_SKIP|S_TITLE,m_null,ADVHUD_X,ST_Y+1*8},
+  {"SECRET AREAS"                ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 2*8, {"hudadd_secretarea"}},
+  {"SMART TOTALS"                ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 3*8, {"hudadd_smarttotals"}},
+  {"SHOW GAMESPEED"              ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 4*8, {"hudadd_gamespeed"}},
+  {"SHOW LEVELTIME"              ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 5*8, {"hudadd_leveltime"}},
+  {"SHOW DEMOTIME"               ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 6*8, {"hudadd_demotime"}},
+  {"SHOW PROGRESS BAR DURING DEMO PLAYBACK" ,S_YESNO     ,m_null,ADVHUD_X,ST_Y+ 7*8, {"hudadd_demoprogressbar"}},
+
+  {0,S_RESET,m_null,X_BUTTON,Y_BUTTON},
+  {"<- PREV",S_SKIP|S_PREV,m_null,KB_PREV,ST_Y+20*8, {stat_settings1}},
   {0,S_SKIP|S_END,m_null}
 };
 
@@ -2727,15 +2818,11 @@ enum {
   enem_friction,
   enem_help_friends,
 
-#ifdef DOGS
   enem_helpers,
-#endif
 
   enem_distfriend,
 
-#ifdef DOGS
   enem_dog_jumping,
-#endif
 
   enem_end
 };
@@ -2760,7 +2847,6 @@ setup_menu_t enem_settings1[] =  // Enemy Settings screen
 
   {"Rescue Dying Friends",S_YESNO,m_null,E_X,E_Y+ enem_help_friends*8, {"help_friends"}},
 
-#ifdef DOGS
   // killough 7/19/98
   {"Number Of Single-Player Helper Dogs",S_NUM|S_LEVWARN,m_null,E_X,E_Y+ enem_helpers*8, {"player_helpers"}},
 
@@ -2768,7 +2854,6 @@ setup_menu_t enem_settings1[] =  // Enemy Settings screen
   {"Distance Friends Stay Away",S_NUM,m_null,E_X,E_Y+ enem_distfriend*8, {"friend_distance"}},
 
   {"Allow dogs to jump down",S_YESNO,m_null,E_X,E_Y+ enem_dog_jumping*8, {"dog_jumping"}},
-#endif
 
   // Button for resetting to defaults
   {0,S_RESET,m_null,X_BUTTON,Y_BUTTON},
@@ -2832,12 +2917,19 @@ extern int usejoystick, usemouse, default_mus_card, default_snd_card;
 extern int detect_voices, realtic_clock_rate, tran_filter_pct;
 
 setup_menu_t gen_settings1[], gen_settings2[], gen_settings3[];
+setup_menu_t gen_settings4[], gen_settings5[], gen_settings6[], gen_settings7[]; //e6y
 
 setup_menu_t* gen_settings[] =
 {
   gen_settings1,
   gen_settings2,
   gen_settings3,
+
+  //e6y
+  gen_settings4,
+  gen_settings5,
+  gen_settings6,
+  gen_settings7,
   NULL
 };
 
@@ -2853,6 +2945,7 @@ enum {
 
 enum {
   general_gl_texfilter,
+  general_gl_texfilter_anisotropic,
   general_gl_texformat,
   general_flooroffset,
 };
@@ -2861,21 +2954,26 @@ enum {
 //  general_sndcard,
 //  general_muscard,
 //  general_detvoices,
+  general_sndpcspeaker,
   general_sndchan,
   general_pitch
 };
 
 #define G_X 250
 #define G_YA  44
-#define G_YA2 (G_YA+9*8)
-#define G_YA3 (G_YA2+5*8)
+#define G_YA2 (G_YA+7*8)
+#define G_YA3 (G_YA2+6*8)
 #define GF_X 76
 
-static const char *videomodes[] = {"8bit","15bit","16bit","32bit","OpenGL"};
+static const char *videomodes[] = {"8bit",/*"16bit","32bit",*/"OpenGL"};
 
 static const char *gltexfilters[] = {"GL_NEAREST","GL_LINEAR",
                                      "GL_LINEAR_MIPMAP_LINEAR",
                                      NULL};
+
+//e6y
+static const char *gltexfilters_anisotropics[] = 
+  {"Off", "2x", "4x", "8x", "16x", NULL};
 
 static const char *gltexformats[] = {"GL_RGBA","GL_RGB5_A1",
                                      "GL_RGBA4", NULL};
@@ -2905,11 +3003,13 @@ setup_menu_t gen_settings1[] = { // General Settings screen1
   {"Texture filter", S_CHOICE|S_PRGWARN, m_null, G_X,
    G_YA2 + general_gl_texfilter*8, {"gl_tex_filter_string"}, 0, 0, NULL, gltexfilters},
 
+  {"Anisotropic filter", S_CHOICE|S_PRGWARN, m_null, G_X,
+   G_YA2 + general_gl_texfilter_anisotropic*8, {"gl_texture_filter_anisotropic"}, 0, 0, M_ChangeAnisotropic, gltexfilters_anisotropics},
+
   {"Texture format", S_CHOICE|S_PRGWARN, m_null, G_X,
    G_YA2 + general_gl_texformat*8, {"gl_tex_format_string"}, 0, 0, NULL, gltexformats},
-
   {"Item out of Floor offset", S_NUM, m_null, G_X,
-   G_YA2 + general_flooroffset*8, {"gl_sprite_offset"}},
+  G_YA2 + general_flooroffset*8, {"gl_sprite_offset"}},
 #endif
 
 #if 0
@@ -2933,6 +3033,9 @@ setup_menu_t gen_settings1[] = { // General Settings screen1
   {"Autodetect Number of Voices", S_YESNO|S_PRGWARN, m_null, G_X,
    G_YA2 + general_detvoices*8, {"detect_voices"}},
 #endif
+
+  {"PC Speaker emulation",     S_YESNO|S_PRGWARN, m_null,G_X,
+   G_YA3 + general_sndpcspeaker*8, {"snd_pcspeaker"}},
 
   {"Number of Sound Channels", S_NUM|S_PRGWARN, m_null, G_X,
    G_YA3 + general_sndchan*8, {"snd_channels"}},
@@ -2965,8 +3068,6 @@ enum {
 enum {
   general_corpse,
   general_realtic,
-  general_smooth,
-  general_smoothfactor
 };
 
 #define G_YB  44
@@ -3002,11 +3103,13 @@ setup_menu_t gen_settings2[] = { // General Settings screen2
   {"Game speed, percentage of normal", S_NUM|S_PRGWARN, m_null, G_X,
    G_YB2 + general_realtic*8, {"realtic_clock_rate"}},
 
+/* e6y
   {"Smooth Demo Playback", S_YESNO, m_null, G_X,
    G_YB2 + general_smooth*8, {"demo_smoothturns"}, 0, 0, M_ChangeDemoSmoothTurns},
 
   {"Smooth Demo Playback Factor", S_NUM, m_null, G_X,
    G_YB2 + general_smoothfactor*8, {"demo_smoothturnsfactor"}, 0, 0, M_ChangeDemoSmoothTurns},
+ */
 
   {"<- PREV",S_SKIP|S_PREV, m_null, KB_PREV, KB_Y+20*8, {gen_settings1}},
 
@@ -3064,8 +3167,96 @@ setup_menu_t gen_settings3[] = { // General Settings screen2
 
   {"<- PREV",S_SKIP|S_PREV, m_null, KB_PREV, KB_Y+20*8, {gen_settings2}},
 
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,KB_Y+20*8, {gen_settings4}},//e6y
   // Final entry
 
+  {0,S_SKIP|S_END,m_null}
+};
+
+//e6y
+#define G_Y 23
+#define G_X2 284
+setup_menu_t gen_settings4[] = { // General Settings screen3
+  {"Demos",                       S_SKIP|S_TITLE, m_null, G_X, G_Y+1*8},
+  {"Overwrite Existing",          S_YESNO, m_null,G_X,G_Y+ 2*8, {"demo_overwriteexisting"}},
+  {"Smooth Demo Playback",        S_YESNO, m_null,G_X,G_Y+ 3*8, {"demo_smoothturns"}, 0, 0, M_ChangeDemoSmoothTurns},
+  {"Smooth Demo Playback Factor", S_NUM,   m_null,G_X,G_Y+ 4*8, {"demo_smoothturnsfactor"}, 0, 0, M_ChangeDemoSmoothTurns},
+  {"Movements",                   S_SKIP|S_TITLE,m_null,G_X, G_Y+6*8},
+  {"Permanent Strafe50",          S_YESNO, m_null,G_X,G_Y+ 7*8, {"movement_strafe50"}, 0, 0, M_ChangeSpeed},
+  {"Strafe50 On Turns",           S_YESNO, m_null,G_X,G_Y+ 8*8, {"movement_strafe50onturns"}, 0, 0, M_ChangeSpeed},
+  {"Misc",                        S_SKIP|S_TITLE, m_null, G_X, G_Y+10*8},
+  {"Fast Exit",                   S_YESNO, m_null,G_X,G_Y+ 11*8, {"misc_fastexit"}},
+#ifdef _WIN32
+  {"Use In-Game Launcher",        S_YESNO, m_null,G_X,G_Y+ 12*8, {"launcher_enable"}},
+#endif
+  {"<- PREV",S_SKIP|S_PREV, m_null,KB_PREV, KB_Y+20*8, {gen_settings3}},
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,KB_Y+20*8, {gen_settings5}},
+  {0,S_SKIP|S_END,m_null}
+};
+
+setup_menu_t gen_settings5[] = { // General Settings screen3
+  {"Mouse",                       S_SKIP|S_TITLE,m_null,G_X, G_Y+1*8},
+  {"Dbl-Click As Use",            S_YESNO, m_null,G_X,G_Y+2*8, {"mouse_doubleclick_as_use"}},
+#ifdef GL_DOOM
+  {"Mouse / OpenGL",              S_SKIP|S_TITLE,m_null,G_X,G_Y+4*8},
+  {"Always Mouselook",            S_YESNO, m_null,G_X,G_Y+5*8, {"movement_mouselook"}, 0, 0, M_ChangeMouseLook},
+  {"Invert Mouse",                S_YESNO, m_null,G_X,G_Y+6*8, {"movement_mouseinvert"}, 0, 0, M_ChangeMouseInvert},
+  {"Max View Pitch",              S_NUM,   m_null,G_X,G_Y+7*8, {"movement_maxviewpitch"}, 0, 0, M_ChangeMaxViewPitch},
+#endif
+  {"Common Render",               S_SKIP|S_TITLE,m_null,G_X,G_Y+9*8},
+  {"Change Palette On Pain",      S_YESNO,m_null,G_X,G_Y+ 10*8, {"palette_ondamage"}},
+  {"Change Palette On Bonus",     S_YESNO,m_null,G_X,G_Y+ 11*8, {"palette_onbonus"}},
+  {"Change Palette On Powers",    S_YESNO,m_null,G_X,G_Y+ 12*8, {"palette_onpowers"}},
+  {"Wipe Screen Effect",          S_YESNO,m_null,G_X,G_Y+ 13*8, {"render_wipescreen"}},
+  {"<- PREV",S_SKIP|S_PREV, m_null,KB_PREV, KB_Y+20*8, {gen_settings4}},
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,KB_Y+20*8, {gen_settings6}},
+  {0,S_SKIP|S_END,m_null}
+};
+
+setup_menu_t gen_settings6[] = { // General Settings screen4
+  {"Soft Render"               ,S_SKIP|S_TITLE,m_null,G_X,G_Y+1*8},
+  {"Screen Multiple Factor (1-None)" ,S_NUM|S_PRGWARN,m_null,G_X,G_Y+2*8, {"render_screen_multiply"}, 0, 0, M_ChangeScreenMultipleFactor},
+  {"Interlaced Scanning"       ,S_YESNO,m_null,G_X,G_Y+3*8, {"render_interlaced_scanning"}, 0, 0, M_ChangeInterlacedScanning},
+#ifdef GL_DOOM
+  {"OpenGL Render"             ,S_SKIP|S_TITLE,m_null,G_X,G_Y+5*8},
+  {"Multisampling (0-None)"    ,S_NUM|S_PRGWARN|S_CANT_GL_ARB_MULTISAMPLEFACTOR,m_null,G_X,G_Y+6*8, {"render_multisampling"}, 0, 0, M_ChangeMultiSample},
+  {"Detailed Walls"            ,S_YESNO,m_null,G_X,G_Y+ 7*8, {"render_detailedwalls"}, 0, 0, M_ChangeUseDetail},
+  {"Detailed Flats"            ,S_YESNO,m_null,G_X,G_Y+ 8*8, {"render_detailedflats"}, 0, 0, M_ChangeUseDetail},
+  {"Field Of View"             ,S_NUM  ,m_null,G_X,G_Y+ 9*8, {"render_fov"}, 0, 0, M_ChangeFOV},
+  {"Paper Items"               ,S_YESNO,m_null,G_X,G_Y+10*8, {"render_paperitems"}},
+  {"Adjust Sprite Clipping"    ,S_CHOICE,m_null,G_X,G_Y+11*8, {"gl_spriteclip"}, 0, 0, M_ChangeSpriteClip, gl_spriteclipmodes},
+  {"Item out of Floor offset"  ,S_NUM  ,m_null,G_X,G_Y+12*8, {"gl_sprite_offset"}},
+  {"Rendering quality"         ,S_CHOICE, m_null,G_X,G_Y+13*8, {"gl_render_precise"}, 0, 0, M_ChangeGLRenderPrecise, gl_render_precises},
+  {"Allow Colormaps"           ,S_YESNO|S_PRGWARN,m_null,G_X,G_Y+ 14*8, {"gl_boom_colormaps"}, 0, 0, M_ChangeAllowBoomColormaps},
+  {"Allow Hi-Res Textures"     ,S_YESNO|S_PRGWARN,m_null,G_X,G_Y+ 15*8, {"gl_texture_usehires"}, 0, 0, M_ChangeTextureUseHires},
+  {"Allow Hi-Res Patches"      ,S_YESNO|S_PRGWARN,m_null,G_X,G_Y+ 16*8, {"gl_patch_usehires"}, 0, 0, M_ChangeTextureUseHires},
+  {"Override PWAD's graphics with Hi-Res" ,S_YESNO|S_PRGWARN,m_null,G_X,G_Y+ 17*8, {"gl_hires_override_pwads"}},
+  {"Sector Light Mode"         ,S_CHOICE,m_null,G_X,G_Y+18*8, {"gl_lightmode"}, 0, 0, M_ChangeLightMode, gl_lightmodes},
+#endif
+  {"<- PREV",S_SKIP|S_PREV,m_null,KB_PREV,KB_Y+20*8, {gen_settings5}},
+  {"NEXT ->",S_SKIP|S_NEXT,m_null,KB_NEXT,KB_Y+20*8, {gen_settings7}},
+  {0,S_SKIP|S_END,m_null}
+};
+
+setup_menu_t gen_settings7[] =
+{
+  {"EMULATION"                         ,S_SKIP|S_TITLE,m_null,G_X2,G_Y+1*8},
+  {"WARN ON SPECHITS OVERFLOW"         ,S_YESNO     ,m_null,G_X2,G_Y+ 2*8, {"overrun_spechit_warn"}},
+  {"TRY TO EMULATE IT"                 ,S_YESNO     ,m_null,G_X2,G_Y+ 3*8, {"overrun_spechit_emulate"}},
+  {"WARN ON REJECT OVERFLOW"           ,S_YESNO     ,m_null,G_X2,G_Y+ 4*8, {"overrun_reject_warn"}},
+  {"TRY TO EMULATE IT"                 ,S_YESNO     ,m_null,G_X2,G_Y+ 5*8, {"overrun_reject_emulate"}},
+  {"WARN ON INTERCEPTS OVERFLOW"       ,S_YESNO     ,m_null,G_X2,G_Y+ 6*8, {"overrun_intercept_warn"}},
+  {"TRY TO EMULATE IT"                 ,S_YESNO     ,m_null,G_X2,G_Y+ 7*8, {"overrun_intercept_emulate"}},
+  {"WARN ON PLAYERINGAME OVERFLOW"     ,S_YESNO     ,m_null,G_X2,G_Y+ 8*8, {"overrun_playeringame_warn"}},
+  {"TRY TO EMULATE IT"                 ,S_YESNO     ,m_null,G_X2,G_Y+ 9*8, {"overrun_playeringame_emulate"}},
+
+  {"COMPATIBILITY WITH COMMON MAPPING ERRORS" ,S_SKIP|S_TITLE,m_null,G_X2,G_Y+11*8},
+  {"LINEDEFS W/O TAGS APPLY LOCALLY"   ,S_YESNO     ,m_null,G_X2,G_Y+12*8, {"comperr_zerotag"}},
+  {"USE PASSES THRU ALL SPECIAL LINES" ,S_YESNO     ,m_null,G_X2,G_Y+13*8, {"comperr_passuse"}},
+  {"WALK UNDER SOLID HANGING BODIES"   ,S_YESNO     ,m_null,G_X2,G_Y+14*8, {"comperr_hangsolid"}},
+
+  {0,S_RESET,m_null,X_BUTTON,Y_BUTTON},
+  {"<- PREV",S_SKIP|S_PREV,m_null,KB_PREV,ST_Y+20*8, {gen_settings6}},
   {0,S_SKIP|S_END,m_null}
 };
 
@@ -3085,12 +3276,19 @@ void M_FullScreen(void) // To (un)set fullscreen video after menu changes
 
 void M_ChangeDemoSmoothTurns(void)
 {
+  extern setup_menu_t gen_settings4[];
+
   if (demo_smoothturns)
-    gen_settings2[12].m_flags &= ~(S_SKIP|S_SELECT);
+    gen_settings4[3].m_flags &= ~(S_SKIP|S_DISABLE);
   else
-    gen_settings2[12].m_flags |= (S_SKIP|S_SELECT);
+    gen_settings4[3].m_flags |= (S_SKIP|S_DISABLE);
 
   R_SmoothPlaying_Reset(NULL);
+}
+
+void M_ChangeAnisotropic(void)
+{
+
 }
 
 // Setting up for the General screen. Turn on flags, set pointers,
@@ -3145,6 +3343,7 @@ void M_DrawGeneral(void)
 #define C_NEXTPREV 131
 
 setup_menu_t comp_settings1[], comp_settings2[], comp_settings3[];
+setup_menu_t comp_settings3[];//e6y
 
 setup_menu_t* comp_settings[] =
 {
@@ -3176,10 +3375,15 @@ enum
   compat_moveblock,
   compat_model,
   compat_zerotags,
-  compat_menu,
   compat_666 = 0,
   compat_soul,
   compat_maskedanim,
+  compat_sound,
+  //e6y
+  compat_plussettings,
+  compat_ouchface,
+  compat_maxhealth,
+  compat_translucency,
 };
 
 setup_menu_t comp_settings1[] =  // Compatibility Settings screen #1
@@ -3205,7 +3409,7 @@ setup_menu_t comp_settings1[] =  // Compatibility Settings screen #1
   {"Arch-Vile resurrects invincible ghosts", S_YESNO, m_null, C_X,
    C_Y + compat_vile * COMP_SPC, {"comp_vile"}},
 
-  {"Pain Elemental limited to 20 lost souls", S_YESNO, m_null, C_X,
+  {"Pain Elementals limited to 21 lost souls", S_YESNO, m_null, C_X,
    C_Y + compat_pain * COMP_SPC, {"comp_pain"}},
 
   {"Lost souls get stuck behind walls", S_YESNO, m_null, C_X,
@@ -3234,7 +3438,7 @@ setup_menu_t comp_settings2[] =  // Compatibility Settings screen #2
   {"Powerup cheats are not infinite duration", S_YESNO, m_null, C_X,
    C_Y + compat_infcheat * COMP_SPC, {"comp_infcheat"}},
 
-  {"Zombie players can exit levels", S_YESNO, m_null, C_X,
+  {"Dead players can exit levels", S_YESNO, m_null, C_X,
    C_Y + compat_zombie * COMP_SPC, {"comp_zombie"}},
 
   {"Sky is unaffected by invulnerability", S_YESNO, m_null, C_X,
@@ -3255,9 +3459,7 @@ setup_menu_t comp_settings2[] =  // Compatibility Settings screen #2
   {"Linedef effects work with sector tag = 0", S_YESNO, m_null, C_X,
    C_Y + compat_zerotags * COMP_SPC, {"comp_zerotags"}},
 
-  {"Use Doom's main menu ordering", S_YESNO, m_null, C_X,
-   C_Y + compat_menu * COMP_SPC, {"traditional_menu"}, 0, 0, M_ResetMenu},
-
+  {"NEXT ->",S_SKIP|S_NEXT, m_null, KB_NEXT, C_Y+C_NEXTPREV, {comp_settings3}},//e6y
   {"<- PREV", S_SKIP|S_PREV, m_null, KB_PREV, C_Y+C_NEXTPREV,{comp_settings1}},
 
   {"NEXT ->",S_SKIP|S_NEXT, m_null, KB_NEXT, C_Y+C_NEXTPREV, {comp_settings3}},
@@ -3267,9 +3469,10 @@ setup_menu_t comp_settings2[] =  // Compatibility Settings screen #2
   {0,S_SKIP|S_END,m_null}
 };
 
-setup_menu_t comp_settings3[] =  // Compatibility Settings screen #2
+//e6y
+setup_menu_t comp_settings3[] =  // Compatibility Settings screen #3
 {
-  {"All boss types can trigger tag 666 at ExM8", S_YESNO, m_null, C_X,
+  {"Emulate pre-Ultimate BossDeath behaviour", S_YESNO, m_null, C_X,
    C_Y + compat_666 * COMP_SPC, {"comp_666"}},
 
   {"Lost souls don't bounce off flat surfaces", S_YESNO, m_null, C_X,
@@ -3278,10 +3481,18 @@ setup_menu_t comp_settings3[] =  // Compatibility Settings screen #2
   {"2S middle textures do not animate", S_YESNO, m_null, C_X,
    C_Y + compat_maskedanim * COMP_SPC, {"comp_maskedanim"}},
 
+  //e6y
+  {"Retain quirks in Doom's sound code", S_YESNO, m_null, C_X,
+   C_Y + compat_sound * COMP_SPC, {"comp_sound"}},
+  {"PrBoom-Plus Settings", S_SKIP|S_TITLE,m_null,C_X,
+   C_Y + compat_plussettings * COMP_SPC},
+  {"Use Doom's buggy \"Ouch\" face code", S_YESNO, m_null, C_X,
+   C_Y + compat_ouchface * COMP_SPC, {"comp_ouchface"}},
+  {"Max Health in DEH applies only to potions", S_YESNO, m_null, C_X,
+   C_Y + compat_maxhealth * COMP_SPC, {"comp_maxhealth"}},
+  {"No predefined translucency for some things", S_YESNO, m_null, C_X,
+   C_Y + compat_translucency * COMP_SPC, {"comp_translucency"}},
   {"<- PREV", S_SKIP|S_PREV, m_null, KB_PREV, C_Y+C_NEXTPREV,{comp_settings2}},
-
-  // Final entry
-
   {0,S_SKIP|S_END,m_null}
 };
 
@@ -3564,6 +3775,8 @@ static setup_menu_t **setup_screens[] =
 
 static void M_ResetDefaults(void)
 {
+  int i; //e6y
+
   default_t *dp;
   int warn = 0;
 
@@ -3574,7 +3787,14 @@ static void M_ResetDefaults(void)
   // current setup screen is the same as in the defaults table.
   // i.e. only reset variables really in the current setup screen.
 
-  for (dp = defaults; dp->name; dp++)
+  // e6y
+  // Fixed crash while trying to read data past array end
+  // All previous versions of prboom worked only by a lucky accident
+  // old code: for (dp = defaults; dp->name; dp++)
+  for (i = 0; i < numdefaults ; i++)
+  {
+    dp = &defaults[i];
+
     if (dp->setupscreen == setup_screen)
       {
   setup_menu_t **l, *p;
@@ -3608,6 +3828,7 @@ static void M_ResetDefaults(void)
         }
       end:;
       }
+  }
 
   if (warn)
     warn_about_changes(warn);
@@ -4143,8 +4364,8 @@ boolean M_Responder (event_t* ev) {
 
   } else {
    // Process mouse input
-
     if (ev->type == ev_mouse && mousewait < I_GetTime()) {
+/* e6y: do not process mouse input in menu
       mousey += ev->data3;
       if (mousey < lasty-30)
   {
@@ -4172,6 +4393,7 @@ boolean M_Responder (event_t* ev) {
     mousewait = I_GetTime() + 5;
     mousex = lastx += 30;
   }
+*/
 
       if (ev->data1&1)
   {
@@ -4361,6 +4583,21 @@ boolean M_Responder (event_t* ev) {
 
     if (ch == key_gamma)       // gamma toggle
       {
+//e6y
+#ifdef GL_DOOM
+        if (V_GetMode() == VID_MODEGL && gl_lightmode == gl_lightmode_gzdoom)
+        {
+          static char str[200];
+          useglgamma++;
+          if (useglgamma > MAX_GLGAMMA)
+            useglgamma = 0;
+          sprintf(str, "Gamma correction level %d", useglgamma); 
+          players[consoleplayer].message = str; 
+          gld_SetGammaRamp(useglgamma);
+        }
+        else
+#endif
+        {
       usegamma++;
       if (usegamma > 4)
   usegamma = 0;
@@ -4372,6 +4609,7 @@ boolean M_Responder (event_t* ev) {
   s_GAMMALVL4;
       V_SetPalette(0);
       return true;
+        }
       }
 
 
@@ -4392,6 +4630,53 @@ boolean M_Responder (event_t* ev) {
       S_StartSound(NULL,sfx_stnmov);                                //  |
       return true;                                                  // phares
       }
+
+    //e6y
+    if (ch == key_speed_default && (!netgame||demoplayback))               
+    {
+      realtic_clock_rate = StepwiseSum(realtic_clock_rate, 0, speed_step, 3, 10000, 100);
+      I_Init2();
+      return true;
+    }
+    if (ch == key_speed_up && (!netgame||demoplayback))
+    {
+      realtic_clock_rate = StepwiseSum(realtic_clock_rate, 1, speed_step, 3, 10000, 100);
+      I_Init2();
+      return true;
+    }
+    if (ch == key_speed_down && (!netgame||demoplayback))
+    {
+      realtic_clock_rate = StepwiseSum(realtic_clock_rate, -1, speed_step, 3, 10000, 100);
+      I_Init2();
+      return true;
+    }
+    if (demoplayback && !doSkip && singledemo)
+    {
+      if (ch == key_demo_nextlevel)
+      {
+        demo_stoponnext = true;
+        G_SkipDemoStart();
+        return true;
+      }
+      if (ch == key_demo_endlevel)
+      {
+        demo_stoponend = true;
+        G_SkipDemoStart();
+        return true;
+      }
+    }
+    if (ch == key_walkcamera)
+    {
+      if (demoplayback && gamestate == GS_LEVEL)
+      {
+        walkcamera.type = (walkcamera.type+1)%3;
+        P_ResetWalkcam (true, (walkcamera.type!=2));
+        R_ResetViewInterpolation ();
+        if (walkcamera.type==0)
+          R_SmoothPlaying_Reset(NULL);
+        return true;
+      }
+    }
 
     if (ch == key_hud)   // heads-up mode
       {
@@ -4489,6 +4774,12 @@ boolean M_Responder (event_t* ev) {
 
       if (ptr1->action)      // killough 10/98
         ptr1->action();
+      
+      //e6y
+#ifdef GL_DOOM
+      if ((ptr1->m_flags&S_CANT_GL_ARB_MULTITEXTURE) && !gl_arb_multitexture)
+        warn_about_changes(ptr1->m_flags & S_CANT_GL_ARB_MULTITEXTURE);
+#endif
     }
     M_SelectDone(ptr1);                           // phares 4/17/98
     return true;
@@ -4523,6 +4814,11 @@ boolean M_Responder (event_t* ev) {
 
       gather_buffer[gather_count] = 0;
       value = atoi(gather_buffer);  // Integer value
+
+      //e6y
+      if ((ptr1->m_flags&S_CANT_GL_ARB_MULTISAMPLEFACTOR) && value%2!=0)
+        warn_about_changes(ptr1->m_flags & S_CANT_GL_ARB_MULTISAMPLEFACTOR);
+      else
 
       if ((ptr1->var.def->minvalue != UL &&
            value < ptr1->var.def->minvalue) ||
@@ -5333,8 +5629,6 @@ void M_ClearMenus (void)
 
   // if (!netgame && usergame && paused)
   //     sendpause = true;
-
-  r_NoInterpolate = false;
 }
 
 //
@@ -5596,29 +5890,26 @@ void M_Init(void)
       break;
     }
 
-  M_ResetMenu();        // killough 10/98
   M_InitHelpScreen();   // init the help screen       // phares 4/08/98
   M_InitExtendedHelp(); // init extended help screens // phares 3/30/98
+  
+  //e6y
+  M_ChangeSpeed();
+#ifdef GL_DOOM
+  M_ChangeMaxViewPitch();
+  M_ChangeMouseLook();
+  M_ChangeMouseInvert();
+  M_ChangeFOV();
+  M_ChangeSpriteClip();
+  M_ChangeAllowBoomColormaps();
+  M_ChangeTextureUseHires();
+#endif
+  M_ChangeScreenMultipleFactor();
+  M_ChangeInterlacedScanning();
 
   M_ChangeDemoSmoothTurns();
 }
 
-// killough 10/98: allow runtime changing of menu order
-
-void M_ResetMenu(void)
-{
-  // killough 4/17/98:
-  // Doom traditional menu, for arch-conservatives like yours truly
-
-  while ((traditional_menu ? M_SaveGame : M_Options)
-   != MainMenu[options].routine)
-    {
-      menuitem_t t       = MainMenu[loadgame];
-      MainMenu[loadgame] = MainMenu[options];
-      MainMenu[options]  = MainMenu[savegame];
-      MainMenu[savegame] = t;
-    }
-}
 //
 // End of General Routines
 //

@@ -43,6 +43,7 @@
 #include "sounds.h"
 #include "d_event.h"
 #include "r_demo.h"
+#include "e6y.h"//e6y
 
 #define LOWERSPEED   (FRACUNIT*6)
 #define RAISESPEED   (FRACUNIT*6)
@@ -603,7 +604,8 @@ void A_FirePlasma(player_t *player, pspdef_t *psp)
 // the height of the intended target
 //
 
-static fixed_t bulletslope;
+//e6y static 
+fixed_t bulletslope;
 
 static void P_BulletSlope(mobj_t *mo)
 {

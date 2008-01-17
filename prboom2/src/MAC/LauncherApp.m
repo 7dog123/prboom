@@ -14,7 +14,7 @@ static LauncherApp *LApp;
 
 - (NSString *)wadPath
 {
-	return [@"~/Library/Application Support/PrBoom" stringByExpandingTildeInPath];
+	return [@"~/Library/Application Support/PrBoom-Plus" stringByExpandingTildeInPath];
 }
 
 - (void)awakeFromNib
@@ -224,7 +224,7 @@ static LauncherApp *LApp;
 {
 	[self saveDefaults];
 
-	NSString *path = [[NSBundle mainBundle] pathForAuxiliaryExecutable:@"PrBoom"];
+	NSString *path = [[NSBundle mainBundle] pathForAuxiliaryExecutable:@"PrBoom-Plus"];
 	NSMutableArray *args = [NSMutableArray arrayWithCapacity:10];
 
 	// redirect all output to stdout

@@ -2,15 +2,15 @@
 # Configuration #
 #################
 
-NAME = 'PrBoom'
+NAME = 'PrBoom-Plus'
 APPVERSION = /^#define VERSION "([^"]*)"$/.match(IO.read('MAC/config.h'))[1]
 
 require 'MAC/macsupport'
 
-DOOMWADDIR = File::expand_path('~/Library/Application Support/PrBoom')
+DOOMWADDIR = File::expand_path('~/Library/Application Support/PrBoom-Plus')
 @deutex = 'deutex'
 @systemFrameworks += %w(Cocoa Carbon QuickTime OpenGL)
-@frameworks += %w(SDL SDL_net)
+@frameworks += %w(SDL SDL_net SDL_image)
 @includes += ' -I. -IMAC'
 @defines += ' -DHAVE_CONFIG_H'
 @objcflags += ' -fobjc-exceptions'
@@ -64,11 +64,17 @@ d_main.c
 doomdef.c
 doomstat.c
 dstrings.c
+e6y.c
 f_finale.c
 f_wipe.c
 g_game.c
+gl_detail.c
 gl_main.c
 gl_texture.c
+gl_vertex.c
+gl_wipe.c
+gl_hires.c
+gl_clipper.c
 hu_lib.c
 hu_stuff.c
 info.c
@@ -80,7 +86,8 @@ m_menu.c
 m_misc.c
 m_random.c
 md5.c
-mmus2mid.c
+memio.c
+mus2mid.c
 p_ceilng.c
 p_checksum.c
 p_doors.c
@@ -148,9 +155,9 @@ SDL/i_network.c
 d_server.c
 )
 
-buildBinary(:binary, BINDIR, 'PrBoom', sources)
+buildBinary(:binary, BINDIR, 'PrBoom-Plus', sources)
 buildBinary(:binary, BINDIR, 'Launcher', launcherSources)
-buildBinary(:binary, BINDIR, 'Server', serverSources)
+buildBinary(:binary, BINDIR, 'Server-Plus', serverSources)
 task(:bundle => :binary)
 
 ############
@@ -170,18 +177,17 @@ wadfiles = [Dir::glob('../data/graphics/*.ppm'),
 
 if wadfiles.empty?
 	# Special case for release tarballs that only contain premade wad
-	file("#{RESOURCEDIR}/prboom.wad" => [RESOURCEDIR, '../data/prboom.wad']) do |task|
+	file("#{RESOURCEDIR}/prboom-plus.wad" => [RESOURCEDIR, '../data/prboom-plus.wad']) do |task|
 		cp(task.prerequisites[1], task.name)
 	end
 else
 	# Make the wad
-	file("#{RESOURCEDIR}/prboom.wad" => [RESOURCEDIR, '../data/prboom.txt', *wadfiles]) do |task|
+	file("#{RESOURCEDIR}/prboom-plus.wad" => [RESOURCEDIR, '../data/prboom.txt', *wadfiles]) do |task|
 		sh("cd ../data && DOOMWADDIR='#{DOOMWADDIR}' #{@deutex} -make prboom.txt ../src/#{task.name}")
 	end
-
 end
 
-task(:data => "#{RESOURCEDIR}/prboom.wad")
+task(:data => "#{RESOURCEDIR}/prboom-plus.wad")
 installTask(:data, RESOURCEDIR, %w(MAC/PrBoom.icns MAC/Launcher.icns MAC/PrBoom.sdef))
 task(:bundle => :data)
 
@@ -195,13 +201,14 @@ task(:image => :bundle) do |t|
 	imagePath = "/Volumes/#{imageName}"
 
 	if File::directory?(imagePath)
-		sh("diskutil eject #{imagePath}")
+		sh("diskutil unmount #{imagePath}")
 	end
 
 	sh("hdiutil create -fs HFS+ -volname #{imageName} -ov -type SPARSE -attach #{imageName}")
 	cp_r([BUNDLEDIR, '../AUTHORS', '../COPYING', '../NEWS', '../README', '../doc'], imagePath)
+
 	cp('MAC/Image-DS_Store', "#{imagePath}/.DS_Store")
-	sh("diskutil eject #{imagePath}")
+	sh("diskutil unmount #{imagePath}")
 
 	rm_f("#{imageName}.dmg")
 	sh("hdiutil convert #{imageName}.sparseimage -format UDZO -o #{imageName}")

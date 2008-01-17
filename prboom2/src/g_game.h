@@ -70,6 +70,7 @@ void G_DoNewGame(void);
 void G_DoReborn(int playernum);
 void G_DoPlayDemo(void);
 void G_DoCompleted(void);
+void G_ReadDemoContinueTiccmd (ticcmd_t* cmd);//e6y
 void G_ReadDemoTiccmd(ticcmd_t *cmd);
 void G_WriteDemoTiccmd(ticcmd_t *cmd);
 void G_DoWorldDone(void);
@@ -176,5 +177,13 @@ extern char savedescription[SAVEDESCLEN];  // Description to save in savegame
 
 /* cph - compatibility level strings */
 extern const char * comp_lev_str[];
+
+// e6y
+// There is a new command-line switch "-shorttics".
+// This makes it possible to practice routes and tricks
+// (e.g. glides, where this makes a significant difference)
+// with the same mouse behaviour as when recording,
+// but without having to be recording every time.
+extern int shorttics;
 
 #endif

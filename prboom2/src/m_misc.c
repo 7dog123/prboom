@@ -71,6 +71,12 @@
 #include "r_demo.h"
 #include "r_fps.h"
 
+//e6y
+#include "e6y.h"
+#ifdef _WIN32
+#include "e6y_launcher.h"
+#endif
+
 /* cph - disk icon not implemented */
 static inline void I_BeginRead(void) {}
 static inline void I_EndRead(void) {}
@@ -145,6 +151,15 @@ extern int mousebfire;
 extern int mousebstrafe;
 extern int mousebforward;
 
+// The available anisotropic
+typedef enum {
+  gl_anisotropic_off = 0,
+  gl_anisotropic_2x  = 1,
+  gl_anisotropic_4x  = 2,
+  gl_anisotropic_8x  = 3,
+  gl_anisotropic_16x = 4,
+} gl_anisotropic_mode_t;
+
 extern int viewwidth;
 extern int viewheight;
 #ifdef GL_DOOM
@@ -152,12 +167,26 @@ extern int gl_nearclip;
 extern int gl_colorbuffer_bits;
 extern int gl_depthbuffer_bits;
 extern char *gl_tex_filter_string;
+extern int gl_texture_filter_anisotropic;
 extern char *gl_tex_format_string;
 extern int gl_drawskys;
 extern int gl_sortsprites;
 extern int gl_use_paletted_texture;
 extern int gl_use_shared_texture_palette;
 extern int gl_sprite_offset;
+extern int gl_seamless;
+extern int gl_invul_bw_method;
+
+//e6y: all OpenGL extentions will be disabled with TRUE
+extern int gl_compatibility;
+
+//e6y: motion bloor
+extern int gl_motionblur;
+extern char *gl_motionblur_minspeed;
+extern char *gl_motionblur_att_a;
+extern char *gl_motionblur_att_b;
+extern char *gl_motionblur_att_c;
+
 #endif
 
 extern int realtic_clock_rate;         // killough 4/13/98: adjustable timer
@@ -183,6 +212,13 @@ int map_point_coordinates;
 
 default_t defaults[] =
 {
+  //e6y
+#ifdef _WIN32
+  {"System settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"Set this to 1 if you experience problems running the game on a multi-processor machine",{NULL},{0},UL,UL,def_none,ss_none},
+  {"process_affinity_mask", {&process_affinity_mask}, {0},-1,UL, def_int,ss_stat},
+#endif
+  
   {"Misc settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"default_compatibility_level",{(int*)&default_compatibility_level},
    {-1},-1,MAX_COMPATIBILITY_LEVEL-1,
@@ -203,7 +239,7 @@ default_t defaults[] =
    def_bool,ss_stat},
   {"demo_smoothturnsfactor", {&demo_smoothturnsfactor},  {6},1,SMOOTH_PLAYING_MAXFACTOR,
    def_int,ss_stat},
-
+   
   {"Files",{NULL},{0},UL,UL,def_none,ss_none},
   /* cph - MBF-like wad/deh/bex autoload code */
   {"wadfile_1",{NULL,&wad_files[0]},{0,""},UL,UL,def_str,ss_none},
@@ -234,20 +270,18 @@ default_t defaults[] =
    def_bool, ss_enem, &monkeys},
   {"monster_friction",{&default_monster_friction}, {1}, 0, 1,
    def_bool, ss_enem, &monster_friction},
-  {"help_friends",{&default_help_friends}, {1}, 0, 1,
+  {"help_friends",{&default_help_friends}, {0}, 0, 1,
    def_bool, ss_enem, &help_friends},
   {"allow_pushers",{&default_allow_pushers},{1},0,1,
    def_bool,ss_weap, &allow_pushers},
   {"variable_friction",{&default_variable_friction},{1},0,1,
    def_bool,ss_weap, &variable_friction},
-#ifdef DOGS
   {"player_helpers",{&default_dogs}, {0}, 0, 3,
    def_bool, ss_enem },
   {"friend_distance",{&default_distfriend}, {128}, 0, 999,
    def_int, ss_enem, &distfriend},
   {"dog_jumping",{&default_dog_jumping}, {1}, 0, 1,
    def_bool, ss_enem, &dog_jumping},
-#endif
    /* End of MBF AI extras */
 
   {"sts_always_red",{&sts_always_red},{1},0,1, // no color changes on status bar
@@ -256,8 +290,6 @@ default_t defaults[] =
    def_bool,ss_stat}, // makes percent signs on status bar always gray
   {"sts_traditional_keys",{&sts_traditional_keys},{0},0,1,  // killough 2/28/98
    def_bool,ss_stat}, // disables doubled card and skull key display on status bar
-  {"traditional_menu",{&traditional_menu},{1},0,1,
-   def_bool,ss_none}, // force use of Doom's main menu ordering // killough 4/17/98
   {"show_messages",{&showMessages},{1},0,1,
    def_bool,ss_none}, // enables message display
   {"autorun",{&autorun},{0},0,1,  // killough 3/6/98: preserve autorun across games
@@ -288,8 +320,14 @@ default_t defaults[] =
   {"comp_666",{&default_comp[comp_666]},{0},0,1,def_bool,ss_comp,&comp[comp_666]},
   {"comp_soul",{&default_comp[comp_soul]},{0},0,1,def_bool,ss_comp,&comp[comp_soul]},
   {"comp_maskedanim",{&default_comp[comp_maskedanim]},{0},0,1,def_bool,ss_comp,&comp[comp_maskedanim]},
+  //e6y
+  {"PrBoom-plus compatibility settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"comp_ouchface",{&default_comp[comp_ouchface]},{0},0,1,def_bool,ss_comp,&comp[comp_ouchface]},
+  {"comp_maxhealth",{&default_comp[comp_maxhealth]},{0},0,1,def_bool,ss_comp,&comp[comp_maxhealth]},
+  {"comp_translucency",{&default_comp[comp_translucency]},{0},0,1,def_bool,ss_comp,&comp[comp_translucency]},
 
   {"Sound settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"snd_pcspeaker",{&snd_pcspeaker},{0}, 0, 1, def_bool,ss_none},
   {"sound_card",{&snd_card},{-1},-1,7,       // jff 1/18/98 allow Allegro drivers
    def_int,ss_none}, // select sounds driver (DOS), -1 is autodetect, 0 is none; in Linux, non-zero enables sound
   {"music_card",{&mus_card},{-1},-1,9,       //  to be set,  -1 = autodetect
@@ -307,12 +345,12 @@ default_t defaults[] =
   {"Video settings",{NULL},{0},UL,UL,def_none,ss_none},
 #ifdef GL_DOOM
   #ifdef _MSC_VER
-    {"videomode",{NULL, &default_videomode},{0,"gl"},UL,UL,def_str,ss_none},
+    {"videomode",{(int*)&default_videomode},{VID_MODEGL}, VID_MODE8, VID_MODEGL, def_int,ss_none},
   #else
-    {"videomode",{NULL, &default_videomode},{0,"8"},UL,UL,def_str,ss_none},
+    {"videomode",{(int*)&default_videomode},{VID_MODE8}, VID_MODE8, VID_MODEGL, def_int,ss_none},
   #endif
 #else
-  {"videomode",{NULL, &default_videomode},{0,"8"},UL,UL,def_str,ss_none},
+  {"videomode",{(int*)&default_videomode},{VID_MODE8}, VID_MODE8, VID_MODE8, def_int,ss_none},
 #endif
   /* 640x480 default resolution */
   {"screen_width",{&desired_screenwidth},{640}, 320, MAX_SCREENWIDTH,
@@ -333,7 +371,7 @@ default_t defaults[] =
    def_int,ss_none},
   {"usegamma",{&usegamma},{3},0,4, //jff 3/6/98 fix erroneous upper limit in range
    def_int,ss_none}, // gamma correction level // killough 1/18/98
-  {"uncapped_framerate", {&movement_smooth},  {0},0,1,
+  {"uncapped_framerate", {&movement_smooth},  {1},0,1,
    def_bool,ss_stat},
   {"filter_wall",{(int*)&drawvars.filterwall},{RDRAW_FILTER_POINT},
    RDRAW_FILTER_POINT, RDRAW_FILTER_ROUNDED, def_int,ss_none},
@@ -360,23 +398,25 @@ default_t defaults[] =
    def_int,ss_none},
   {"gl_depthbuffer_bits",{&gl_depthbuffer_bits},{16},16,32,
    def_int,ss_none},
-  {"gl_tex_filter_string", {NULL,&gl_tex_filter_string}, {0,"GL_LINEAR"},UL,UL,
+  {"gl_tex_filter_string", {NULL,&gl_tex_filter_string}, {0,"GL_LINEAR_MIPMAP_LINEAR"},UL,UL,
    def_str,ss_none},
+  {"gl_texture_filter_anisotropic",{(int*)&gl_texture_filter_anisotropic},
+   {gl_anisotropic_2x}, gl_anisotropic_off, gl_anisotropic_16x, def_int,ss_none},
   {"gl_tex_format_string", {NULL,&gl_tex_format_string}, {0,"GL_RGB5_A1"},UL,UL,
    def_str,ss_none},
-  {"gl_drawskys",{&gl_drawskys},{1},0,1,
-   def_bool,ss_none},
+  {"gl_drawskys",{&gl_drawskys},{1},0,2,
+   def_int,ss_none},
   {"gl_sortsprites",{&gl_sortsprites},{1},0,1,
    def_bool,ss_none},
   {"gl_use_paletted_texture",{&gl_use_paletted_texture},{0},0,1,
    def_bool,ss_none},
   {"gl_use_shared_texture_palette",{&gl_use_shared_texture_palette},{0},0,1,
    def_bool,ss_none},
-#ifdef GL_DOOM
+#endif
+
+  //e6y: removed from #ifdef GL_DOOM
   {"gl_sprite_offset",{&gl_sprite_offset},{0}, 0, 5,
    def_int,ss_none}, // amount to bring items out of floor (GL) Mead 8/13/03
-#endif
-#endif
 
   {"Mouse settings",{NULL},{0},UL,UL,def_none,ss_none},
   {"use_mouse",{&usemouse},{1},0,1,
@@ -681,6 +721,197 @@ default_t defaults[] =
   {"hud_nosecrets", {&hud_nosecrets},  {0},0,1, // no secrets/items/kills HUD line
    def_bool,ss_stat}, // disables display of kills/items/secrets on HUD
 
+//e6y
+  {"Prboom-plus key bindings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"key_speedup", {&key_speed_up}, {KEYD_KEYPADPLUS},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_speeddown", {&key_speed_down}, {KEYD_KEYPADMINUS},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_speeddefault", {&key_speed_default}, {KEYD_KEYPADMULTIPLY},
+   0,MAX_KEY,def_key,ss_keys},
+  {"speed_step",{&speed_step},{0},0,1000,
+   def_int,ss_none},
+  {"key_demo_jointogame", {&key_demo_jointogame}, {'q'},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_demo_nextlevel", {&key_demo_nextlevel}, {KEYD_PAGEDOWN},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_demo_endlevel", {&key_demo_endlevel}, {KEYD_END},
+   0,MAX_KEY,def_key,ss_keys},
+  {"key_walkcamera", {&key_walkcamera}, {KEYD_KEYPAD0},
+   0,MAX_KEY,def_key,ss_keys},
+
+  {"Prboom-plus heads-up display settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"hudadd_gamespeed", {&hudadd_gamespeed},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_leveltime", {&hudadd_leveltime},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_demotime", {&hudadd_demotime},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_secretarea", {&hudadd_secretarea},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_smarttotals", {&hudadd_smarttotals},  {0},0,1,
+   def_bool,ss_stat},
+  {"hudadd_demoprogressbar", {&hudadd_demoprogressbar},  {0},0,1,
+   def_bool,ss_stat},
+
+  //e6y
+  {"Prboom-plus mouse settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"mouse_acceleration",{&mouse_acceleration},{0},0,UL,
+   def_int,ss_none},
+  {"mouse_sensitivity_mlook",{&mouseSensitivity_mlook},{10},0,UL,
+   def_int,ss_none},
+  {"mouse_doubleclick_as_use", {&mouse_doubleclick_as_use},  {1},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus demos settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"demo_overwriteexisting", {&demo_overwriteexisting},  {0},0,1,
+   def_bool,ss_stat},
+  {"demo_smoothturns", {&demo_smoothturns},  {0},0,1,
+   def_bool,ss_stat},
+  {"demo_smoothturnsfactor", {&demo_smoothturnsfactor},  {6},1,SMOOTH_PLAYING_MAXFACTOR,
+   def_int,ss_stat},
+
+  {"Prboom-plus game settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"movement_strafe50", {&movement_strafe50},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_strafe50onturns", {&movement_strafe50onturns},  {0},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus misc settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"misc_fastexit", {&misc_fastexit},  {0},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus video settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"sdl_videodriver", {NULL,&sdl_videodriver}, {0,"default"},UL,UL,
+   def_str,ss_none},
+  {"palette_ondamage", {&palette_ondamage},  {1},0,1,
+   def_bool,ss_stat},
+  {"palette_onbonus", {&palette_onbonus},  {1},0,1,
+   def_bool,ss_stat},
+  {"palette_onpowers", {&palette_onpowers},  {1},0,1,
+   def_bool,ss_stat},
+  {"render_wipescreen", {&render_wipescreen},  {1},0,1,
+   def_bool,ss_stat},
+  {"render_screen_multiply", {&render_screen_multiply},  {1},1,4,
+   def_int,ss_stat},
+  {"render_interlaced_scanning", {&render_interlaced_scanning},  {0},0,1,
+   def_bool,ss_stat},
+
+#ifdef GL_DOOM
+  {"Prboom-plus OpenGL settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"gl_compatibility", {&gl_compatibility},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_detailedwalls", {&render_detailedwalls},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_detailedflats", {&render_detailedflats},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_multisampling", {&render_multisampling},  {0},0,8,
+   def_int,ss_stat},
+  {"render_fov", {&render_fov},  {90},20,160,
+   def_int,ss_stat},
+  {"gl_spriteclip",{(int*)&gl_spriteclip},{spriteclip_const}, spriteclip_const, spriteclip_smart, def_int,ss_none},
+  {"movement_mouselook", {&movement_mouselook},  {0},0,1,
+   def_bool,ss_stat},
+  {"movement_maxviewpitch", {&movement_maxviewpitch},  {90},0,90,
+   def_int,ss_stat},
+  {"movement_mouseinvert", {&movement_mouseinvert},  {0},0,1,
+   def_bool,ss_stat},
+  {"render_paperitems", {&render_paperitems},  {1},0,1,
+   def_bool,ss_stat},
+  {"test_voodoo", {&test_voodoo},  {0},0,1,
+   def_bool,ss_stat},
+  {"gl_render_precise",{(int*)&gl_render_precise},{gl_render_precise_quality},
+   gl_render_precise_speed, gl_render_precise_quality, def_int,ss_none},
+  {"gl_boom_colormaps", {&gl_boom_colormaps_default},  {1},0,1,
+   def_bool,ss_stat},
+  {"gl_texture_usehires", {&gl_texture_usehires_default},  {0},0,1,
+   def_bool,ss_stat},
+  {"gl_patch_usehires", {&gl_patch_usehires_default},  {0},0,1,
+   def_bool,ss_stat},
+  {"gl_hires_override_pwads", {&gl_hires_override_pwads},  {0},0,1,
+   def_bool,ss_stat},
+  {"gl_texture_hires_dir", {NULL,&gl_texture_hires_dir}, {0,""},UL,UL,
+   def_str,ss_none},
+  {"gl_motionblur", {&gl_motionblur},  {0},0,1,
+   def_bool,ss_stat},
+  {"gl_motionblur_minspeed", {NULL,&gl_motionblur_minspeed}, {0,"64.1"},UL,UL,
+   def_str,ss_none},
+  {"gl_motionblur_att_a", {NULL,&gl_motionblur_att_a}, {0,"55.0"},UL,UL,
+   def_str,ss_none},
+  {"gl_motionblur_att_b", {NULL,&gl_motionblur_att_b}, {0,"1.8"},UL,UL,
+   def_str,ss_none},
+  {"gl_motionblur_att_c", {NULL,&gl_motionblur_att_c}, {0,"0.9"},UL,UL,
+   def_str,ss_none},
+  {"gl_invul_bw_method", {&gl_invul_bw_method},  {0},0,1,
+   def_int,ss_stat},
+  {"gl_lightmode",{(int*)&gl_lightmode},{gl_lightmode_glboom},
+   gl_lightmode_glboom, gl_lightmode_gzdoom, def_int,ss_none},
+  {"gl_light_ambient", {&gl_light_ambient},  {20},0,255,
+   def_int,ss_stat},
+  {"useglgamma",{&useglgamma},{6},0,MAX_GLGAMMA,
+   def_int,ss_none},
+#endif
+  {"Prboom-plus emulation settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"overrun_spechit_warn", {&overrun_spechit_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_spechit_emulate", {&overrun_spechit_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_reject_warn", {&overrun_reject_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_reject_emulate", {&overrun_reject_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_intercept_warn", {&overrun_intercept_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_intercept_emulate", {&overrun_intercept_emulate},  {1},0,1,
+   def_bool,ss_stat},
+  {"overrun_playeringame_warn", {&overrun_playeringame_warn},  {0},0,1,
+   def_bool,ss_stat},
+  {"overrun_playeringame_emulate", {&overrun_playeringame_emulate},  {1},0,1,
+   def_bool,ss_stat},
+
+  {"Prboom-plus 'bad' compatibility settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"comperr_zerotag", {&comperr_zerotag},  {0},0,1,
+   def_bool,ss_stat},
+  {"comperr_passuse", {&comperr_passuse},  {0},0,1,
+   def_bool,ss_stat},
+  {"comperr_hangsolid", {&comperr_hangsolid},  {0},0,1,
+   def_bool,ss_stat},
+
+#ifdef _WIN32
+  {"Prboom-plus launcher settings",{NULL},{0},UL,UL,def_none,ss_none},
+  {"launcher_enable", {&launcher_enable},  {0},0,1, def_bool,ss_stat},
+  {"launcher_history0", {NULL,&launcher_history[0]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history1", {NULL,&launcher_history[1]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history2", {NULL,&launcher_history[2]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history3", {NULL,&launcher_history[3]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history4", {NULL,&launcher_history[4]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history5", {NULL,&launcher_history[5]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history6", {NULL,&launcher_history[6]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history7", {NULL,&launcher_history[7]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history8", {NULL,&launcher_history[8]}, {0,""},UL,UL,def_str,ss_none},
+  {"launcher_history9", {NULL,&launcher_history[9]}, {0,""},UL,UL,def_str,ss_none},
+#endif
+  {"Prboom-plus demo patterns list. Put your patterns here",{NULL},{0},UL,UL,def_none,ss_none},
+  {"demo_patterns_mask", {NULL, &demo_patterns_mask, &demo_patterns_count, &demo_patterns_list}, {0,"demo_pattern",9, &demo_patterns_list_def[0]},UL,UL,def_arr,ss_none},
+  {"demo_pattern0", {NULL,&demo_patterns_list_def[0]}, 
+   {0,"DOOM 2: Hell on Earth/((lv)|(nm)|(pa)|(ty))\\d\\d.\\d\\d\\d\\.lmp/doom2.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern1", {NULL,&demo_patterns_list_def[1]}, 
+   {0,"DOOM 2: Plutonia Experiment/p(c|f|l|n|p|r|s|t)\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|plutonia.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern2", {NULL,&demo_patterns_list_def[2]}, 
+   {0,"DOOM 2: TNT - Evilution/((e(c|f|v|p|r|s|t))|(tn))\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|tnt.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern3", {NULL,&demo_patterns_list_def[3]}, 
+   {0,"The Ultimate DOOM/(((e|f|n|p|r|t|u)\\dm\\d)|(n\\ds\\d)).\\d\\d\\d\\.lmp/doom.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern4", {NULL,&demo_patterns_list_def[4]}, 
+   {0,"Alien Vendetta/a(c|f|n|p|r|s|t|v)\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|av.wad|av.deh"},UL,UL,def_str,ss_none},
+  {"demo_pattern5", {NULL,&demo_patterns_list_def[5]}, 
+   {0,"Requiem/r(c|f|n|p|q|r|s|t)\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|requiem.wad|req21fix.wad|reqmus.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern6", {NULL,&demo_patterns_list_def[6]}, 
+   {0,"Hell Revealed/h(c|e|f|n|p|r|s|t)\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|hr.wad|hrmus.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern7", {NULL,&demo_patterns_list_def[7]}, 
+   {0,"Memento Mori/mm\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|mm.wad|mmmus.wad"},UL,UL,def_str,ss_none},
+  {"demo_pattern8", {NULL,&demo_patterns_list_def[8]}, 
+   {0,"Memento Mori 2/m2\\d\\d.\\d\\d\\d\\.lmp/doom2.wad|mm2.wad|mm2mus.wad"},UL,UL,def_str,ss_none},
+
   {"Weapon preferences",{NULL},{0},UL,UL,def_none,ss_none},
   // killough 2/8/98: weapon preferences set by user:
   {"weapon_choice_1", {&weapon_preferences[0][0]}, {6}, 0,9,
@@ -867,6 +1098,25 @@ void M_SaveDefaults (void)
       // CPhipps - pure headers
       fprintf(f, "\n# %s\n", defaults[i].name);
     } else
+      // e6y: arrays
+      if (defaults[i].type == def_arr)
+      {
+        int k;
+        fprintf (f,"%-25s \"%s\"\n",defaults[i].name,*(defaults[i].location.ppsz));
+        for (k = 0; k < *(defaults[i].location.array_size); k++)
+        {
+          char ***arr = defaults[i].location.array_data;
+          if ((*arr)[k])
+          {
+            char def[80];
+            sprintf(def, "%s%d", *(defaults[i].location.ppsz), k);
+            fprintf (f,"%-25s \"%s\"\n",def, (*arr)[k]);
+          }
+        }
+        i += defaults[i].defaultvalue.array_size;
+      }
+      else
+
     // CPhipps - modified for new default_t form
     if (!IS_STRING(defaults[i])) //jff 4/10/98 kill super-hack on pointer value
       {
@@ -914,10 +1164,12 @@ void M_LoadDefaults (void)
   int   len;
   FILE* f;
   char  def[80];
-  char  strparm[100];
+  char  strparm[32767];//e6y
   char* newstring = NULL;   // killough
   int   parm;
   boolean isstring;
+  // e6y: arrays
+  default_t *item = NULL;
 
   // set everything to base values
 
@@ -929,6 +1181,39 @@ void M_LoadDefaults (void)
       *defaults[i].location.pi = defaults[i].defaultvalue.i;
   }
 
+  //e6y: arrays
+  for (i = 0 ; i < numdefaults ; i++) {
+    if (defaults[i].type == def_arr)
+    {
+      int k;
+      default_t *item = &defaults[i];
+      char ***arr = (char***)(item->location.array_data);
+      // free memory
+      for (k = 0; k < *(item->location.array_size); k++)
+      {
+        if ((*arr)[k])
+        {
+          free((*arr)[k]);
+          (*arr)[k] = NULL;
+        }
+      }
+      free(*arr);
+      *arr = NULL;
+      *(item->location.array_size) = 0;
+      // load predefined data
+      *arr = realloc(*arr, sizeof(char*) * item->defaultvalue.array_size);
+      *(item->location.array_size) = item->defaultvalue.array_size;
+      item->location.array_index = 0;
+      for (k = 0; k < item->defaultvalue.array_size; k++)
+      {
+        if (item->defaultvalue.array_data[k])
+          (*arr)[k] = strdup(item->defaultvalue.array_data[k]);
+        else
+          (*arr)[k] = strdup("");
+      }
+    }
+  }
+
   // check for a custom default file
 
   i = M_CheckParm ("-config");
@@ -938,12 +1223,8 @@ void M_LoadDefaults (void)
     const char* exedir = I_DoomExeDir();
     defaultfile = malloc(PATH_MAX+1);
     /* get config file from same directory as executable */
-#ifdef HAVE_SNPRINTF
-    snprintf((char *)defaultfile, PATH_MAX,
-#else
-    sprintf ((char *)defaultfile,
-#endif
-            "%s%s%sboom.cfg", exedir, HasTrailingSlash(exedir) ? "" : "/", 
+    SNPRINTF((char *)defaultfile, PATH_MAX,
+            "%s%s%sboom-plus.cfg", exedir, HasTrailingSlash(exedir) ? "" : "/", 
 #if ((defined GL_DOOM) && (defined _MSC_VER))
             "gl"
 #else
@@ -986,9 +1267,52 @@ void M_LoadDefaults (void)
     // Keycode hack removed
   }
 
+        // e6y: arrays
+        if (item)
+        {
+          int *pcount = item->location.array_size;
+          int *index = &item->location.array_index;
+          char ***arr = (char***)(item->location.array_data);
+          if (!strncmp(def, *(item->location.ppsz), strlen(*(item->location.ppsz))) 
+              && ((item->maxvalue == UL) || *(item->location.array_size) < item->maxvalue) )
+          {
+            if ((*index) + 1 > *pcount)
+            {
+              *arr = realloc(*arr, sizeof(char*) * ((*index) + 1));
+              (*pcount)++;
+            }
+            else
+            {
+              if ((*arr)[(*index)])
+              {
+                free((*arr)[(*index)]);
+                (*arr)[(*index)] = NULL;
+              }
+            }
+            (*arr)[(*index)] = newstring;
+            (*index)++;
+            continue;
+          }
+          else
+          {
+            item = NULL;
+          }
+        }
+
         for (i = 0 ; i < numdefaults ; i++)
           if ((defaults[i].type != def_none) && !strcmp(def, defaults[i].name))
             {
+              // e6y: arrays
+              if (defaults[i].type == def_arr)
+              {
+                char** ppsz=((char**)(defaults[i].location.ppsz));
+                free(*ppsz);
+                *ppsz = NULL;
+                *(defaults[i].location.ppsz) = newstring;
+                item = &defaults[i];
+                continue;
+              }
+
       // CPhipps - safety check
             if (isstring != IS_STRING(defaults[i])) {
         lprintf(LO_WARN, "M_LoadDefaults: Type mismatch reading %s\n", defaults[i].name);
@@ -1018,7 +1342,11 @@ void M_LoadDefaults (void)
   //jff 3/4/98 redundant range checks for hud deleted here
   /* proff 2001/7/1 - added prboom.wad as last entry so it's always loaded and
      doesn't overlap with the cfg settings */
-  wad_files[MAXLOADFILES-1]="prboom.wad";
+  //e6y: Check on existence of prboom.wad
+#ifndef ALL_IN_ONE
+  if (!(wad_files[MAXLOADFILES-1] = I_FindFile("prboom-plus.wad", "")))
+    I_Error("PrBoom-Plus.wad not found. Can't continue.");
+#endif
 }
 
 
@@ -1041,7 +1369,7 @@ static void WritePNGfile(FILE* fp, const byte* data,
 {
   png_structp png_ptr;
   png_infop info_ptr;
-  boolean gl = V_GetMode() == VID_MODEGL;
+  boolean gl = !palette;
 
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, png_error_ptr_NULL, error_fn, NULL);
   png_set_compression_level(png_ptr, 2);
@@ -1281,6 +1609,7 @@ static void WriteTGAfile(FILE* st, const byte* data,
 
 void M_DoScreenShot (const char* fname)
 {
+  extern int st_palette;//e6y
   screeninfo_t screenshot;
   FILE	*fp = fopen(fname,"wb");
   const byte *pal;
@@ -1295,7 +1624,7 @@ void M_DoScreenShot (const char* fname)
   if (V_GetMode() == VID_MODEGL) {
     screenshot.width = screens[0].width;
     screenshot.height = screens[0].height;
-    screenshot.byte_pitch = screens[0].width*3;
+    screenshot.pitch = screens[0].width*3;
     screenshot.not_on_heap = false;
     V_AllocScreen(&screenshot);
     // munge planar buffer to linear
@@ -1305,16 +1634,18 @@ void M_DoScreenShot (const char* fname)
 #endif
 
     // save the bmp file
+    // e6y: processing of screen_multiply
 
   #ifdef HAVE_LIBPNG
-    WritePNGfile(fp, screenshot.data, SCREENWIDTH, SCREENHEIGHT, NULL);
+    WritePNGfile(fp, screenshot.data, REAL_SCREENWIDTH, REAL_SCREENHEIGHT, NULL);
   #else
-    WriteTGAfile(fp, screenshot.data, SCREENWIDTH, SCREENHEIGHT);
+    WriteTGAfile
+      (fp, screenshot.data, REAL_SCREENWIDTH, REAL_SCREENHEIGHT);
   #endif
   } else {
     screenshot.width = screens[0].width;
     screenshot.height = screens[0].height;
-    screenshot.byte_pitch = screens[0].width;
+    screenshot.pitch = screens[0].width;
     screenshot.not_on_heap = false;
     V_AllocScreen(&screenshot);
     // munge planar buffer to linear
@@ -1325,11 +1656,13 @@ void M_DoScreenShot (const char* fname)
     pal = W_CacheLumpNum (pplump);
 
     // save the bmp file
+    // e6y: processing of screen_multiply
 
   #ifdef HAVE_LIBPNG
-    WritePNGfile(fp, screenshot.data, SCREENWIDTH, SCREENHEIGHT, pal + 3*256*st_palette);
+    WritePNGfile(fp, screenshot.data, REAL_SCREENWIDTH, REAL_SCREENHEIGHT, pal + 3*256*st_palette);
   #else
-    WriteBMPfile(fp, screenshot.data, SCREENWIDTH, SCREENHEIGHT, pal + 3*256*st_palette);
+    WriteBMPfile
+      (fp, screenshot.data, REAL_SCREENWIDTH, REAL_SCREENHEIGHT, pal + 3*256*st_palette);
   #endif
 
     // cph - free the palette

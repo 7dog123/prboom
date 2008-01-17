@@ -42,6 +42,8 @@
 // MISC
 //
 
+int numdefaults; //e6y
+
 boolean M_WriteFile (char const* name,void* source,int length);
 
 int M_ReadFile (char const* name,byte** buffer);
@@ -75,10 +77,17 @@ typedef struct default_s
   struct {
     int* pi;
     const char** ppsz;
+    //e6y: arrays
+    int* array_size;
+    char*** array_data;
+    int array_index;
   } location;
   struct {
     int i;
     const char* psz;
+    //e6y: arrays
+    int array_size;
+    char** array_data;
   } defaultvalue; // CPhipps - default value
   // Limits (for an int)
   int   minvalue;         // jff 3/3/98 minimum allowed value
@@ -88,6 +97,7 @@ typedef struct default_s
     def_str,  // A string
     def_int,  // Integer
     def_hex,  // Integer (write in hex)
+    def_arr,  // e6y: arrays
     def_bool = def_int,  // Boolean
     def_key = def_hex,   // Key code (byte)
     def_mouseb = def_int,// Mouse button

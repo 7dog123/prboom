@@ -153,6 +153,10 @@ typedef struct player_s
   int                 itemcount;
   int                 secretcount;
 
+  //e6y
+  int                 resurectedkillcount;
+  const char*         centermessage;
+
   // Hint messages. // CPhipps - const
   const char*         message;
 

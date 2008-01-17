@@ -39,6 +39,7 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "sounds.h"
+#include "e6y.h"
 
 //////////////////////////////////////////////////////////
 //
@@ -79,6 +80,7 @@ int EV_DoGenFloor
 
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_floor;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -283,6 +285,7 @@ int EV_DoGenCeiling
 
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_ceiling;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -491,6 +494,7 @@ int EV_DoGenLift
   if (Targ==LnF2HnF)
     P_ActivateInStasis(line->tag);
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_lift;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -649,6 +653,7 @@ int EV_DoGenStairs
 
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_stair;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -837,6 +842,7 @@ int EV_DoGenCrusher
   //jff 4/5/98 return if activated
   rtn = P_ActivateInStasisCeiling(line);
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_crusher;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -932,6 +938,7 @@ int EV_DoGenLockedDoor
 
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_locked;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)
@@ -1041,6 +1048,7 @@ int EV_DoGenDoor
 
   rtn = 0;
 
+  if (ProcessNoTagLines(line, &sec, &secnum)) if (zerotag_manual) {manual = true; goto manual_door;} else return rtn;//e6y
   // check if a manual trigger, if so do just the sector on the backside
   manual = false;
   if (Trig==PushOnce || Trig==PushMany)

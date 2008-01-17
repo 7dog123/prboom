@@ -69,8 +69,6 @@ void M_StartControlPanel (void);
 
 void M_ForcedLoadGame(const char *msg); // killough 5/15/98: forced loadgames
 
-extern int traditional_menu;  // display the menu traditional way
-
 void M_Trans(void);          // killough 11/98: reset translucency
 
 void M_ResetMenu(void);      // killough 11/98: reset main menu ordering
@@ -113,6 +111,9 @@ extern int warning_about_changes, print_warning_about_changes;
 #define S_CREDIT  0x200000  // killough 10/98: credit
 #define S_BADVID  0x400000  // killough 12/98: video mode change error
 #define S_CHOICE  0x800000  // this item has several values
+
+//e6y
+#define S_DISABLE  0x1000000
 
 /* S_SHOWDESC  = the set of items whose description should be displayed
  * S_SHOWSET   = the set of items whose setting should be displayed

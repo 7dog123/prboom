@@ -38,6 +38,7 @@
 #include "p_spec.h"
 #include "r_demo.h"
 #include "r_fps.h"
+#include "e6y.h"
 
 int movement_smooth = false;
 
@@ -77,7 +78,6 @@ static fixed2_t *bakipos;
 static interpolation_t *curipos;
 
 static boolean NoInterpolateView;
-boolean r_NoInterpolate;
 static boolean didInterp;
 boolean WasRenderedInTryRunTics;
 
@@ -93,20 +93,66 @@ void R_InterpolateView (player_t *player, fixed_t frac)
       original_view_vars.viewz = player->viewz;
 
       original_view_vars.viewangle = player->mo->angle + viewangleoffset;
+      original_view_vars.viewpitch = player->mo->pitch;
+
+      if(walkcamera.type)
+      {
+        walkcamera.PrevX = walkcamera.x;
+        walkcamera.PrevY = walkcamera.y;
+        walkcamera.PrevZ = walkcamera.z;
+        walkcamera.PrevAngle = walkcamera.angle;
+        walkcamera.PrevPitch = walkcamera.pitch;
+      }
     }
 
-    viewx = original_view_vars.viewx + FixedMul (frac, player->mo->x - original_view_vars.viewx);
-    viewy = original_view_vars.viewy + FixedMul (frac, player->mo->y - original_view_vars.viewy);
-    viewz = original_view_vars.viewz + FixedMul (frac, player->viewz - original_view_vars.viewz);
+    if (walkcamera.type != 2)
+    {
+      viewx = original_view_vars.viewx + FixedMul (frac, player->mo->x - original_view_vars.viewx);
+      viewy = original_view_vars.viewy + FixedMul (frac, player->mo->y - original_view_vars.viewy);
+      viewz = original_view_vars.viewz + FixedMul (frac, player->viewz - original_view_vars.viewz);
+    }
+    else
+    {
+      viewx = walkcamera.PrevX + FixedMul (frac, walkcamera.x - walkcamera.PrevX);
+      viewy = walkcamera.PrevY + FixedMul (frac, walkcamera.y - walkcamera.PrevY);
+      viewz = walkcamera.PrevZ + FixedMul (frac, walkcamera.z - walkcamera.PrevZ);
+    }
 
-    viewangle = original_view_vars.viewangle + FixedMul (frac, R_SmoothPlaying_Get(player->mo->angle) + viewangleoffset - original_view_vars.viewangle);
+    if (walkcamera.type)
+    {
+      viewangle = walkcamera.PrevAngle + FixedMul (frac, walkcamera.angle - walkcamera.PrevAngle);
+      viewpitch = walkcamera.PrevPitch + FixedMul (frac, walkcamera.pitch - walkcamera.PrevPitch);
+    }
+    else
+    {
+      viewangle = original_view_vars.viewangle + FixedMul (frac, R_SmoothPlaying_Get(player->mo->angle) + viewangleoffset - original_view_vars.viewangle);
+      viewpitch = original_view_vars.viewpitch + FixedMul (frac, R_SmoothPlaying_Get(player->mo->pitch) - original_view_vars.viewpitch);
+    }
   }
   else
   {
-    viewx = player->mo->x;
-    viewy = player->mo->y;
-    viewz = player->viewz;
-    viewangle = R_SmoothPlaying_Get(player->mo->angle);
+    if (walkcamera.type != 2)
+    {
+      viewx = player->mo->x;
+      viewy = player->mo->y;
+      viewz = player->viewz;
+    }
+    else
+    {
+      viewx = walkcamera.x;
+      viewy = walkcamera.y;
+      viewz = walkcamera.z;
+    }
+    if (walkcamera.type)
+    {
+      viewangle = walkcamera.angle;
+      viewpitch = walkcamera.pitch;
+    }
+    else
+    {
+      viewangle = R_SmoothPlaying_Get(player->mo->angle);
+      viewpitch = player->mo->pitch;
+    }
   }
 }
 
@@ -219,6 +265,19 @@ static void R_DoAnInterpolation (int i, fixed_t smoothratio)
     pos = bakipos[i][1] = *adr2;
     *adr2 = oldipos[i][1] + FixedMul (pos - oldipos[i][1], smoothratio);
   }
+
+#ifdef GL_DOOM
+  if (gl_seamless)
+  {
+    switch (curipos[i].type)
+    {
+    case INTERP_SectorFloor:
+    case INTERP_SectorCeiling:
+      gld_UpdateSplitData(((sector_t*)curipos[i].address));
+      break;
+    }
+  }
+#endif
 }
 
 void R_UpdateInterpolations()
@@ -448,4 +507,3 @@ void R_StopInterpolationIfNeeded(thinker_t *th)
       R_StopInterpolation (type2, posptr2);
   }
 }
-

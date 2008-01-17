@@ -52,6 +52,7 @@
 #include "v_video.h"
 #include "r_demo.h"
 #include "r_fps.h"
+#include "e6y.h"//e6y
 
 //
 // MAP related Lookup tables.
@@ -162,6 +163,20 @@ size_t     num_deathmatchstarts;   // killough
 
 mapthing_t *deathmatch_p;
 mapthing_t playerstarts[MAXPLAYERS];
+
+static int previous_episode = -1;
+static int previous_map = -1;
+
+boolean SameLevel(int episode, int map)
+{
+  return ((map == previous_map) && (episode == previous_episode));
+}
+
+void AcceptLevel(int episode, int map)
+{
+  previous_episode = episode;
+  previous_map = map;
+}
 
 //
 // P_CheckForZDoomNodes
@@ -385,17 +400,41 @@ static void P_LoadSegs (int lump)
 
       v1 = (unsigned short)SHORT(ml->v1);
       v2 = (unsigned short)SHORT(ml->v2);
-      li->v1 = &vertexes[v1];
-      li->v2 = &vertexes[v2];
+
+      // e6y
+      // moved down for additional checks to avoid overflow
+      // if wrong vertexe's indexes are in SEGS lump
+      // see below for more detailed information
+      //li->v1 = &vertexes[v1];
+      //li->v2 = &vertexes[v2];
 
       li->miniseg = false; // figgi -- there are no minisegs in classic BSP nodes
-      li->length  = GetDistance(li->v2->x - li->v1->x, li->v2->y - li->v1->y);
+
+      // e6y: moved down, see below
+      //li->length  = GetDistance(li->v2->x - li->v1->x, li->v2->y - li->v1->y);
+
       li->angle = (SHORT(ml->angle))<<16;
       li->offset =(SHORT(ml->offset))<<16;
       linedef = (unsigned short)SHORT(ml->linedef);
+
+      //e6y: check for wrong indexes
+      if ((unsigned)linedef >= (unsigned)numlines)
+      {
+        I_Error("P_LoadSegs: seg %d references a non-existent linedef %d",
+          i, (unsigned)linedef);
+      }
+
       ldef = &lines[linedef];
       li->linedef = ldef;
       side = SHORT(ml->side);
+
+      //e6y: check for wrong indexes
+      if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
+      {
+        I_Error("P_LoadSegs: linedef %d for seg %d references a non-existent sidedef %d",
+          linedef, i, (unsigned)ldef->sidenum[side]);
+      }
+
       li->sidedef = &sides[ldef->sidenum[side]];
 
       /* cph 2006/09/30 - our frontsector can be the second side of the
@@ -412,6 +451,46 @@ static void P_LoadSegs (int lump)
         li->backsector = sides[ldef->sidenum[side^1]].sector;
       else
         li->backsector = 0;
+
+      // e6y
+      // check and fix wrong references to non-existent vertexes
+      // see e1m9 @ NIVELES.WAD
+      // http://www.doomworld.com/idgames/index.php?id=12647
+      if (v1 >= numvertexes || v2 >= numvertexes)
+      {
+        char str[200] = 
+          "P_LoadSegs: compatibility loss - seg %d references a non-existent vertex %d\n";
+        
+        if (demorecording)
+        {
+          I_Error(strcat(str, "Demo recording on levels with invalid nodes is not allowed"),
+            i, (v1 >= numvertexes ? v1 : v2));
+        }
+
+        if (v1 >= numvertexes)
+          lprintf(LO_WARN, str, i, v1);
+        if (v2 >= numvertexes)
+          lprintf(LO_WARN, str, i, v2);
+
+        if (li->sidedef == &sides[li->linedef->sidenum[0]])
+        {
+          li->v1 = lines[ml->linedef].v1;
+          li->v2 = lines[ml->linedef].v2;
+        }
+        else
+        {
+          li->v1 = lines[ml->linedef].v2;
+          li->v2 = lines[ml->linedef].v1;
+        }
+      }
+      else
+      {
+        li->v1 = &vertexes[v1];
+        li->v2 = &vertexes[v2];
+      }
+
+      //e6y: now we can calculate it
+      li->length  = GetDistance(li->v2->x - li->v1->x, li->v2->y - li->v1->y);
     }
 
   W_UnlockLumpNum(lump); // cph - release the data
@@ -637,7 +716,7 @@ static void P_LoadThings (int lump)
         continue;
 
       // Do spawn all other stuff.
-      P_SpawnMapThing(&mt);
+      P_SpawnMapThing(&mt, i);
     }
 
   W_UnlockLumpNum(lump); // cph - release the data
@@ -704,8 +783,17 @@ static void P_LoadLineDefs (int lump)
         }
 
       /* calculate sound origin of line to be its midpoint */
-      ld->soundorg.x = (ld->bbox[BOXLEFT] + ld->bbox[BOXRIGHT] ) / 2;
-      ld->soundorg.y = (ld->bbox[BOXTOP]  + ld->bbox[BOXBOTTOM]) / 2;
+      if (comp[comp_sound])
+      {
+        ld->soundorg.x = (ld->bbox[BOXLEFT] + ld->bbox[BOXRIGHT] ) / 2;
+        ld->soundorg.y = (ld->bbox[BOXTOP]  + ld->bbox[BOXBOTTOM]) / 2;
+      }
+      else
+      {
+        //e6y: fix sound origin for large levels
+        ld->soundorg.x = ld->bbox[BOXLEFT] / 2 + ld->bbox[BOXRIGHT] / 2;
+        ld->soundorg.y = ld->bbox[BOXTOP] / 2 + ld->bbox[BOXBOTTOM] / 2;
+      }
 
       ld->iLineID=i; // proff 04/05/2000: needed for OpenGL
       ld->sidenum[0] = SHORT(mld->sidenum[0]);
@@ -764,6 +852,7 @@ static void P_LoadLineDefs2(int lump)
           int lump, j;
 
         case 260:               // killough 4/11/98: translucent 2s textures
+            transparentpresent = true;//e6y
             lump = sides[*ld->sidenum].special; // translucency from sidedef
             if (!ld->tag)                       // if tag==0,
               ld->tranlump = lump;              // affect this linedef only
@@ -1129,7 +1218,7 @@ static void P_CreateBlockMap(void)
   // Create the blockmap lump
 
   blockmaplump = Z_Malloc(sizeof(*blockmaplump) * (4+NBlocks+linetotal),
-                          PU_LEVEL, 0);
+                          PU_STATIC, 0);
   // blockmap header
 
   blockmaplump[0] = bmaporgx = xorg << FRACBITS;
@@ -1188,7 +1277,7 @@ static void P_LoadBlockMap (int lump)
       long i;
       // cph - const*, wad lump handling updated
       const short *wadblockmaplump = W_CacheLumpNum(lump);
-      blockmaplump = Z_Malloc(sizeof(*blockmaplump) * count, PU_LEVEL, 0);
+      blockmaplump = Z_Malloc(sizeof(*blockmaplump) * count, PU_STATIC, 0);
 
       // killough 3/1/98: Expand wad blockmap into larger internal one,
       // by treating all offsets except -1 as unsigned and zero-extending
@@ -1215,7 +1304,7 @@ static void P_LoadBlockMap (int lump)
     }
 
   // clear out mobj chains - CPhipps - use calloc
-  blocklinks = Z_Calloc (bmapwidth*bmapheight,sizeof(*blocklinks),PU_LEVEL,0);
+  blocklinks = Z_Calloc (bmapwidth*bmapheight,sizeof(*blocklinks),PU_STATIC,0);
   blockmap = blockmaplump+4;
 }
 
@@ -1234,6 +1323,7 @@ static void P_LoadReject(int lumpnum, int totallines)
 {
   unsigned int length, required;
   byte *newreject;
+  unsigned char pad;
 
   // dump any old cached reject lump, then cache the new one
   if (rejectlump != -1)
@@ -1251,32 +1341,48 @@ static void P_LoadReject(int lumpnum, int totallines)
   // PU_LEVEL => will be freed on level exit
   newreject = Z_Malloc(required, PU_LEVEL, NULL);
   rejectmatrix = (const byte *)memmove(newreject, rejectmatrix, length);
-  memset(newreject + length, 0, required - length);
+
+  // e6y
+  // PrBoom 2.2.5 and 2.2.6 padded a short REJECT with 0xff
+  // This command line switch is needed for all potential demos 
+  // recorded with these versions of PrBoom on maps with too short REJECT
+  // I don't think there are any demos that will need it but yes that seems sensible
+  pad = prboom_comp[PC_REJECT_PAD_WITH_FF].state ? 0xff : 0;
+
+  memset(newreject + length, pad, required - length);
   // unlock the original lump, it is no longer needed
   W_UnlockLumpNum(rejectlump);
   rejectlump = -1;
 
-  if (demo_compatibility)
+  //e6y
+  if (demo_compatibility && (overrun_reject_warn || overrun_reject_emulate))
   {
-    // merged in RejectOverrunAddInt(), and the 4 calls to it, here
-    unsigned int rejectpad[4] = {
-      0,        // size, will be filled in using totallines
-      0,        // part of the header of a doom.exe z_zone block
-      50,       // DOOM_CONST_PU_LEVEL
-      0x1d4a11  // DOOM_CONST_ZONEID
-    };
-    unsigned int i, pad = 0, *src = rejectpad;
-    byte *dest = newreject + length;
+    if (overrun_reject_warn)
+      ShowOverflowWarning(overrun_reject_emulate, &overrun_reject_promted, 
+        (required - length > 16) || (length%4!=0), "REJECT", "");
 
-    rejectpad[0] = ((totallines*4+3)&~3)+24; // doom.exe zone header size
+    if (overrun_reject_emulate)
+    {
+      // merged in RejectOverrunAddInt(), and the 4 calls to it, here
+      unsigned int rejectpad[4] = {
+        0,        // size, will be filled in using totallines
+        0,        // part of the header of a doom.exe z_zone block
+        50,       // DOOM_CONST_PU_LEVEL
+        0x1d4a11  // DOOM_CONST_ZONEID
+      };
+      unsigned int i, pad = 0, *src = rejectpad;
+      byte *dest = newreject + length;
 
-    // copy at most 16 bytes from rejectpad
-    // emulating a 32-bit, little-endian architecture (can't memmove)
-    for (i = 0; i < required - length && i < 16; i++) { // 16 hard-coded
-      if (!(i&3)) // get the next 4 bytes to copy when i=0,4,8,12
-        pad = *src++;
-      *dest++ = pad & 0xff; // store lowest-significant byte
-      pad >>= 8; // rotate the next byte down
+      rejectpad[0] = ((totallines*4+3)&~3)+24; // doom.exe zone header size
+
+      // copy at most 16 bytes from rejectpad
+      // emulating a 32-bit, little-endian architecture (can't memmove)
+      for (i = 0; i < required - length && i < 16; i++) { // 16 hard-coded
+        if (!(i&3)) // get the next 4 bytes to copy when i=0,4,8,12
+          pad = *src++;
+        *dest++ = pad & 0xff; // store lowest-significant byte
+        pad >>= 8; // rotate the next byte down
+      }
     }
   }
   lprintf(LO_WARN, "P_LoadReject: REJECT too short (%u<%u) - padded\n",
@@ -1341,7 +1447,6 @@ static int P_GroupLines (void)
 
   {  // allocate line tables for each sector
     line_t **linebuffer = Z_Malloc(total*sizeof(line_t *), PU_LEVEL, 0);
-
     // e6y: REJECT overrun emulation code
     // moved to P_LoadReject
 
@@ -1369,8 +1474,17 @@ static int P_GroupLines (void)
     int block;
 
     // set the degenmobj_t to the middle of the bounding box
-    sector->soundorg.x = (bbox[BOXRIGHT]+bbox[BOXLEFT])/2;
-    sector->soundorg.y = (bbox[BOXTOP]+bbox[BOXBOTTOM])/2;
+    if (comp[comp_sound])
+    {
+      sector->soundorg.x = (bbox[BOXRIGHT]+bbox[BOXLEFT])/2;
+      sector->soundorg.y = (bbox[BOXTOP]+bbox[BOXBOTTOM])/2;
+    }
+    else
+    {
+      //e6y: fix sound origin for large levels
+      sector->soundorg.x = bbox[BOXRIGHT]/2+bbox[BOXLEFT]/2;
+      sector->soundorg.y = bbox[BOXTOP]/2+bbox[BOXBOTTOM]/2;
+    }
 
     // adjust bounding box to map blocks
     block = (bbox[BOXTOP]-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
@@ -1489,13 +1603,20 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   char  gl_lumpname[9];
   int   gl_lumpnum;
 
+  //e6y
+  totallive = 0;
+  transparentpresent = false;
+
   R_StopAllInterpolations();
 
   totallive = totalkills = totalitems = totalsecret = wminfo.maxfrags = 0;
   wminfo.partime = 180;
 
   for (i=0; i<MAXPLAYERS; i++)
+  {//e6y
     players[i].killcount = players[i].secretcount = players[i].itemcount = 0;
+    players[i].resurectedkillcount = 0;//e6y
+  }//e6y
 
   // Initial height of PointOfView will be set by player think.
   players[consoleplayer].viewz = 1;
@@ -1508,10 +1629,22 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
     W_UnlockLumpNum(rejectlump);
     rejectlump = -1;
   }
+  
+#ifdef GL_DOOM
+  // e6y
+  // vertexes data should be purged here,
+  // because it depends from sectors
+  gld_CleanVertexData();
+#endif
 
 #ifdef GL_DOOM
 // proff 11/99: clean the memory from textures etc.
-  gld_CleanMemory();
+  {
+    if (!SameLevel(episode, map))
+    {
+      gld_CleanMemory();
+    }
+  }
 #endif
 
   P_InitThinkers();
@@ -1542,11 +1675,6 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // killough 4/4/98: split load of sidedefs into two parts,
   // to allow texture names to be used in special linedefs
 
-  // refuse to load Hexen-format maps, avoid segfaults
-  if ((i = lumpnum + ML_BLOCKMAP + 1) < numlumps
-      && !strncmp(lumpinfo[i].name, "BEHAVIOR", 8))
-    I_Error("P_SetupLevel: %s: Hexen format not supported", lumpname);
-
 #if 1
   // figgi 10/19/00 -- check for gl lumps and load them
   P_GetNodesVersion(lumpnum,gl_lumpnum);
@@ -1560,7 +1688,17 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   P_LoadLineDefs  (lumpnum+ML_LINEDEFS);
   P_LoadSideDefs2 (lumpnum+ML_SIDEDEFS);
   P_LoadLineDefs2 (lumpnum+ML_LINEDEFS);
-  P_LoadBlockMap  (lumpnum+ML_BLOCKMAP);
+
+  if (!SameLevel(episode, map))
+  {
+    Z_Free(blocklinks);
+    Z_Free(blockmaplump);
+    P_LoadBlockMap  (lumpnum+ML_BLOCKMAP);
+  }
+  else
+  {
+    memset(blocklinks, 0, bmapwidth*bmapheight*sizeof(*blocklinks));
+  }
 
   if (nodesVersion > 0)
   {
@@ -1597,7 +1735,7 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // e6y
   // Correction of desync on dv04-423.lmp/dv.wad
   // http://www.doomworld.com/vb/showthread.php?s=&postid=627257#post627257
-  if (compatibility_level>=lxdoom_1_compatibility || M_CheckParm("-force_remove_slime_trails") > 0)
+  if (compatibility_level>=lxdoom_1_compatibility || prboom_comp[PC_REMOVE_SLIME_TRAILS].state)
     P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
 
   // Note: you don't need to clear player queue slots --
@@ -1608,29 +1746,18 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   /* cph - reset all multiplayer starts */
   memset(playerstarts,0,sizeof(playerstarts));
   deathmatch_p = deathmatchstarts;
-  for (i = 0; i < MAXPLAYERS; i++)
-    players[i].mo = NULL;
-
   P_MapStart();
 
   P_LoadThings(lumpnum+ML_THINGS);
 
   // if deathmatch, randomly spawn the active players
   if (deathmatch)
-  {
     for (i=0; i<MAXPLAYERS; i++)
       if (playeringame[i])
         {
-          players[i].mo = NULL; // not needed? - done before P_LoadThings
+          players[i].mo = NULL;
           G_DeathMatchSpawnPlayer(i);
         }
-  }
-  else // if !deathmatch, check all necessary player starts actually exist
-  {
-    for (i=0; i<MAXPLAYERS; i++)
-      if (playeringame[i] && !players[i].mo)
-        I_Error("P_SetupLevel: missing player %d start\n", i+1);
-  }
 
   // killough 3/26/98: Spawn icon landings:
   if (gamemode==commercial)
@@ -1655,8 +1782,10 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
     gld_PreprocessLevel();
   }
 #endif
-
-  R_SmoothPlaying_Reset(NULL); // e6y
+  //e6y
+  P_ResetWalkcam(true, true);
+  R_SmoothPlaying_Reset(NULL);
+  AcceptLevel(episode, map);
 }
 
 //

@@ -41,6 +41,7 @@
 #include "p_user.h"
 #include "r_demo.h"
 #include "r_fps.h"
+#include "e6y.h"//e6y
 
 // Index of the special effects (INVUL inverse) map.
 
@@ -82,6 +83,10 @@ void P_Thrust(player_t* player,angle_t angle,fixed_t move)
 
 static void P_Bob(player_t *player, angle_t angle, fixed_t move)
 {
+  //e6y
+  if (!mbf_features && !prboom_comp[PC_PRBOOM_FRICTION].state)
+    return;
+
   player->momx += FixedMul(move,finecosine[angle >>= ANGLETOFINESHIFT]);
   player->momy += FixedMul(move,finesine[angle]);
 }
@@ -115,6 +120,17 @@ void P_CalcHeight (player_t* player)
      + FixedMul (player->mo->momy,player->mo->momy))>>2 :
     player_bobbing ? (FixedMul(player->momx,player->momx) +
         FixedMul(player->momy,player->momy))>>2 : 0;
+
+    //e6y
+    if (!prboom_comp[PC_PRBOOM_FRICTION].state &&
+        compatibility_level >= boom_202_compatibility && 
+        compatibility_level <= lxdoom_1_compatibility &&
+        player->mo->friction > ORIG_FRICTION) // ice?
+    {
+      if (player->bob > (MAXBOB>>2))
+        player->bob = MAXBOB>>2;
+    }
+    else
 
   if (player->bob > MAXBOB)
     player->bob = MAXBOB;
@@ -184,11 +200,22 @@ void P_MovePlayer (player_t* player)
   mobj_t *mo = player->mo;
 
   mo->angle += cmd->angleturn << 16;
-  onground = mo->z <= mo->floorz;
 
-  // e6y
+  //e6y
   if (demo_smoothturns && player == &players[displayplayer])
     R_SmoothPlaying_Add(cmd->angleturn << 16);
+  if (GetMouseLook() && player == &players[displayplayer])
+  {
+    if(!(automapmode & am_active) || (automapmode & am_overlay))
+      mo->pitch += (mlooky << 16);
+    CheckPitch((signed int *) &mo->pitch);
+  }
+  else
+  {
+    mo->pitch = 0;
+  }
+
+  onground = mo->z <= mo->floorz;
 
   // killough 10/98:
   //
@@ -197,7 +224,9 @@ void P_MovePlayer (player_t* player)
   // ice, because the player still "works just as hard" to move, while the
   // thrust applied to the movement varies with 'movefactor'.
 
-  if (cmd->forwardmove | cmd->sidemove) // killough 10/98
+  //e6y
+  if ((!demo_compatibility && !mbf_features && !prboom_comp[PC_PRBOOM_FRICTION].state) || 
+    (cmd->forwardmove | cmd->sidemove)) // killough 10/98
     {
       if (onground || mo->flags & MF_BOUNCES) // killough 8/9/98
       {
@@ -296,12 +325,22 @@ void P_PlayerThink (player_t* player)
   ticcmd_t*    cmd;
   weapontype_t newweapon;
 
+  //e6y
   if (movement_smooth && players && &players[displayplayer] == player)
   {
     original_view_vars.viewx = player->mo->x;
     original_view_vars.viewy = player->mo->y;
     original_view_vars.viewz = player->viewz;
     original_view_vars.viewangle = R_SmoothPlaying_Get(player->mo->angle) + viewangleoffset;
+    original_view_vars.viewpitch = player->mo->pitch;// + viewpitchoffset;
+    if(walkcamera.type)
+    {
+      walkcamera.PrevX = walkcamera.x;
+      walkcamera.PrevY = walkcamera.y;
+      walkcamera.PrevZ = walkcamera.z;
+      walkcamera.PrevAngle = walkcamera.angle;
+      walkcamera.PrevPitch = walkcamera.pitch;
+    }
   }
 
   // killough 2/8/98, 3/21/98:
@@ -360,6 +399,10 @@ void P_PlayerThink (player_t* player)
 
     if (demo_compatibility)
       { // compatibility mode -- required for old demos -- killough
+      //e6y
+      if (!prboom_comp[PC_ALLOW_SSG_DIRECT].state)
+        newweapon = (cmd->buttons & BT_WEAPONMASK_OLD)>>BT_WEAPONSHIFT;
+
       if (newweapon == wp_fist && player->weaponowned[wp_chainsaw] &&
         (player->readyweapon != wp_chainsaw ||
          !player->powers[pw_strength]))
@@ -431,7 +474,12 @@ void P_PlayerThink (player_t* player)
   // Handling colormaps.
   // killough 3/20/98: reformat to terse C syntax
 
-  player->fixedcolormap = player->powers[pw_invulnerability] > 4*32 ||
-    player->powers[pw_invulnerability] & 8 ? INVERSECOLORMAP :
+//e6y  player->fixedcolormap = player->powers[pw_invulnerability] > 4*32 ||
+//e6y    player->powers[pw_invulnerability] & 8 ? INVERSECOLORMAP :
+//e6y    player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8;
+//e6y
+  player->fixedcolormap = palette_onpowers &&
+    (player->powers[pw_invulnerability] > 4*32 ||
+    player->powers[pw_invulnerability] & 8) ? INVERSECOLORMAP :
     player->powers[pw_infrared] > 4*32 || player->powers[pw_infrared] & 8;
   }

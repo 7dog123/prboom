@@ -55,6 +55,7 @@ extern int      centerx;
 extern int      centery;
 extern fixed_t  centerxfrac;
 extern fixed_t  centeryfrac;
+extern fixed_t  viewheightfrac; //e6y: for correct cliping of things
 extern fixed_t  projection;
 // proff 11/06/98: Added for high-res
 extern fixed_t  projectiony;
@@ -89,6 +90,16 @@ extern int numcolormaps;    // killough 4/4/98: dynamic number of maps
 extern const lighttable_t **colormaps;
 // killough 3/20/98, 4/4/98: end dynamic colormaps
 
+//e6y
+extern int scalelight_offset[LIGHTLEVELS][MAXLIGHTSCALE];
+
+//e6y: for Boom colormaps in OpenGL mode
+extern boolean use_boom_cm;
+extern int boom_cm;         // current colormap
+extern int last_boom_cm;    // previous colormap
+extern int last_fixedcolormap;
+extern int frame_fixedcolormap;
+
 extern int          extralight;
 extern const lighttable_t *fixedcolormap;
 
@@ -106,6 +117,9 @@ PUREFUNC int R_PointOnSegSide(fixed_t x, fixed_t y, const seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
+
+//e6y: made more precise
+angle_t R_PointToAngleEx(fixed_t x, fixed_t y);
 
 //
 // REFRESH - the actual rendering functions.
