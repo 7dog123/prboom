@@ -496,8 +496,8 @@ void R_DrawMaskedColumn(
 
 static void R_SetSpritelights(int lightlevel)
 {
-  int lightnum = (lightlevel >> LIGHTSEGSHIFT) + (extralight * LIGHTBRIGHT);
-  spritelights = scalelight[BETWEEN(0, LIGHTLEVELS - 1, lightnum)];
+	int lightnum = (lightlevel >> LIGHTSEGSHIFT) + (extralight * LIGHTBRIGHT);
+	spritelights = scalelight[BETWEEN(0, LIGHTLEVELS - 1, lightnum)];
 }
 
 
@@ -814,7 +814,7 @@ static void R_ProjectSprite (mobj_t* thing, int lightlevel)
   vis->patch = lump;
 
   R_SetSpritelights(lightlevel);
-
+  
   // get light level
   if (thing->flags & MF_SHADOW)
       vis->colormap = NULL;             // shadow draw
@@ -1058,6 +1058,7 @@ static void R_DrawPSprite (pspdef_t *psp)
       else if (lightlevel >= 255)
         lightlevel = 255;
     }
+
     gld_DrawWeapon(lump,vis,lightlevel);
   }
 #endif
@@ -1070,13 +1071,14 @@ static void R_DrawPSprite (pspdef_t *psp)
 void R_DrawPlayerSprites(void)
 {
   int i;
+  int i, lightnum;
   pspdef_t *psp;
 
   if (walkcamera.type != 0)
     return;
 
   // get light level
-  R_SetSpritelights(viewplayer->mo->subsector->sector->lightlevel);
+ R_SetSpritelights(viewplayer->mo->subsector->sector->lightlevel);
 
   // clip to screen bounds
   mfloorclip = screenheightarray;

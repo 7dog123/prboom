@@ -740,7 +740,7 @@ static void P_BulletSlope(mobj_t *mo)
   while (mask && (mask=0, !linetarget));  /* killough 8/2/98 */
   
   if (!linetarget && comperr(comperr_freeaim))
-    bulletslope = finetangent[(ANG90 - mo->pitch) >> ANGLETOFINESHIFT];
+	  bulletslope = finetangent[(ANG90 - mo->pitch) >> ANGLETOFINESHIFT];
 }
 
 //

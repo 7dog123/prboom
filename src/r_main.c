@@ -243,26 +243,24 @@ angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
 
 angle_t R_PointToAngleEx(fixed_t x, fixed_t y)
 {
-  return R_PointToAngleEx2(viewx, viewy, x, y);
+ return R_PointToAngleEx2(viewx, viewy, x, y);
 }
 
 angle_t R_PointToAngleEx2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
 {
-  // [crispy] fix overflows for very long distances
-  int64_t y_viewy = (int64_t)y - y1;
-  int64_t x_viewx = (int64_t)x - x1;
-
-  // [crispy] the worst that could happen is e.g. INT_MIN-INT_MAX = 2*INT_MIN
-  if (x_viewx < INT_MIN || x_viewx > INT_MAX ||y_viewy < INT_MIN || y_viewy > INT_MAX)
-  {
-    // [crispy] preserving the angle by halfing the distance in both directions
-    x = (int)(x_viewx / 2 + x1);
-    y = (int)(y_viewy / 2 + y1);
-  }
-
-  return R_PointToAngleSlope(x1, y1, x, y, SlopeDivEx);
+	// [crispy] fix overflows for very long distances
+	int64_t y_viewy = (int64_t)y - y1;
+	int64_t x_viewx = (int64_t)x - x1
+	
+	// [crispy] the worst that could happen is e.g. INT_MIN-INT_MAX = 2*INT_MIN
+	if (x_viewx < INT_MIN || x_viewx > INT_MAX ||y_viewy < INT_MIN || y_viewy > INT_MAX)
+	{
+		// [crispy] preserving the angle by halfing the distance in both directions
+		x = (int)(x_viewx / 2 + x1);
+		y = (int)(y_viewx / 2 + y1);
+	}
+	return R_PointToAngleSlope(x1, y1, x, y, SlopeDivEx);
 }
-
 
 //-----------------------------------------------------------------------------
 //
@@ -294,7 +292,24 @@ angle_t R_PointToPseudoAngle (fixed_t x, fixed_t y)
     {
       result = 2.0 - result;
     }
-    return (angle_t)(result * (1 << 30));
+
+   // LOGI("R_PointToPseudoAngle result = %f",result);
+    result = result * (double)(1 << 30);
+    angle_t ang;
+    if (result < 0)
+    {
+    	result *= -1;
+    	ang = (angle_t)result;
+    	ang = -ang;
+    }
+    else
+    {
+    	 ang = (angle_t)result;
+    }
+
+    // LOGI("R_PointToPseudoAngle result after = %f, ANGLE = %d",result,ang);
+    //return (angle_t)(result * (1 << 30));
+    return ang;
   }
 }
 
@@ -787,7 +802,7 @@ void R_ExecuteSetViewSize (void)
   // calculate projectiony using int_64_t math to avoid overflow when SCREENWIDTH>4228
   projectiony = (fixed_t)((((int_64_t)cheight * centerx * 320) / 200) / SCREENWIDTH * FRACUNIT);
   // e6y: this is a precalculated value for more precise flats drawing (see R_MapPlane)
-  viewfocratio = projectiony / wide_centerx;
+  vviewfocratio = projectiony / wide_centerx;
 
   R_SetupViewScaling();
 
@@ -933,17 +948,16 @@ void R_SetupMatrix(void)
 
   R_SetupViewport();
 
-  #ifdef GL_DOOM
+#ifdef GL_DOOM
   if (V_GetMode() == VID_MODEGL)
   {
     extern int gl_nearclip;
-    r_nearclip = gl_nearclip;
+	r_nearclip = gl_nearclip;
   }
-  #endif
-
-  fovy = render_fovy;
-  aspect = render_ratio;
-  znear = (float)r_nearclip / 100.0f;
+#endif
+    fovy = render_fovy;
+    aspect = render_ratio;
+    znear = (float)r_nearclip / 100.0f;
 
   R_SetupPerspective(fovy, aspect, znear);
   R_BuildModelViewMatrix();
@@ -1110,7 +1124,7 @@ void R_RenderPlayerView (player_t* player)
   R_RenderBSPNode (numnodes-1);
 
 #ifdef HAVE_NET
-  NetUpdate ();
+    NetUpdate ();
 #endif
 
   if (V_GetMode() != VID_MODEGL)

@@ -1225,7 +1225,7 @@ static void AM_drawGrid(int color)
 
   // Figure out start of vertical gridlines
   start = minx - extx;
-  if ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize)
+if ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize)
     start -= ((start - (bmaporgx>>FRACTOMAPBITS)) % gridsize);
   end = minx + minlen - extx;
 
@@ -1251,7 +1251,7 @@ static void AM_drawGrid(int color)
 
   // Figure out start of horizontal gridlines
   start = miny - exty;
-  if ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize)
+if ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize)
     start -= ((start - (bmaporgy>>FRACTOMAPBITS)) % gridsize);
   end = miny + minlen - exty;
 
@@ -2270,6 +2270,14 @@ void AM_Drawer (void)
   if (!(automapmode & am_active))
     return;
 
+#ifdef ANDROID //clear the screen so map has black backgorund, not sure why not here anyway..?
+  if (V_GetMode() == VID_MODEGL)
+  {
+	  qglClearColor(0.0f, 0.0f, 0.0f, 1.0f );
+	  qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  }
+#endif
+
   if (automapmode & am_follow)
     AM_doFollowPlayer();
 
@@ -2306,6 +2314,8 @@ void AM_Drawer (void)
   AM_drawThings(); //jff 1/5/98 default double IDDT sprite
   AM_drawCrosshair(mapcolor_hair);   //jff 1/7/98 default crosshair color
   
+
+
 #if defined(HAVE_LIBSDL_IMAGE) && defined(GL_DOOM)
   if (V_GetMode() == VID_MODEGL)
   {

@@ -205,7 +205,7 @@ static void L_FilesOnChange(void)
   int index;
   int i, start, end;
 
-  // блядь, как заебал этот винапи...
+  // пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ...
   start = (int)SendMessage(launcher.listPWAD, LB_GETANCHORINDEX, 0, 0);
   end = (int)SendMessage(launcher.listPWAD, LB_GETCARETINDEX, 0, 0);
   
@@ -852,20 +852,20 @@ static void L_FillGameList(void)
     "DOOM 2: Hell on Earth",
     "DOOM 2: Plutonia Experiment",
     "DOOM 2: TNT - Evilution",
-
+	
     "DOOM Registered",
     "DOOM Shareware",
     "The Ultimate DOOM",
-
+	
     "Freedoom: Phase 2",
-    "Freedoom: Phase 1",
-    "FreeDM",
-
+	"Freedoom: Phase 1",
+	"FreeDM",
+	
     "HACX - Twitch 'n Kill",
     "Chex(R) Quest",
-
-    "DOOM 2: BFG Edition",
-    "DOOM 1: BFG Edition",
+	
+	"DOOM 2: BFG Edition",
+	"DOOM 1: BFG Edition",
   };
   
   for (i = 0; (size_t)i < launcher.filescount; i++)

@@ -358,6 +358,6 @@ extern int monkeys, default_monkeys;
 
 extern int HelperThing;          // type of thing to use for helper
 
-extern dboolean forceOldBsp;
+comperr_freeaim,
 
 #endif

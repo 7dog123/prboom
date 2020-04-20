@@ -288,16 +288,16 @@ void P_MovePlayer (player_t* player)
 
   if (comperr(comperr_allowjump))
   {
-    if (upmove > 0 && onground && player == &players[consoleplayer] && !(player->mo->flags & MF_FLY))
-    {
-      if (!player->jumpTics)
-      {
-        mo->momz = 9 * FRACUNIT;
-        player->jumpTics = 18;
-      }
-    }
+	  if (upmove > 0 && onground && player == &players[consoleplayer] && !(player->mo->flags & MF_FLY))
+	  {
+		  if (!player->jumpTics)
+		  {
+			  mo->momz = 9 * FRACUNIT;
+			  player->jumpTics = 18;
+		  }
+	  }
   }
-
+	  
   // killough 10/98:
   //
   // We must apply thrust to the player and bobbing separately, to avoid
@@ -332,20 +332,20 @@ void P_MovePlayer (player_t* player)
           P_SideThrust(player,mo->angle-ANG90,cmd->sidemove*movefactor);
         }
       }
-      else if (comperr(comperr_allowjump))
-      {
-        if (!onground)
-        {
-          if (cmd->forwardmove)
-          {
-            P_Thrust(player, mo->angle, FRACUNIT >> 8);
-          }
-          if (cmd->sidemove)
-          {
-            P_Thrust(player, mo->angle, FRACUNIT >> 8);
-          }
-        }
-      }
+	  else if (comperr(comperr_allowjump))
+	  {
+		  if (!onground)
+		  {
+			  if (cmd->forwardmove)
+			  {
+				  P_Thrust(player, mo->angle, FRACUNIT >> 8);
+			  }
+			  if (cmd->sidemove)
+			  {
+				  P_Thrust(player, mo->angle, FRACUNIT >> 8);
+			  }
+		  }
+	  }
       if (mo->state == states+S_PLAY)
         P_SetMobjState(mo,S_PLAY_RUN1);
     }
@@ -469,10 +469,10 @@ void P_PlayerThink (player_t* player)
     return;
     }
 
-    if (player->jumpTics)
-    {
-        player->jumpTics--;
-    }
+  if (player->jumpTics)
+  {
+	  player->jumpTics--;
+  }
   // Move around.
   // Reactiontime is used to prevent movement
   //  for a bit after a teleport.
@@ -582,6 +582,7 @@ void P_PlayerThink (player_t* player)
 
   // Handling colormaps.
   // killough 3/20/98: reformat to terse C syntax
+
   player->fixedcolormap = palette_onpowers &&
     (player->powers[pw_invulnerability] > 4*32 ||
     player->powers[pw_invulnerability] & 8) ? INVERSECOLORMAP :

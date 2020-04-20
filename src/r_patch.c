@@ -123,7 +123,7 @@ void R_InitPatches(void) {
     // clear out new patches to signal they're uninitialized
     memset(texture_composites, 0, sizeof(rpatch_t)*numtextures);
   }
-
+  
   if (!playpal_duplicate)
   {
     int lump = W_GetNumForName("PLAYPAL");
@@ -395,10 +395,10 @@ static dboolean CheckIfPatch(int lump)
 //---------------------------------------------------------------------------
 static void StorePixel(rpatch_t *patch, int x, int y, byte color)
 {
-  // write pixel to patch, substituting for playpal_transparent as needed
-  if (color == playpal_transparent && playpal_duplicate >= 0)
-    color = playpal_duplicate;
-  patch->pixels[x * patch->height + y] = color;
+	// write pixel to patch, substituting for playpal_transparent as needed
+	if (color == playpal_transparent && playpal_duplicate >= 0)
+		color = playpal_duplicate;
+	patch->pixels[x * patch->height + y] = color;
 }
 
 //---------------------------------------------------------------------------
@@ -489,7 +489,7 @@ static void createPatch(int id) {
   assert((((byte*)patch->posts  + numPostsTotal*sizeof(rpost_t)) - (byte*)patch->data) == dataSize);
 
   if (playpal_transparent != 0)
-    memset(patch->pixels, playpal_transparent, (patch->width*patch->height));
+	  memset(patch->pixels, playpal_transparent, (patch->width*patch->height));
 
   // fill in the pixels, posts, and columns
   numPostsUsedSoFar = 0;
@@ -694,8 +694,8 @@ static void createTextureCompositePatch(int id) {
   assert((((byte*)composite_patch->posts + numPostsTotal*sizeof(rpost_t)) - (byte*)composite_patch->data) == dataSize);
 
   if (playpal_transparent != 0)
-    memset(composite_patch->pixels, playpal_transparent,
-           (composite_patch->width*composite_patch->height));
+	  memset(composite_patch->pixels, playpal_transparent,
+	  (composite_patch->width*composite_patch->height));
 
   numPostsUsedSoFar = 0;
 
@@ -852,9 +852,7 @@ static void createTextureCompositePatch(int id) {
     }
   }
 
-  FillEmptySpace(composite_patch);
-
-  free(countsInColumn);
+  FillEmptySpace(composite_patch);  free(countsInColumn);
 }
 
 //---------------------------------------------------------------------------

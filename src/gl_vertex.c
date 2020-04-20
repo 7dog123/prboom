@@ -91,6 +91,7 @@ typedef struct vertexsplit_info_s
   byte validcount;
 } vertexsplit_info_t;
 
+
 static vertexsplit_info_t * gl_vertexsplit = NULL;
 
 typedef struct splitsbysector_s
@@ -147,16 +148,16 @@ void gld_SplitLeftEdge(const GLWall *wall, dboolean detail)
         }
         else
         {
-          glTexCoord2f(
+          qglTexCoord2f(
             s * tex->detail_width + tex->detail->offsetx,
             t * tex->detail_height + tex->detail->offsety);
         }
       }
       else
       {
-        glTexCoord2f(s, t);
+        qglTexCoord2f(s, t);
       }
-      glVertex3f(wall->glseg->x1, vi->heightlist[i], wall->glseg->z1);
+      qglVertex3f(wall->glseg->x1, vi->heightlist[i], wall->glseg->z1);
       i++;
     }
   }
@@ -209,16 +210,16 @@ void gld_SplitRightEdge(const GLWall *wall, dboolean detail)
         }
         else
         {
-          glTexCoord2f(
+          qglTexCoord2f(
             s * tex->detail_width + tex->detail->offsetx,
             t * tex->detail_height + tex->detail->offsety);
         }
       }
       else
       {
-        glTexCoord2f(s, t);
+        qglTexCoord2f(s, t);
       }
-      glVertex3f(wall->glseg->x2, vi->heightlist[i], wall->glseg->z2);
+      qglVertex3f(wall->glseg->x2, vi->heightlist[i], wall->glseg->z2);
       i--;
     }
   }

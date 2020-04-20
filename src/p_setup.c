@@ -891,9 +891,9 @@ static void P_LoadSectors (int lump)
       // killough 10/98: sky textures coming from sidedefs:
       ss->sky = 0;
 
-      // [kb] For R_WiggleFix
-      ss->cachedheight = 0;
-      ss->scaleindex = 0;
+	  // [kb] For R_WiggleFix
+	  ss->cachedheight = 0;
+	  ss->scaleindex = 0;
     }
 
   W_UnlockLumpNum(lump); // cph - release the data
@@ -1297,12 +1297,12 @@ static void P_LoadThings (int lump)
       if (!P_IsDoomnumAllowed(mt.type))
         continue;
 
-      // Although all resources of the Wolf SS have been removed
-      // off the BFG Edition, there is still one left in MAP33.
-      // Replace with a Former Human instead.
-      if (bfgedition && singleplayer && mt.type == 84)
-        mt.type = 3004;
-
+	  // Although all resources of the Wolf SS have been remove
+	  // off the BFG Edition, there is still one left in MAP33.
+	  // Replace with a Former Human instead.
+	  if (bfgedition && singleplayer && mt.type == 84)
+	   mt.type = 3004;
+	   
       // Do spawn all other stuff.
       mobj = P_SpawnMapThing(&mt, i);
       if (mobj && mobj->info->speed == 0)
@@ -2161,7 +2161,7 @@ static int P_GroupLines (void)
       sector->soundorg.y = bbox[BOXTOP]/2+bbox[BOXBOTTOM]/2;
     }
 
-    // adjust bounding box to map blocks
+ p[87   // adjust bounding box to map blocks
     block = P_GetSafeBlockY(bbox[BOXTOP]-bmaporgy+MAXRADIUS);
     block = block >= bmapheight ? bmapheight-1 : block;
     sector->blockbox[BOXTOP]=block;
@@ -2170,11 +2170,11 @@ static int P_GroupLines (void)
     block = block < 0 ? 0 : block;
     sector->blockbox[BOXBOTTOM]=block;
 
-    block = P_GetSafeBlockX(bbox[BOXRIGHT]-bmaporgx+MAXRADIUS);
+    block = P_GetSafeBlockY(bbox[BOXRIGHT]-bmaporgy-MAXRADIUS);
     block = block >= bmapwidth ? bmapwidth-1 : block;
     sector->blockbox[BOXRIGHT]=block;
 
-    block = P_GetSafeBlockX(bbox[BOXLEFT]-bmaporgx-MAXRADIUS);
+    block = P_GetSafeBlockY(bbox[BOXLEFT]-bmaporgy-MAXRADIUS);
     block = block < 0 ? 0 : block;
     sector->blockbox[BOXLEFT]=block;
   }
@@ -2235,14 +2235,14 @@ static void P_RemoveSlimeTrails(void)         // killough 10/98
   // Correction of desync on dv04-423.lmp/dv.wad
   // http://www.doomworld.com/vb/showthread.php?s=&postid=627257#post627257
   int apply_for_real_vertexes = (compatibility_level>=lxdoom_1_compatibility || prboom_comp[PC_REMOVE_SLIME_TRAILS].state);
-
+  
   for (i=0; i<numvertexes; i++)
   {
-    // [crispy] initialize pseudovertexes with actual vertex coordinates
-    vertexes[i].px = vertexes[i].x;
-    vertexes[i].py = vertexes[i].y;
+	  // [crispy] initialize pseudovertexes with actual vertex coordinates
+	  vertexes[i].px = vertexes[i].x;
+	  vertexes[i].py = vertexes[i].y;
   }
-
+  
   for (i=0; i<numsegs; i++)                   // Go through each seg
   {
     const line_t *l;
@@ -2267,21 +2267,21 @@ static void P_RemoveSlimeTrails(void)         // killough 10/98
         int x0 = v->x, y0 = v->y, x1 = l->v1->x, y1 = l->v1->y;
         v->px = (int)((dx2 * x0 + dy2 * x1 + dxy * (y0 - y1)) / s);
         v->py = (int)((dy2 * y0 + dx2 * y1 + dxy * (x0 - x1)) / s);
-        
-        // [crispy] wait a minute... moved more than 8 map units?
-        // maybe that's a linguortal then, back to the original coordinates
-        // http://www.doomworld.com/vb/doom-editing/74354-stupid-bsp-tricks/
-        if (!apply_for_real_vertexes && (D_abs(v->px - v->x) > 8*FRACUNIT || D_abs(v->py - v->y) > 8*FRACUNIT))
-        {
-          v->px = v->x;
-          v->py = v->y;
-        }
-
-        if (apply_for_real_vertexes)
-        {
-          v->x = v->px;
-          v->y = v->py;
-        }
+	
+		// [crispy] wait a minute... moved more than 8 map units?
+		// maybe that's a linguortal then, back to the original coordinates
+		// http://www.doomworld.com/vb/doom-editing/74354-stupid-bsp-tricks/
+		if (!apply_for_real_vertexes && (D_abs(v->px - v->x) > 8*FRACUNIT || D_abs(v->py - v->y) > 8*FRACUNIT))
+		{
+			v->px = v->x;
+			v->py = v->y;
+		}
+		
+		if (apply_for_real_vertexes)
+		{
+			v->x = v->px;
+			v->y = v->py;
+		}
       }
         }  // Obsfucated C contest entry:   :)
     while ((v != segs[i].v2) && (v = segs[i].v2));
@@ -2292,16 +2292,16 @@ static void P_RemoveSlimeTrails(void)         // killough 10/98
 
 static void R_CalcSegsLength(void)
 {
-  int i;
-  for (i=0; i<numsegs; i++)
-  {
-    seg_t *li = segs+i;
-    int_64_t dx = (int_64_t)li->v2->px - li->v1->px;
-    int_64_t dy = (int_64_t)li->v2->py - li->v1->py;
-    li->length = (int_64_t)sqrt((double)dx*dx + (double)dy*dy);
-    // [crispy] re-calculate angle used for rendering
-    li->pangle = R_PointToAngleEx2(li->v1->px, li->v1->py, li->v2->px, li->v2->py);
-  }
+	int i;
+	for (i=0; i<numsegs; i++)
+	{
+		seg_t *li = segs+i;
+		int_64_t dx = (int_64_t)li->v2->px - li->v1->px;
+		int_64_t dy = (int_64_t)li->v2->py - li->v1->py;
+		li->length = (int_64_t)sqrt((double)dx*dx + (double)dy*dy);
+		// [crispy] re-calculate angle used for rendering
+		li->pangle = R_PointToAngleEx2(li->v1->px, li->v1->py, li->v2->px, li->v2->py);
+	}
 }
 
 //
@@ -2665,10 +2665,11 @@ void P_SetupLevel(int episode, int map, int playermask, skill_t skill)
   // P_GroupLines modified to return a number the underflow padding needs
   P_LoadReject(lumpnum, P_GroupLines());
 
-  P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
-
-  // should be after P_RemoveSlimeTrails, because it changes vertexes
-  R_CalcSegsLength();
+  if (compatibility_level>=lxdoom_1_compatibility || prboom_comp[PC_REMOVE_SLIME_TRAILS].state)
+    P_RemoveSlimeTrails();    // killough 10/98: remove slime trails from wad
+	
+ // should be after P_RemoveSlimeTrails, because it changes vertexes
+ R_CalcSegsLength();
 
   // Note: you don't need to clear player queue slots --
   // a much simpler fix is in g_game.c -- killough 10/98

@@ -276,12 +276,12 @@ void e6y_InitCommandLine(void)
 
   if ((p = M_CheckParm("-skipsec")) && (p < myargc-1))
   {
-    float min, sec;
-
-    if (sscanf(myargv[p+1], "%f:%f", &min, &sec) == 2)
-      demo_skiptics = (int) ((60 * min + sec) * TICRATE);
-    else if (sscanf(myargv[p+1], "%f", &sec) == 1)
-      demo_skiptics = (int) (sec * TICRATE);
+	  float min, sec;
+	  
+	  if (sscanf(myargv[p+1], "%f:%f", &min, &sec) == 2)
+		  demo_skiptics = (int) ((60 * min + sec) * TICRATE);
+	  else if (sscanf(myargv[p+1], "%f", &sec) == 1)
+		  demo_skiptics = (int) (sec * TICRATE);
   }
 
   if ((IsDemoPlayback() || IsDemoContinue()) && (startmap > 1 || demo_skiptics))
@@ -318,6 +318,7 @@ void G_SkipDemoStart(void)
   nosfxparm = true;
   nomusicparm = true;
 
+
   I_Init2();
 }
 
@@ -330,6 +331,7 @@ void G_SkipDemoStop(void)
   nosfxparm = saved_nosfxparm;
   nomusicparm = saved_nomusicparm;
   
+
   demo_stoponnext = false;
   demo_stoponend = false;
   demo_warp = false;
@@ -384,7 +386,7 @@ int G_ReloadLevel(void)
 
 int G_GotoNextLevel(void)
 {
-  static byte doom2_next[33] = {
+  static byte doom2_next[3] = {
     2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
     12, 13, 14, 15, 31, 17, 18, 19, 20, 21,
     22, 23, 24, 25, 26, 27, 28, 29, 30, 1,
@@ -403,15 +405,15 @@ int G_GotoNextLevel(void)
   doom2_next[14] = (haswolflevels ? 31 : 16);
   
   if (bfgedition && singleplayer)
-    if (gamemission == pack_nerve)
-    {
-      doom2_next[3] = 9;
-      doom2_next[7] = 1;
-      doom2_next[8] = 5;
-    }
-    else
-      doom2_next[1] = 33;
-
+	  if (gamemission == pack_nerve)
+	  {
+		  doom2_next[3] = 9;
+		  doom2_next[7] = 1;
+		  doom2_next[8] = 5;
+	  }
+	  else
+		  doom2_next[1] = 33;
+		  
   // shareware doom has only episode 1
   doom_next[0][7] = (gamemode == shareware ? 11 : 21);
   
@@ -465,6 +467,10 @@ void M_ChangeMouseLook(void)
   else
     gl_drawskys = gl_skymode;
 #endif // GL_DOOM
+
+#ifdef ANDROID
+ gl_drawskys = skytype_skydome;
+#endif
 }
 
 void M_ChangeMouseInvert(void)

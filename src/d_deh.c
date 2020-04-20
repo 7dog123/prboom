@@ -1549,10 +1549,10 @@ void ProcessDehFile(const char *filename, const char *outfilename, int lumpnum)
 
   while (dehfgets(inbuffer,sizeof(inbuffer),filein))
     {
-      dboolean match;
+	  dboolean match;
       unsigned i;
-      static unsigned last_i = DEH_BLOCKMAX-1;
-      static long filepos = 0;
+	  static unsigned last_i = DEH_BLOCKMAX-1;
+	  static long filepos = 0;
 
       lfstrip(inbuffer);
       if (fileout) fprintf(fileout,"Line='%s'\n",inbuffer);
@@ -1606,27 +1606,27 @@ void ProcessDehFile(const char *filename, const char *outfilename, int lumpnum)
       for (match=0, i=0; i<DEH_BLOCKMAX; i++)
         if (!strncasecmp(inbuffer,deh_blocks[i].key,strlen(deh_blocks[i].key)))
           { // matches one
-            if (i < DEH_BLOCKMAX-1)
-              match = 1;
-            break;  // we got one, that's enough for this block
-          }
-
-      if (match) // inbuffer matches a valid block code name
-        last_i = i;
-      else if (last_i >= 10 && last_i < DEH_BLOCKMAX-1) // restrict to BEX style lumps
-        { // process that same line again with the last valid block code handler
-          i = last_i;
-          if (!filein->lump)
-            fseek(filein->f, filepos, SEEK_SET);
-        }
-
-      if (fileout)
-        fprintf(fileout,"Processing function [%d] for %s\n",
-                i, deh_blocks[i].key);
-      deh_blocks[i].fptr(filein,fileout,inbuffer);  // call function
-
-      if (!filein->lump) // back up line start
-        filepos = ftell(filein->f);
+		  if (i < DEH_BLOCKMAX-1)
+			  match = 1;
+			  break;  // we got one, that's enough for this block
+		  }
+		  
+		  if (match) // inbuffer matches a valid block code name
+		   last_i = i;
+		  else if (last_i >= 10 && last_i < DEH_BLOCKMAX-1) // restrict to BEX style lumps
+		  { // process that same line again with the last valid block code handler
+		  	i = last_i;
+			if (!filein->lump)
+				fseek(filein->f, filepos, SEEK_SET);
+		  }
+		  
+            if (fileout)
+              fprintf(fileout,"Processing function [%d] for %s\n",
+                      i, deh_blocks[i].key);
+            deh_blocks[i].fptr(filein,fileout,inbuffer);  // call function
+			
+            if (!filein->lump) // back up line start
+			filepos = ftell(filein->f);
     }
 
   if (infile.lump)

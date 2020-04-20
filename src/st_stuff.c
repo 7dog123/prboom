@@ -337,9 +337,9 @@ int armor_green;   // armor amount above is blue, below is green
 
 ammo_colour_behaviour_t ammo_colour_behaviour;
 const char *ammo_colour_behaviour_list[ammo_colour_behaviour_max] = {
-  "no",
-  "full ammo only",
-  "yes"
+	"no",
+	"full ammo only",
+	"yes"
 };
 
  // in deathmatch only, summary of frags stats
@@ -801,7 +801,7 @@ static void ST_doPaletteStuff(void)
 
 void M_ChangeApplyPalette(void)
 {
-  ST_doPaletteStuff();
+	ST_doPaletteStuff();
 }
 
 static void ST_drawWidgets(dboolean refresh)
@@ -816,7 +816,7 @@ static void ST_drawWidgets(dboolean refresh)
   st_fragson = deathmatch && st_statusbaron;
 
   //jff 2/16/98 make color of ammo depend on amount
-  if ((*w_ready.num == plyr->maxammo[weaponinfo[w_ready.data].ammo]) ||
+ if ((*w_ready.num == plyr->maxammo[weaponinfo[w_ready.data].ammo]) ||
     (ammo_colour_behaviour == ammo_colour_behaviour_no && plyr->backpack &&
     *w_ready.num*2 >= plyr->maxammo[weaponinfo[w_ready.data].ammo]))
     STlib_updateNum(&w_ready, CR_BLUE2, refresh);
@@ -833,6 +833,7 @@ static void ST_drawWidgets(dboolean refresh)
       else
         STlib_updateNum(&w_ready, CR_GREEN, refresh);
   }
+
   for (i=0;i<4;i++)
     {
       STlib_updateNum(&w_ammo[i], CR_DEFAULT, refresh);   //jff 2/16/98 no xlation

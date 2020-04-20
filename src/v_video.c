@@ -983,7 +983,7 @@ static void V_PlotPixelWuGL(int scrn, int x, int y, byte color, int weight) {
 }
 static void WRAP_gld_DrawLine(fline_t* fl, int color)
 {
-  gld_DrawLine_f(fl->a.fx, fl->a.fy, fl->b.fx, fl->b.fy, color);
+    gld_DrawLine_f(fl->a.fx, fl->a.fy, fl->b.fx, fl->b.fy, color);
 }
 #endif
 
@@ -1655,9 +1655,9 @@ void SetRatio(int width, int height)
 
   WIDE_SCREENWIDTH = MAX(1, WIDE_SCREENWIDTH);
   WIDE_SCREENHEIGHT = MAX(1, WIDE_SCREENHEIGHT);
-
+  
   yaspectmul = Scale((320<<FRACBITS), WIDE_SCREENHEIGHT, 200 * WIDE_SCREENWIDTH);
-
+  
   patches_scalex = MIN(SCREENWIDTH / 320, SCREENHEIGHT / 200);
   patches_scalex = MAX(1, patches_scalex);
   patches_scaley = patches_scalex;

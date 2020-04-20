@@ -487,6 +487,12 @@ void I_SafeExit(int rc)
     }
 }
 
+#ifdef __ANDROID__
+
+void appShutdown();
+
+#endif
+
 static void I_Quit (void)
 {
   if (!has_exited)
@@ -500,6 +506,9 @@ static void I_Quit (void)
     M_SaveDefaults ();
     I_DemoExShutdown();
   }
+#ifdef __ANDROID__
+	appShutdown();
+#endif
 }
 
 #ifdef SECURE_UID
@@ -625,7 +634,7 @@ void I_SetProcessPriority(void)
 }
 
 //int main(int argc, const char * const * argv)
-int main(int argc, char **argv)
+int main_doom(int argc, char **argv)
 {
 #ifdef SECURE_UID
   /* First thing, revoke setuid status (if any) */

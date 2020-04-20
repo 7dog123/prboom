@@ -96,8 +96,11 @@ int detect_voices = 0; // God knows
 static dboolean sound_inited = false;
 static dboolean first_sound_init = true;
 
+//in_android.c
+extern int ANDROID_SAMPLECOUNT;
+
 // Needed for calling the actual sound output.
-static int SAMPLECOUNT =   512;
+static int SAMPLECOUNT;
 #define MAX_CHANNELS    32
 
 // MWM 2000-01-08: Sample rate in samples/second
@@ -617,7 +620,7 @@ void I_InitSound(void)
     /* Initialize variables */
     audio_rate = snd_samplerate;
     audio_channels = 2;
-    SAMPLECOUNT = 512;
+    SAMPLECOUNT =  ANDROID_SAMPLECOUNT;
     audio_buffers = SAMPLECOUNT*snd_samplerate/11025;
 
     if (Mix_OpenAudio(audio_rate, MIX_DEFAULT_FORMAT, audio_channels, audio_buffers) < 0)
@@ -646,6 +649,7 @@ void I_InitSound(void)
     audio.format = AUDIO_S16LSB;
 #endif
     audio.channels = 2;
+    SAMPLECOUNT =  ANDROID_SAMPLECOUNT;
     audio.samples = SAMPLECOUNT * snd_samplerate / 11025;
     audio.callback = I_UpdateSound;
     if ( SDL_OpenAudio(&audio, NULL) < 0 )
@@ -841,9 +845,18 @@ void I_InitMusic(void)
 #ifdef HAVE_MIXER
   if (!music_tmp) {
 #ifndef _WIN32
+
     music_tmp = strdup("/tmp/"PACKAGE_TARNAME"-music-XXXXXX");
+#ifdef ANDROID
+    music_tmp = malloc(256);
+    sprintf(music_tmp,"%s/music_temp",getDoomPath());
+#endif
     {
+#ifdef ANDROID
+      int fd = 1;
+#else
       int fd = mkstemp(music_tmp);
+#endif
       if (fd<0) {
         lprintf(LO_ERROR, "I_InitMusic: failed to create music temp file %s", music_tmp);
         free(music_tmp); music_tmp = NULL; return;

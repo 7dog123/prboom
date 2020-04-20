@@ -412,7 +412,8 @@ extern const char *s_HUSTR_30; // = HUSTR_30;
 extern const char *s_HUSTR_31; // = HUSTR_31;
 //#define HUSTR_32      "level 32: grosse"
 extern const char *s_HUSTR_32; // = HUSTR_32;
-extern const char *s_HUSTR_33;
+//#define HUSTR_33      "level 33: betray"
+extern const char *s_HUSTR_33; // = HUSTR_33;
 
 //#define PHUSTR_1      "level 1: congo"
 extern const char *s_PHUSTR_1; // = PHUSTR_1;

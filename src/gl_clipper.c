@@ -199,7 +199,22 @@ angle_t gld_clipper_AngleToPseudo(angle_t ang)
   {
     result = 2.f - result;
   }
-  return (angle_t)(result * (1<<30));
+
+  result = result * (double)(1 << 30);
+  angle_t angr;
+  if (result < 0)
+  {
+  	result *= -1;
+  	angr = (angle_t)result;
+  	angr = -angr;
+  }
+  else
+  {
+  	 angr = (angle_t)result;
+  }
+
+  //return (angle_t)(result * (1<<30));
+ return angr;
 }
 
 void gld_clipper_SafeAddClipRangeRealAngles(angle_t startangle, angle_t endangle)
@@ -381,6 +396,7 @@ void gld_FrustrumSetup(void)
 {
   float t;
   float clip[16];
+
 
   clip[0]  = CALCMATRIX(0, 0, 1, 4, 2, 8, 3, 12);
   clip[1]  = CALCMATRIX(0, 1, 1, 5, 2, 9, 3, 13);

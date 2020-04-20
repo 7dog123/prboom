@@ -140,18 +140,18 @@ const char *const standard_iwads[]=
   "doom2.wad",
   "plutonia.wad",
   "tnt.wad",
-
+  
   "doom.wad",
   "doom1.wad",
   "doomu.wad", /* CPhipps - alow doomu.wad */
-
+  
   "freedoom2.wad", /* wart@kobold.org:  added freedoom for Fedora Extras */
   "freedoom1.wad",
   "freedm.wad",
-
+  
   "hacx.wad",
   "chex.wad",
-
+  
   "bfgdoom2.wad",
   "bfgdoom.wad",
 };
@@ -252,6 +252,8 @@ extern int     showMessages;
 
 void D_Display (void)
 {
+  //LOGI("D_Display");
+
   static dboolean isborderstate        = false;
   static dboolean borderwillneedredraw = false;
   static gamestate_t oldgamestate = -1;
@@ -502,6 +504,68 @@ static void D_DoomLoop(void)
 }
 }
 
+
+void Doom_Frame()
+{
+    WasRenderedInTryRunTics = false;
+      // frame syncronous IO operations
+      I_StartFrame ();
+
+      if (ffmap == gamemap) ffmap = 0;
+
+      // process one or more tics
+      if (singletics)
+        {
+          I_StartTic ();
+          G_BuildTiccmd (&netcmds[consoleplayer][maketic%BACKUPTICS]);
+          if (advancedemo)
+            D_DoAdvanceDemo ();
+          M_Ticker ();
+          G_Ticker ();
+          P_Checksum(gametic);
+          gametic++;
+          maketic++;
+        }
+      else
+        TryRunTics (); // will run at least one tic
+
+      // killough 3/16/98: change consoleplayer to displayplayer
+      if (players[displayplayer].mo) // cph 2002/08/10
+        S_UpdateSounds(players[displayplayer].mo);// move positional sounds
+
+      if (!movement_smooth || !WasRenderedInTryRunTics || gamestate != wipegamestate)
+        {
+        // Update display, next frame, with current state.
+    	  //LOGI("Doom_Frame D_Display");
+    	  D_Display();
+      }
+
+      // CPhipps - auto screenshot
+      if (auto_shot_fname && !--auto_shot_count) {
+  auto_shot_count = auto_shot_time;
+  M_DoScreenShot(auto_shot_fname);
+      }
+//e6y
+      if (avi_shot_fname && !doSkip)
+      {
+        int len;
+        char *avi_shot_curr_fname;
+        avi_shot_num++;
+        len = snprintf(NULL, 0, "%s%06d.tga", avi_shot_fname, avi_shot_num);
+        avi_shot_curr_fname = malloc(len+1);
+        sprintf(avi_shot_curr_fname, "%s%06d.tga", avi_shot_fname, avi_shot_num);
+        M_DoScreenShot(avi_shot_curr_fname);
+        free(avi_shot_curr_fname);
+      }
+      // NSM
+      if (capturing_video && !doSkip)
+      {
+        I_CaptureFrame ();
+      }
+
+}
+
+
 //
 //  DEMO LOOP
 //
@@ -700,12 +764,12 @@ void D_AddFile (const char *file, wad_source_t source)
     AddDefaultExtension(strcpy(malloc(strlen(file)+5), file), ".wad");
   wadfiles[numwadfiles].src = source; // Ty 08/29/98
   wadfiles[numwadfiles].handle = 0;
-
+  
   // No Rest For The Living
   len=strlen(wadfiles[numwadfiles].name);
   if (len>=9 && !strnicmp(wadfiles[numwadfiles].name+len-9,"nerve.wad",9))
-    gamemission = pack_nerve;
-
+	  gamemission = pack_nerve;
+	  
   numwadfiles++;
   // proff: automatically try to add the gwa files
   // proff - moved from w_wad.c
@@ -1387,6 +1451,7 @@ static void D_DoomMainSetup(void)
 
   // figgi 09/18/00-- added switch to force classic bsp nodes
   if (M_CheckParm ("-forceoldbsp"))
+
     forceOldBsp = true;
 
   D_BuildBEXTables(); // haleyjd
@@ -1413,18 +1478,19 @@ static void D_DoomMainSetup(void)
       deathmatch = 1;
 
   {
+
     switch ( gamemode ) {
     case retail:
-      switch (gamemission)
-      {
-        case chex:
-          doomverstr = "Chex(R) Quest";
-          break;
-        default:
-          doomverstr = "The Ultimate DOOM";
-          break;
-      }
+		switch (gamemission)
+		{
+			case chex:
+				doomverstr = "Chex(R) Quest";
+				break;
+			default:
+      doomverstr = "The Ultimate DOOM";
       break;
+	  }
+	  break;
     case shareware:
       doomverstr = "DOOM Shareware";
       break;
@@ -1435,7 +1501,7 @@ static void D_DoomMainSetup(void)
       switch (gamemission)
       {
         case pack_plut:
-          doomverstr = "Final DOOM - The Plutonia Experiment";
+    doomverstr = "Final DOOM - The Plutonia Experiment";
           break;
         case pack_tnt:
           doomverstr = "Final DOOM - TNT: Evilution";
@@ -1451,17 +1517,17 @@ static void D_DoomMainSetup(void)
     default:
       doomverstr = "Public DOOM";
       break;
-    }
-
-    if (bfgedition)
-    {
-      char *tempverstr;
-      const char bfgverstr[]=" (BFG Edition)";
-      tempverstr = malloc(sizeof(char) * (strlen(doomverstr)+strlen(bfgverstr)+1));
-      strcpy (tempverstr, doomverstr);
-      strcat (tempverstr, bfgverstr);
-      doomverstr = strdup (tempverstr);
-      free (tempverstr);
+	  }
+	  
+	  if (bfgedition)
+	  {
+		  char *tempverstr;
+		  const char bfgverstr[]=" (BFG Edition)";
+		  tempverstr = malloc(sizeof(char) * (strlen(doomverstr)+strlen(bfgverstr)+1));
+		  strcpy (tempverstr, doomverstr);
+		  strcat (tempverstr, bfgverstr);
+		  doomverstr = strdup (tempverstr);
+		  free (tempverstr);
     }
 
     /* cphipps - the main display. This shows the build date, copyright, and game type */
@@ -1725,22 +1791,22 @@ static void D_DoomMainSetup(void)
           || lumpinfo[p].source == source_auto_load)
         ProcessDehFile(NULL, D_dehout(), p); // cph - add dehacked-in-a-wad support
 
-    if (bfgedition)
-    {
-      int lump = (W_CheckNumForName)("BFGBEX", ns_prboom);
-      if (lump != -1)
-      {
-        ProcessDehFile(NULL, D_dehout(), lump);
-      }
-    }
-    if (gamemission == pack_nerve)
-    {
-      int lump = (W_CheckNumForName)("NERVEBEX", ns_prboom);
-      if (lump != -1)
-      {
-        ProcessDehFile(NULL, D_dehout(), lump);
-      }
-    }
+	if (bfgedition)
+	{
+		int lump = (W_CheckNumForName)("BFGBEX", ns_prboom);
+		if (lump != -1)
+		{
+			ProcessDehFile(NULL, D_dehout(), lump);
+		}
+	}
+	if (gamemission == pack_nerve)
+	{
+		int lump = (W_CheckNumForName)("NERVEBEX", ns_prboom);
+		if (lump != -1)
+		{
+			ProcessDehFile(NULL, D_dehout(), lump);
+		}
+	}
     if (gamemission == chex)
     {
       int lump = (W_CheckNumForName)("CHEXDEH", ns_prboom);
@@ -1961,7 +2027,9 @@ void D_DoomMain(void)
 {
   D_DoomMainSetup(); // CPhipps - setup out of main execution stack
 
+#ifndef ANDROID
   D_DoomLoop ();  // never returns
+#endif
 }
 
 //

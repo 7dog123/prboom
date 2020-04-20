@@ -119,7 +119,7 @@ int desired_fullscreen;
 SDL_Surface *screen;
 #ifdef GL_DOOM
 vid_8ingl_t vid_8ingl;
-int use_gl_surface;
+int use_gl_surface = 0;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////
@@ -260,12 +260,12 @@ while (SDL_PollEvent(Event))
         V_ToggleFullscreen();
         break;
       }
-      // Immediately exit on Alt+F4 ("Boss Key")
-      else if (Event->key.keysym.sym == SDLK_F4)
-      {
-        I_SafeExit(0);
-        break;
-      }
+	  // Immediately exit on Alt+F4 ("Boss Key")
+	  else if (Event->key.keysym.sym == SDLK_F4)
+	  {
+		  I_SafeExit(0);
+		  break;
+	  }
     }
 #endif
     event.type = ev_keydown;
@@ -1134,11 +1134,11 @@ void I_SetWindowIcon(void)
   if (!surface)
   {
     surface = SDL_CreateRGBSurfaceFrom(icon_data,
-      icon_w, icon_h, 32, icon_w * 4,
-      0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
+	icon_w, icon_h, 32, icon_w * 4,
+	0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
   }
 
-  if (surface)
+    if (surface)
   {
     SDL_WM_SetIcon(surface, NULL);
   }

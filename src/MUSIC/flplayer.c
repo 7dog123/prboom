@@ -105,7 +105,7 @@ static const char *fl_name (void)
 
 static int fl_init (int samplerate)
 {
-  const char *filename;
+ const char *filename;
 #ifdef _WIN32
   #ifndef _MSC_VER
   int __stdcall GetVersion (void);
@@ -152,7 +152,7 @@ static int fl_init (int samplerate)
 
   FSET (int, "synth.chorus.active", mus_fluidsynth_chorus);
   FSET (int, "synth.reverb.active", mus_fluidsynth_reverb);
-
+  
   // gain control
   FSET (num, "synth.gain", mus_fluidsynth_gain / 100.0); // 0.0 - 0.2 - 10.0
   // behavior wrt bank select messages
@@ -178,11 +178,17 @@ static int fl_init (int samplerate)
     return 0;
   }
 
+ // LOGI("Loading Fluidsynth");
+
+  snd_soundfont = "../WeedsGM3.sf2";
+
   filename = I_FindFile2(snd_soundfont, ".sf2");
   f_font = fluid_synth_sfload (f_syn, filename, 1);
 
   if (f_font == FLUID_FAILED)
   {
+	//  LOGI("ERROR Loading Fluidsynth");
+
     lprintf (LO_WARN, "fl_init: error loading soundfont %s\n", snd_soundfont);
     delete_fluid_synth (f_syn);
     delete_fluid_settings (f_set);
@@ -345,7 +351,9 @@ static void writesysex (unsigned char *data, int len)
   sysexbufflen += len;
   if (sysexbuff[sysexbufflen - 1] == 0xf7) // terminator
   { // pass len-1 because fluidsynth does NOT want the final F7
-    fluid_synth_sysex (f_syn, sysexbuff, sysexbufflen - 1, NULL, NULL, &didrespond, 0);
+#ifndef __ANDROID__
+	  fluid_synth_sysex (f_syn, sysexbuff, sysexbufflen - 1, NULL, NULL, &didrespond, 0);
+#endif
     sysexbufflen = 0;
   }
   if (!didrespond)

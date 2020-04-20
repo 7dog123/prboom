@@ -579,8 +579,8 @@ floater:
     P_DamageMobj(mo, NULL, NULL, mo->health);
   else
   {
-    if (mo->player)
-        mo->player->jumpTics = 7;
+	if (mo->player)
+		mo->player->jumpTics = 7;
     if (mo->player && /* killough 5/12/98: exclude voodoo dolls */
         // e6y
         // Restoring original visual behaviour for demo_compatibility.
@@ -602,8 +602,8 @@ floater:
         //e6y: compatibility optioned
         if (comp[comp_sound] || (mo->health>0)) /* cph - prevent "oof" when dead */
     S_StartSound (mo, sfx_oof);
+	}
       }
-  }
   mo->momz = 0;
       }
     mo->z = mo->floorz;
@@ -1626,9 +1626,9 @@ void P_SpawnPlayerMissile(mobj_t* source,mobjtype_t type)
       an = source->angle, slope = 0;
   }
       while (mask && (mask=0, !linetarget));  // killough 8/2/98
-
-      if (!linetarget && comperr(comperr_freeaim))
-        slope = finetangent[(ANG90 - source->pitch) >> ANGLETOFINESHIFT];
+	  
+	  if (!linetarget && comperr(comperr_freeaim))
+		  slope = finetangent[(ANG90 - source->pitch) >> ANGLETOFINESHIFT];
     }
 
   x = source->x;

@@ -159,23 +159,23 @@ void SetFrameTextureMode(void)
 #ifdef USE_FBO_TECHNIQUE
   if (SceneInTexture)
   {
-    glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
   }
   else
 #endif
   if (invul_method & INVUL_BW)
   {
-    glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
-    glTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_DOT3_RGB);
-    glTexEnvi(GL_TEXTURE_ENV,GL_SOURCE0_RGB,GL_PRIMARY_COLOR);
-    glTexEnvi(GL_TEXTURE_ENV,GL_OPERAND0_RGB,GL_SRC_COLOR);
-    glTexEnvi(GL_TEXTURE_ENV,GL_SOURCE1_RGB,GL_TEXTURE);
-    glTexEnvi(GL_TEXTURE_ENV,GL_OPERAND1_RGB,GL_SRC_COLOR);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_DOT3_RGB);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_SOURCE0_RGB,GL_PRIMARY_COLOR);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_OPERAND0_RGB,GL_SRC_COLOR);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_SOURCE1_RGB,GL_TEXTURE);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_OPERAND1_RGB,GL_SRC_COLOR);
   }
 
-  glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE); 
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_TEXTURE);
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+  qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
+  qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_TEXTURE);
+  qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 }
 
 void gld_InitTextureParams(void)
@@ -345,13 +345,17 @@ void gld_Init(int width, int height)
 {
   GLfloat params[4]={0.0f,0.0f,1.0f,0.0f};
 
-  lprintf(LO_INFO,"GL_VENDOR: %s\n",glGetString(GL_VENDOR));
-  lprintf(LO_INFO,"GL_RENDERER: %s\n",glGetString(GL_RENDERER));
-  lprintf(LO_INFO,"GL_VERSION: %s\n",glGetString(GL_VERSION));
+#ifdef ANDROID
+  QGL_Init(0);
+#endif
+
+  lprintf(LO_INFO,"GL_VENDOR: %s\n",qglGetString(GL_VENDOR));
+  lprintf(LO_INFO,"GL_RENDERER: %s\n",qglGetString(GL_RENDERER));
+  lprintf(LO_INFO,"GL_VERSION: %s\n",qglGetString(GL_VERSION));
   lprintf(LO_INFO,"GL_EXTENSIONS:\n");
   {
     char ext_name[256];
-    const char *extensions = (const char*)glGetString(GL_EXTENSIONS);
+    const char *extensions = (const char*)qglGetString(GL_EXTENSIONS);
     const char *rover = extensions;
     const char *p = rover;
 
@@ -381,35 +385,37 @@ void gld_Init(int width, int height)
   gld_InitPalettedTextures();
   gld_InitTextureParams();
 
-  glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT);
+  qglViewport(0, 0, SCREENWIDTH, SCREENHEIGHT);
 
-  glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
-  glClearDepth(1.0f);
+  qglClearColor(0.0f, 0.5f, 0.5f, 1.0f);
+  qglClearDepth(1.0f);
 
-  glEnable(GL_BLEND);
-  glEnable(GL_DEPTH_CLAMP_NV);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // proff_dis
-  glShadeModel(GL_FLAT);
+  qglEnable(GL_BLEND);
+#ifndef ANDROID
+  qglEnable(GL_DEPTH_CLAMP_NV);
+#endif
+  qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  qglHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // proff_dis
+  qglShadeModel(GL_FLAT);
   gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
-  glDepthFunc(GL_LEQUAL);
-  glEnable(GL_ALPHA_TEST);
-  glAlphaFunc(GL_GEQUAL,0.5f);
-  glDisable(GL_CULL_FACE);
-  glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-
-  glTexGenfv(GL_Q,GL_EYE_PLANE,params);
-  glTexGenf(GL_S,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-  glTexGenf(GL_T,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-  glTexGenf(GL_Q,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
-
+  qglDepthFunc(GL_LEQUAL);
+  qglEnable(GL_ALPHA_TEST);
+  qglAlphaFunc(GL_GEQUAL,0.5f);
+  qglDisable(GL_CULL_FACE);
+  qglTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+#ifndef ANDROID
+  qglTexGenfv(GL_Q,GL_EYE_PLANE,params);
+  qglTexGenf(GL_S,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+  qglTexGenf(GL_T,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+  qglTexGenf(GL_Q,GL_TEXTURE_GEN_MODE,GL_EYE_LINEAR);
+#endif
   //e6y
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
+  qglClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  qglClear(GL_COLOR_BUFFER_BIT);
   gld_Finish();
-  glClear(GL_COLOR_BUFFER_BIT);
-  glClearColor(0.0f, 0.5f, 0.5f, 1.0f);
+  qglClear(GL_COLOR_BUFFER_BIT);
+  qglClearColor(0.0f, 0.5f, 0.5f, 1.0f);
 
   // e6y
   // if you have a prior crash in the game,
@@ -522,10 +528,10 @@ void gld_MapDrawSubsectors(player_t *plr, int fx, int fy, fixed_t mx, fixed_t my
       sizeof(visible_subsectors[0]), dicmp_visible_subsectors_by_pic);
   }
 
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glScissor(fx, SCREENHEIGHT - (fy + fh), fw, fh);
-  glEnable(GL_SCISSOR_TEST);
+  qglMatrixMode(GL_MODELVIEW);
+  qglPushMatrix();
+  qglScissor(fx, SCREENHEIGHT - (fy + fh), fw, fh);
+  qglEnable(GL_SCISSOR_TEST);
 
   if (automapmode & am_rotate)
   {
@@ -535,17 +541,17 @@ void gld_MapDrawSubsectors(player_t *plr, int fx, int fy, fixed_t mx, fixed_t my
     float rot = -(float)(ANG90 - viewangle) / (float)(1u << 31) * 180.0f;
 
     // Apply the automap's rotation to the vertexes.
-    glTranslatef(pivotx, pivoty, 0.0f);
-    glRotatef(rot, 0.0f, 0.0f, 1.0f);
-    glTranslatef(-pivotx, -pivoty, 0.0f);
+    qglTranslatef(pivotx, pivoty, 0.0f);
+    qglRotatef(rot, 0.0f, 0.0f, 1.0f);
+    qglTranslatef(-pivotx, -pivoty, 0.0f);
   }
 
-  glTranslatef(
+  qglTranslatef(
     (float)fx - (float)mx / (float)FRACUNIT * (float)scale / (float)FRACUNIT, 
     (float)fy + (float)fh + (float)my / (float)FRACUNIT * (float)scale / (float)FRACUNIT,
     0);
   coord_scale = (float)scale / (float)(1<<FRACTOMAPBITS) / (float)FRACUNIT * MAP_COEFF;
-  glScalef(-coord_scale, -coord_scale, 1.0f);
+  qglScalef(-coord_scale, -coord_scale, 1.0f);
   
   for (i = 0; i < visible_subsectors_count; i++)
   {
@@ -589,40 +595,40 @@ void gld_MapDrawSubsectors(player_t *plr, int fx, int fy, fixed_t mx, fixed_t my
           continue;
 
         // set the mode (GL_TRIANGLE_FAN)
-        glBegin(currentloop->mode);
+        qglBegin(currentloop->mode);
         // go through all vertexes of this loop
         for (vertexnum = currentloop->vertexindex; vertexnum < (currentloop->vertexindex + currentloop->vertexcount); vertexnum++)
         {
-          glTexCoord2f(flats_vbo[vertexnum].u + floor_uoffs, flats_vbo[vertexnum].v + floor_voffs);
-          glVertex3f(flats_vbo[vertexnum].x, flats_vbo[vertexnum].z, 0);
+          qglTexCoord2f(flats_vbo[vertexnum].u + floor_uoffs, flats_vbo[vertexnum].v + floor_voffs);
+          qglVertex3f(flats_vbo[vertexnum].x, flats_vbo[vertexnum].z, 0);
         }
-        glEnd();
+        qglEnd();
       }
     }
   }
 
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
-  glDisable(GL_SCISSOR_TEST);
+  qglMatrixMode(GL_MODELVIEW);
+  qglPopMatrix();
+  qglDisable(GL_SCISSOR_TEST);
 }
 
 void gld_DrawTriangleStrip(GLWall *wall, gl_strip_coords_t *c)
 {
-  glBegin(GL_TRIANGLE_STRIP);
+  qglBegin(GL_TRIANGLE_STRIP);
   
-  glTexCoord2fv((const GLfloat*)&c->t[0]);
-  glVertex3fv((const GLfloat*)&c->v[0]);
+  qglTexCoord2fv((const GLfloat*)&c->t[0]);
+  qglVertex3fv((const GLfloat*)&c->v[0]);
 
-  glTexCoord2fv((const GLfloat*)&c->t[1]);
-  glVertex3fv((const GLfloat*)&c->v[1]);
+  qglTexCoord2fv((const GLfloat*)&c->t[1]);
+  qglVertex3fv((const GLfloat*)&c->v[1]);
 
-  glTexCoord2fv((const GLfloat*)&c->t[2]);
-  glVertex3fv((const GLfloat*)&c->v[2]);
+  qglTexCoord2fv((const GLfloat*)&c->t[2]);
+  qglVertex3fv((const GLfloat*)&c->v[2]);
 
-  glTexCoord2fv((const GLfloat*)&c->t[3]);
-  glVertex3fv((const GLfloat*)&c->v[3]);
+  qglTexCoord2fv((const GLfloat*)&c->t[3]);
+  qglVertex3fv((const GLfloat*)&c->v[3]);
 
-  glEnd();
+  qglEnd();
 }
 
 void gld_DrawNumPatch_f(float x, float y, int lump, int cm, enum patch_translation_e flags)
@@ -693,26 +699,26 @@ void gld_DrawNumPatch_f(float x, float y, int lump, int cm, enum patch_translati
     {
       cm = CR_RED;
     }
-    glColor3f(cm2RGB[cm][0], cm2RGB[cm][1], cm2RGB[cm][2]);//, cm2RGB[cm][3]);
+    qglColor3f(cm2RGB[cm][0], cm2RGB[cm][1], cm2RGB[cm][2]);//, cm2RGB[cm][3]);
   }
   else
   {
     // e6y
     // This is a workaround for some on-board Intel video cards.
     // Do you know more elegant solution?
-    glColor3f(1.0f, 1.0f, 1.0f);
+    qglColor3f(1.0f, 1.0f, 1.0f);
   }
 
-  glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(fU1, fV1); glVertex2f((xpos),(ypos));
-    glTexCoord2f(fU1, fV2); glVertex2f((xpos),(ypos+height));
-    glTexCoord2f(fU2, fV1); glVertex2f((xpos+width),(ypos));
-    glTexCoord2f(fU2, fV2); glVertex2f((xpos+width),(ypos+height));
-  glEnd();
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(fU1, fV1); qglVertex2f((xpos),(ypos));
+    qglTexCoord2f(fU1, fV2); qglVertex2f((xpos),(ypos+height));
+    qglTexCoord2f(fU2, fV1); qglVertex2f((xpos+width),(ypos));
+    qglTexCoord2f(fU2, fV2); qglVertex2f((xpos+width),(ypos+height));
+  qglEnd();
   
   if (bFakeColormap)
   {
-    glColor3f(1.0f,1.0f,1.0f);
+    qglColor3f(1.0f,1.0f,1.0f);
   }
 }
 
@@ -752,12 +758,12 @@ void gld_FillFlat(int lump, int x, int y, int width, int height, enum patch_tran
   fU2 = (float)width / (float)gltexture->realtexwidth;
   fV2 = (float)height / (float)gltexture->realtexheight;
 
-  glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(fU1, fV1); glVertex2f((float)(x),(float)(y));
-    glTexCoord2f(fU1, fV2); glVertex2f((float)(x),(float)(y + height));
-    glTexCoord2f(fU2, fV1); glVertex2f((float)(x + width),(float)(y));
-    glTexCoord2f(fU2, fV2); glVertex2f((float)(x + width),(float)(y + height));
-  glEnd();
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(fU1, fV1); qglVertex2f((float)(x),(float)(y));
+    qglTexCoord2f(fU1, fV2); qglVertex2f((float)(x),(float)(y + height));
+    qglTexCoord2f(fU2, fV1); qglVertex2f((float)(x + width),(float)(y));
+    qglTexCoord2f(fU2, fV2); qglVertex2f((float)(x + width),(float)(y + height));
+  qglEnd();
 }
 
 void gld_FillPatch(int lump, int x, int y, int width, int height, enum patch_translation_e flags)
@@ -794,17 +800,19 @@ void gld_FillPatch(int lump, int x, int y, int width, int height, enum patch_tra
   fU2 = (float)width / (float)gltexture->realtexwidth;
   fV2 = (float)height / (float)gltexture->realtexheight;
 
-  glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(fU1, fV1); glVertex2f((float)(x),(float)(y));
-    glTexCoord2f(fU1, fV2); glVertex2f((float)(x),(float)(y + height));
-    glTexCoord2f(fU2, fV1); glVertex2f((float)(x + width),(float)(y));
-    glTexCoord2f(fU2, fV2); glVertex2f((float)(x + width),(float)(y + height));
-  glEnd();
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(fU1, fV1); qglVertex2f((float)(x),(float)(y));
+    qglTexCoord2f(fU1, fV2); qglVertex2f((float)(x),(float)(y + height));
+    qglTexCoord2f(fU2, fV1); qglVertex2f((float)(x + width),(float)(y));
+    qglTexCoord2f(fU2, fV2); qglVertex2f((float)(x + width),(float)(y + height));
+  qglEnd();
 }
 
 void gld_DrawLine_f(float x0, float y0, float x1, float y1, int BaseColor)
 {
+	//LOGI("gld_DrawLine_f ");
 #if defined(USE_VERTEX_ARRAYS) || defined(USE_VBO)
+//#if 0
   const unsigned char *playpal = V_GetPlaypal();
   unsigned char r, g, b, a;
   map_line_t *line;
@@ -839,14 +847,14 @@ void gld_DrawLine_f(float x0, float y0, float x1, float y1, int BaseColor)
   if (alpha == 0)
     return;
 
-  glColor4f((float)playpal[3*BaseColor]/255.0f,
+  qglColor4f((float)playpal[3*BaseColor]/255.0f,
             (float)playpal[3*BaseColor+1]/255.0f,
             (float)playpal[3*BaseColor+2]/255.0f,
             alpha);
-  glBegin(GL_LINES);
-    glVertex2f( x0, y0 );
-    glVertex2f( x1, y1 );
-  glEnd();
+  qglBegin(GL_LINES);
+    qglVertex2f( x0, y0 );
+    qglVertex2f( x1, y1 );
+  qglEnd();
 #endif
 }
 
@@ -886,10 +894,10 @@ void gld_DrawWeapon(int weaponlump, vissprite_t *vis, int lightlevel)
   // when invisibility is about to go
   if (/*(viewplayer->mo->flags & MF_SHADOW) && */!vis->colormap)
   {
-    glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
-    glAlphaFunc(GL_GEQUAL,0.1f);
+    qglBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+    qglAlphaFunc(GL_GEQUAL,0.1f);
     //glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
-    glColor4f(0.2f,0.2f,0.2f,0.33f);
+    qglColor4f(0.2f,0.2f,0.2f,0.33f);
   }
   else
   {
@@ -898,18 +906,18 @@ void gld_DrawWeapon(int weaponlump, vissprite_t *vis, int lightlevel)
     else
       gld_StaticLight(light);
   }
-  glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(fU1, fV1); glVertex2f((float)(x1),(float)(y1));
-    glTexCoord2f(fU1, fV2); glVertex2f((float)(x1),(float)(y2));
-    glTexCoord2f(fU2, fV1); glVertex2f((float)(x2),(float)(y1));
-    glTexCoord2f(fU2, fV2); glVertex2f((float)(x2),(float)(y2));
-  glEnd();
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(fU1, fV1); qglVertex2f((float)(x1),(float)(y1));
+    qglTexCoord2f(fU1, fV2); qglVertex2f((float)(x1),(float)(y2));
+    qglTexCoord2f(fU2, fV1); qglVertex2f((float)(x2),(float)(y1));
+    qglTexCoord2f(fU2, fV2); qglVertex2f((float)(x2),(float)(y2));
+  qglEnd();
   if(!vis->colormap)
   {
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glAlphaFunc(GL_GEQUAL,0.5f);
+    qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    qglAlphaFunc(GL_GEQUAL,0.5f);
   }
-  glColor3f(1.0f,1.0f,1.0f);
+  qglColor3f(1.0f,1.0f,1.0f);
 }
 
 void gld_FillBlock(int x, int y, int width, int height, int col)
@@ -917,16 +925,16 @@ void gld_FillBlock(int x, int y, int width, int height, int col)
   const unsigned char *playpal = V_GetPlaypal();
 
   gld_EnableTexture2D(GL_TEXTURE0_ARB, false);
-  glColor3f((float)playpal[3*col]/255.0f,
+  qglColor3f((float)playpal[3*col]/255.0f,
             (float)playpal[3*col+1]/255.0f,
             (float)playpal[3*col+2]/255.0f);
-  glBegin(GL_TRIANGLE_STRIP);
-    glVertex2i( x, y );
-    glVertex2i( x, y+height );
-    glVertex2i( x+width, y );
-    glVertex2i( x+width, y+height );
-  glEnd();
-  glColor3f(1.0f,1.0f,1.0f);
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglVertex2i( x, y );
+    qglVertex2i( x, y+height );
+    qglVertex2i( x+width, y );
+    qglVertex2i( x+width, y+height );
+  qglEnd();
+  qglColor3f(1.0f,1.0f,1.0f);
   gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
 }
 
@@ -1030,13 +1038,13 @@ unsigned char *gld_ReadScreen(void)
   if (buffer && scr)
   {
       GLint pack_aligment;
-      glGetIntegerv(GL_PACK_ALIGNMENT, &pack_aligment);
-      glPixelStorei(GL_PACK_ALIGNMENT, 1);
+      qglGetIntegerv(GL_PACK_ALIGNMENT, &pack_aligment);
+      qglPixelStorei(GL_PACK_ALIGNMENT, 1);
       
-      glFlush();
-      glReadPixels(0, 0, REAL_SCREENWIDTH, REAL_SCREENHEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scr);
+      qglFlush();
+      qglReadPixels(0, 0, REAL_SCREENWIDTH, REAL_SCREENHEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scr);
       
-      glPixelStorei(GL_PACK_ALIGNMENT, pack_aligment);
+      qglPixelStorei(GL_PACK_ALIGNMENT, pack_aligment);
 
       gld_ApplyGammaRamp(scr, REAL_SCREENWIDTH * 3, REAL_SCREENWIDTH, REAL_SCREENHEIGHT);
 
@@ -1054,11 +1062,11 @@ unsigned char *gld_ReadScreen(void)
 
 GLvoid gld_Set2DMode(void)
 {
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glOrtho(
+  qglMatrixMode(GL_MODELVIEW);
+  qglLoadIdentity();
+  qglMatrixMode(GL_PROJECTION);
+  qglLoadIdentity();
+  qglOrtho(
     (GLdouble) 0,
     (GLdouble) REAL_SCREENWIDTH,
     (GLdouble) REAL_SCREENHEIGHT,
@@ -1066,7 +1074,7 @@ GLvoid gld_Set2DMode(void)
     (GLdouble) -1.0,
     (GLdouble) 1.0
   );
-  glDisable(GL_DEPTH_TEST);
+  qglDisable(GL_DEPTH_TEST);
 }
 
 void gld_InitDrawScene(void)
@@ -1079,9 +1087,11 @@ void gld_Finish(void)
   gld_Set2DMode();
   if (gl_finish)
   {
-    glFinish();
+    qglFinish();
   }
+#ifndef ANDROID
   SDL_GL_SwapBuffers();
+#endif
 }
 
 GLuint flats_vbo_id = 0; // ID of VBO
@@ -1118,7 +1128,7 @@ void gld_Clear(void)
   if (flashing_hom)
   {
     clearbits |= GL_COLOR_BUFFER_BIT;
-    glClearColor (gametic % 20 < 9 ? 1.0f : 0.0f, 0.0f, 0.0f, 1.0f);
+    qglClearColor (gametic % 20 < 9 ? 1.0f : 0.0f, 0.0f, 0.0f, 1.0f);
   }
 
   if (gl_use_stencil)
@@ -1128,7 +1138,7 @@ void gld_Clear(void)
     clearbits |= GL_DEPTH_BUFFER_BIT;
 
   if (clearbits)
-    glClear(clearbits);
+    qglClear(clearbits);
 
   if (gl_ztrick)
   {
@@ -1137,15 +1147,15 @@ void gld_Clear(void)
     {
       gldepthmin = 0.0f;
       gldepthmax = 0.49999f;
-      glDepthFunc(GL_LEQUAL);
+      qglDepthFunc(GL_LEQUAL);
     }
     else
     {
       gldepthmin = 1.0f;
       gldepthmax = 0.5f;
-      glDepthFunc(GL_GEQUAL);
+      qglDepthFunc(GL_GEQUAL);
     }
-    glDepthRange(gldepthmin, gldepthmax);
+    qglDepthRange(gldepthmin, gldepthmax);
   }
 }
 
@@ -1156,12 +1166,12 @@ void gld_StartDrawScene(void)
   gld_MultisamplingSet();
 
   if (gl_shared_texture_palette)
-    glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
+    qglEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
   gld_SetPalette(-1);
 
-  glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  glScissor(viewwindowx, SCREENHEIGHT-(viewheight+viewwindowy), viewwidth, viewheight);
-  glEnable(GL_SCISSOR_TEST);
+  qglViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  qglScissor(viewwindowx, SCREENHEIGHT-(viewheight+viewwindowy), viewwidth, viewheight);
+  qglEnable(GL_SCISSOR_TEST);
   // Player coordinates
   xCamera=-(float)viewx/MAP_SCALE;
   yCamera=(float)viewy/MAP_SCALE;
@@ -1237,7 +1247,7 @@ void gld_StartDrawScene(void)
   // Vortex: Set FBO object
   if (SceneInTexture)
   {
-    GLEXT_glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, glSceneImageFBOTexID);
+    GLEXT_glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, qglSceneImageFBOTexID);
   }
 #endif
 
@@ -1245,13 +1255,13 @@ void gld_StartDrawScene(void)
 
   gld_Clear();
 
-  glEnable(GL_DEPTH_TEST);
+  qglEnable(GL_DEPTH_TEST);
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf(projMatrix);
+  qglMatrixMode(GL_PROJECTION);
+  qglLoadMatrixf(projMatrix);
 
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf(modelMatrix);
+  qglMatrixMode(GL_MODELVIEW);
+  qglLoadMatrixf(modelMatrix);
 
   rendermarker++;
   scene_has_overlapped_sprites = false;
@@ -1264,41 +1274,43 @@ static void gld_ProcessExtraAlpha(void)
 {
   if (extra_alpha>0.0f)
   {
-    glDisable(GL_ALPHA_TEST);
-    glColor4f(extra_red, extra_green, extra_blue, extra_alpha);
+    qglDisable(GL_ALPHA_TEST);
+    qglColor4f(extra_red, extra_green, extra_blue, extra_alpha);
     gld_EnableTexture2D(GL_TEXTURE0_ARB, false);
-    glBegin(GL_TRIANGLE_STRIP);
-      glVertex2f( 0.0f, 0.0f);
-      glVertex2f( 0.0f, (float)SCREENHEIGHT);
-      glVertex2f( (float)SCREENWIDTH, 0.0f);
-      glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
-    glEnd();
+    qglBegin(GL_TRIANGLE_STRIP);
+      qglVertex2f( 0.0f, 0.0f);
+      qglVertex2f( 0.0f, (float)SCREENHEIGHT);
+      qglVertex2f( (float)SCREENWIDTH, 0.0f);
+      qglVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
+    qglEnd();
     gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
-    glEnable(GL_ALPHA_TEST);
+    qglEnable(GL_ALPHA_TEST);
   }
 }
 
 //e6y
 static void gld_InvertScene(void)
 {
-  glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
-  glColor4f(1,1,1,1);
+  qglBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+  qglColor4f(1,1,1,1);
   gld_EnableTexture2D(GL_TEXTURE0_ARB, false);
-  glBegin(GL_TRIANGLE_STRIP);
-    glVertex2f( 0.0f, 0.0f);
-    glVertex2f( 0.0f, (float)SCREENHEIGHT);
-    glVertex2f( (float)SCREENWIDTH, 0.0f);
-    glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
-  glEnd();
+  qglBegin(GL_TRIANGLE_STRIP);
+    qglVertex2f( 0.0f, 0.0f);
+    qglVertex2f( 0.0f, (float)SCREENHEIGHT);
+    qglVertex2f( (float)SCREENWIDTH, 0.0f);
+    qglVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
+  qglEnd();
   gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void gld_EndDrawScene(void)
 {
-  glDisable(GL_POLYGON_SMOOTH);
+#ifndef ANDROID
+  qglDisable(GL_POLYGON_SMOOTH);
+#endif
 
-  glViewport(0, 0, SCREENWIDTH, SCREENHEIGHT);
+  qglViewport(0, 0, SCREENWIDTH, SCREENHEIGHT);
   gl_EnableFog(false);
   gld_Set2DMode();
 
@@ -1328,23 +1340,23 @@ void gld_EndDrawScene(void)
     // Vortex: Restore original RT
     GLEXT_glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
-    glBindTexture(GL_TEXTURE_2D, glSceneImageTextureFBOTexID);
+    qglBindTexture(GL_TEXTURE_2D, qglSceneImageTextureFBOTexID);
 
     // Setup blender
     if (invul_method & INVUL_BW)
     {
-      glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
-      glTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_DOT3_RGB);
-      glTexEnvi(GL_TEXTURE_ENV,GL_SOURCE0_RGB,GL_PRIMARY_COLOR);
-      glTexEnvi(GL_TEXTURE_ENV,GL_OPERAND0_RGB,GL_SRC_COLOR);
-      glTexEnvi(GL_TEXTURE_ENV,GL_SOURCE1_RGB,GL_TEXTURE);
-      glTexEnvi(GL_TEXTURE_ENV,GL_OPERAND1_RGB,GL_SRC_COLOR);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_DOT3_RGB);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_SOURCE0_RGB,GL_PRIMARY_COLOR);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_OPERAND0_RGB,GL_SRC_COLOR);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_SOURCE1_RGB,GL_TEXTURE);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_OPERAND1_RGB,GL_SRC_COLOR);
 
-      glColor3f(0.3f, 0.3f, 0.4f);
+      qglColor3f(0.3f, 0.3f, 0.4f);
     }
     else
     {
-      glColor3f(1.0f, 1.0f, 1.0f);
+      qglColor3f(1.0f, 1.0f, 1.0f);
     }
 
     //e6y: motion bloor effect for strafe50
@@ -1358,26 +1370,26 @@ void gld_EndDrawScene(void)
         motionblur_alpha = (float)((atan(-renderer_fps / motion_blur.att_a)) / motion_blur.att_b) + motion_blur.att_c;
       }
 
-      glBlendFunc(GL_CONSTANT_ALPHA_EXT, GL_ONE_MINUS_CONSTANT_ALPHA_EXT);
+      qglBlendFunc(GL_CONSTANT_ALPHA_EXT, GL_ONE_MINUS_CONSTANT_ALPHA_EXT);
       GLEXT_glBlendColorEXT(1.0f, 1.0f, 1.0f, motionblur_alpha);
     }
   
-    glBegin(GL_TRIANGLE_STRIP);
+    qglBegin(GL_TRIANGLE_STRIP);
     {
-      glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, 0.0f);
-      glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, (float)SCREENHEIGHT);
-      glTexCoord2f(1.0f, 1.0f); glVertex2f((float)SCREENWIDTH, 0.0f);
-      glTexCoord2f(1.0f, 0.0f); glVertex2f((float)SCREENWIDTH, (float)SCREENHEIGHT);
+      qglTexCoord2f(0.0f, 1.0f); qglVertex2f(0.0f, 0.0f);
+      qglTexCoord2f(0.0f, 0.0f); qglVertex2f(0.0f, (float)SCREENHEIGHT);
+      qglTexCoord2f(1.0f, 1.0f); qglVertex2f((float)SCREENWIDTH, 0.0f);
+      qglTexCoord2f(1.0f, 0.0f); qglVertex2f((float)SCREENWIDTH, (float)SCREENHEIGHT);
     }
-    glEnd();
+    qglEnd();
 
     
     if (motion_blur.enabled)
     {
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+    qglTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
   }
   else
 #endif
@@ -1388,7 +1400,7 @@ void gld_EndDrawScene(void)
     }
     if (invul_method & INVUL_BW)
     {
-      glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+      qglTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
     }
 
     if (!invul_method)
@@ -1397,11 +1409,11 @@ void gld_EndDrawScene(void)
     }
   }
 
-  glColor3f(1.0f,1.0f,1.0f);
-  glDisable(GL_SCISSOR_TEST);
-  glDisable(GL_ALPHA_TEST);
+  qglColor3f(1.0f,1.0f,1.0f);
+  qglDisable(GL_SCISSOR_TEST);
+  qglDisable(GL_ALPHA_TEST);
   if (gl_shared_texture_palette)
-    glDisable(GL_SHARED_TEXTURE_PALETTE_EXT);
+    qglDisable(GL_SHARED_TEXTURE_PALETTE_EXT);
 }
 
 static void gld_AddDrawWallItem(GLDrawItemType itemtype, void *itemdata)
@@ -1488,7 +1500,7 @@ static void gld_DrawWall(GLWall *wall)
 
   if (!wall->gltexture)
   {
-    glColor4f(1.0f,0.0f,0.0f,1.0f);
+    qglColor4f(1.0f,0.0f,0.0f,1.0f);
   }
 
   if (has_detail)
@@ -1514,33 +1526,33 @@ static void gld_DrawWall(GLWall *wall)
     {
       gld_StaticLightAlpha(wall->light, wall->alpha);
 
-      glBegin(GL_TRIANGLE_FAN);
+      qglBegin(GL_TRIANGLE_FAN);
 
       // lower left corner
-      glTexCoord2f(wall->ul,wall->vb);
-      glVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
+      qglTexCoord2f(wall->ul,wall->vb);
+      qglVertex3f(wall->glseg->x1,wall->ybottom,wall->glseg->z1);
 
       // split left edge of wall
       if (!wall->glseg->fracleft)
         gld_SplitLeftEdge(wall, false);
 
       // upper left corner
-      glTexCoord2f(wall->ul,wall->vt);
-      glVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
+      qglTexCoord2f(wall->ul,wall->vt);
+      qglVertex3f(wall->glseg->x1,wall->ytop,wall->glseg->z1);
 
       // upper right corner
-      glTexCoord2f(wall->ur,wall->vt);
-      glVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
+      qglTexCoord2f(wall->ur,wall->vt);
+      qglVertex3f(wall->glseg->x2,wall->ytop,wall->glseg->z2);
 
       // split right edge of wall
       if (!wall->glseg->fracright)
         gld_SplitRightEdge(wall, false);
 
       // lower right corner
-      glTexCoord2f(wall->ur,wall->vb);
-      glVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
+      qglTexCoord2f(wall->ur,wall->vb);
+      qglVertex3f(wall->glseg->x2,wall->ybottom,wall->glseg->z2);
 
-      glEnd();
+      qglEnd();
     }
   }
 }
@@ -2011,16 +2023,16 @@ static void gld_DrawFlat(GLFlat *flat)
   gld_StaticLightAlpha(flat->light, flat->alpha);
 
 #if defined(USE_VERTEX_ARRAYS) || defined(USE_VBO)
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glTranslatef(0.0f,flat->z,0.0f);
+  qglMatrixMode(GL_MODELVIEW);
+  qglPushMatrix();
+  qglTranslatef(0.0f,flat->z,0.0f);
 #endif
 
   if (has_offset)
   {
-    glMatrixMode(GL_TEXTURE);
-    glPushMatrix();
-    glTranslatef(flat->uoffs, flat->voffs, 0.0f);
+    qglMatrixMode(GL_TEXTURE);
+    qglPushMatrix();
+    qglTranslatef(flat->uoffs, flat->voffs, 0.0f);
   }
   
   gld_BindDetailARB(flat->gltexture, has_detail);
@@ -2032,7 +2044,7 @@ static void gld_DrawFlat(GLFlat *flat)
     GLEXT_glActiveTextureARB(GL_TEXTURE1_ARB);
     gld_StaticLightAlpha(flat->light, flat->alpha);
     
-    glPushMatrix();
+    qglPushMatrix();
 
     w = flat->gltexture->detail_width;
     h = flat->gltexture->detail_height;
@@ -2041,10 +2053,10 @@ static void gld_DrawFlat(GLFlat *flat)
 
     if ((flat->flags & GLFLAT_HAVE_OFFSET) || dx || dy)
     {
-      glTranslatef(flat->uoffs * w + dx, flat->voffs * h + dy, 0.0f);
+      qglTranslatef(flat->uoffs * w + dx, flat->voffs * h + dy, 0.0f);
     }
 
-    glScalef(w, h, 1.0f);
+    qglScalef(w, h, 1.0f);
   }
 
   if (flat->sectornum>=0)
@@ -2054,7 +2066,7 @@ static void gld_DrawFlat(GLFlat *flat)
     if (gl_use_display_lists)
     {
       int display_list = (has_detail ? flats_detail_display_list : flats_display_list);
-      glCallList(display_list + flat->sectornum);
+      qglCallList(display_list + flat->sectornum);
     }
     else
     {
@@ -2062,7 +2074,7 @@ static void gld_DrawFlat(GLFlat *flat)
       {
         // set the current loop
         currentloop=&sectorloops[flat->sectornum].loops[loopnum];
-        glDrawArrays(currentloop->mode,currentloop->vertexindex,currentloop->vertexcount);
+        qglDrawArrays(currentloop->mode,currentloop->vertexindex,currentloop->vertexcount);
       }
     }
 #else
@@ -2074,7 +2086,7 @@ static void gld_DrawFlat(GLFlat *flat)
       if (!currentloop)
         continue;
       // set the mode (GL_TRIANGLES, GL_TRIANGLE_STRIP or GL_TRIANGLE_FAN)
-      glBegin(currentloop->mode);
+      qglBegin(currentloop->mode);
       // go through all vertexes of this loop
       for (vertexnum=currentloop->vertexindex; vertexnum<(currentloop->vertexindex+currentloop->vertexcount); vertexnum++)
       {
@@ -2086,14 +2098,14 @@ static void gld_DrawFlat(GLFlat *flat)
         }
         else
         {
-          glTexCoord2fv((GLfloat*)&flats_vbo[vertexnum].u);
+          qglTexCoord2fv((GLfloat*)&flats_vbo[vertexnum].u);
         }
         // set vertex coordinate
         //glVertex3fv((GLfloat*)&flats_vbo[vertexnum].x);
-        glVertex3f(flats_vbo[vertexnum].x, flat->z, flats_vbo[vertexnum].z);
+        qglVertex3f(flats_vbo[vertexnum].x, flat->z, flats_vbo[vertexnum].z);
       }
       // end of loop
-      glEnd();
+      qglEnd();
     }
 #endif
   }
@@ -2101,18 +2113,18 @@ static void gld_DrawFlat(GLFlat *flat)
   //e6y
   if (has_detail)
   {
-    glPopMatrix();
+    qglPopMatrix();
     GLEXT_glActiveTextureARB(GL_TEXTURE0_ARB);
   }
 
   if (has_offset)
   {
-    glPopMatrix();
+    qglPopMatrix();
   }
 
 #if defined(USE_VERTEX_ARRAYS) || defined(USE_VBO)
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
+  qglMatrixMode(GL_MODELVIEW);
+  qglPopMatrix();
 #endif
 }
 
@@ -2249,12 +2261,12 @@ static void gld_DrawSprite(GLSprite *sprite)
   {
     if(sprite->flags & MF_SHADOW)
     {
-      glGetIntegerv(GL_BLEND_SRC, &blend_src);
-      glGetIntegerv(GL_BLEND_DST, &blend_dst);
-      glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+      qglGetIntegerv(GL_BLEND_SRC, &blend_src);
+      qglGetIntegerv(GL_BLEND_DST, &blend_dst);
+      qglBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
       //glColor4f(0.2f,0.2f,0.2f,(float)tran_filter_pct/100.0f);
-      glAlphaFunc(GL_GEQUAL,0.1f);
-      glColor4f(0.2f,0.2f,0.2f,0.33f);
+      qglAlphaFunc(GL_GEQUAL,0.1f);
+      qglColor4f(0.2f,0.2f,0.2f,0.33f);
       restore = 1;
     }
     else
@@ -2293,12 +2305,12 @@ static void gld_DrawSprite(GLSprite *sprite)
     z3 = -(sprite->x1 * sin_inv_yaw + y2z2_y * cos_inv_yaw) + sprite->z;
     z4 = -(sprite->x2 * sin_inv_yaw + y2z2_y * cos_inv_yaw) + sprite->z;
 
-    glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(sprite->ul, sprite->vt); glVertex3f(x1, y1, z1);
-    glTexCoord2f(sprite->ur, sprite->vt); glVertex3f(x2, y1, z2);
-    glTexCoord2f(sprite->ul, sprite->vb); glVertex3f(x3, y2, z3);
-    glTexCoord2f(sprite->ur, sprite->vb); glVertex3f(x4, y2, z4);
-    glEnd();
+    qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(sprite->ul, sprite->vt); qglVertex3f(x1, y1, z1);
+    qglTexCoord2f(sprite->ur, sprite->vt); qglVertex3f(x2, y1, z2);
+    qglTexCoord2f(sprite->ul, sprite->vb); qglVertex3f(x3, y2, z3);
+    qglTexCoord2f(sprite->ur, sprite->vb); qglVertex3f(x4, y2, z4);
+    qglEnd();
   }
   else
   {
@@ -2313,18 +2325,18 @@ static void gld_DrawSprite(GLSprite *sprite)
     z2 = -(sprite->x1 * sin_inv_yaw) + sprite->z;
     z1 = -(sprite->x2 * sin_inv_yaw) + sprite->z;
 
-    glBegin(GL_TRIANGLE_STRIP);
-    glTexCoord2f(sprite->ul, sprite->vt); glVertex3f(x1, y1, z2);
-    glTexCoord2f(sprite->ur, sprite->vt); glVertex3f(x2, y1, z1);
-    glTexCoord2f(sprite->ul, sprite->vb); glVertex3f(x1, y2, z2);
-    glTexCoord2f(sprite->ur, sprite->vb); glVertex3f(x2, y2, z1);
-    glEnd();
+    qglBegin(GL_TRIANGLE_STRIP);
+    qglTexCoord2f(sprite->ul, sprite->vt); qglVertex3f(x1, y1, z2);
+    qglTexCoord2f(sprite->ur, sprite->vt); qglVertex3f(x2, y1, z1);
+    qglTexCoord2f(sprite->ul, sprite->vb); qglVertex3f(x1, y2, z2);
+    qglTexCoord2f(sprite->ur, sprite->vb); qglVertex3f(x2, y2, z1);
+    qglEnd();
   }
 
   if (restore)
   {
-    glBlendFunc(blend_src, blend_dst);
-    glAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
+    qglBlendFunc(blend_src, blend_dst);
+    qglAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
   }
 }
 
@@ -2374,33 +2386,33 @@ static void gld_DrawHealthBars(void)
   {
     gld_EnableTexture2D(GL_TEXTURE0_ARB, false);
 
-    glBegin(GL_LINES);
+    qglBegin(GL_LINES);
     for (i = count - 1; i >= 0; i--)
     {
       GLHealthBar *hbar = gld_drawinfo.items[GLDIT_HBAR][i].item.hbar;
       if (hbar->cm != cm)
       {
         cm = hbar->cm;
-        glColor4f(cm2RGB[cm][0], cm2RGB[cm][1], cm2RGB[cm][2], 1.0f);
+        qglColor4f(cm2RGB[cm][0], cm2RGB[cm][1], cm2RGB[cm][2], 1.0f);
       }
 
-      glVertex3f(hbar->x1, hbar->y, hbar->z1);
-      glVertex3f(hbar->x2, hbar->y, hbar->z2);
+      qglVertex3f(hbar->x1, hbar->y, hbar->z1);
+      qglVertex3f(hbar->x2, hbar->y, hbar->z2);
     }
-    glEnd();
+    qglEnd();
 
     if (health_bar_full_length)
     {
-      glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
-      glBegin(GL_LINES);
+      qglColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+      qglBegin(GL_LINES);
       for (i = count - 1; i >= 0; i--)
       {
         GLHealthBar *hbar = gld_drawinfo.items[GLDIT_HBAR][i].item.hbar;
 
-        glVertex3f(hbar->x1, hbar->y, hbar->z1);
-        glVertex3f(hbar->x3, hbar->y, hbar->z3);
+        qglVertex3f(hbar->x1, hbar->y, hbar->z1);
+        qglVertex3f(hbar->x3, hbar->y, hbar->z3);
       }
-      glEnd();
+      qglEnd();
     }
 
     gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
@@ -2670,13 +2682,14 @@ void gld_ProcessWall(GLWall *wall)
   // otherwise there are rendering artifacts worse than anything that could be seen 
   // on Geforce 2's! Made this a menu option because the speed impact is quite severe
   // and this special handling is not necessary on modern NVidia cards.
-  seg_t *seg = wall->seg;
 
-  wall->glseg->fracleft  = 0;
-  wall->glseg->fracright = 0;
+    seg_t *seg = wall->seg;
 
-  gld_RecalcVertexHeights(seg->linedef->v1);
-  gld_RecalcVertexHeights(seg->linedef->v2);
+    wall->glseg->fracleft  = 0;
+    wall->glseg->fracright = 0;
+
+    gld_RecalcVertexHeights(seg->linedef->v1);
+    gld_RecalcVertexHeights(seg->linedef->v2);
 
   gld_DrawWall(wall);
 }
@@ -2825,10 +2838,10 @@ void gld_DrawProjectedWalls(GLDrawItemType itemtype)
   {
     // Push bleeding floor/ceiling textures back a little in the z-buffer
     // so they don't interfere with overlapping mid textures.
-    glPolygonOffset(1.0f, 128.0f);
-    glEnable(GL_POLYGON_OFFSET_FILL);
+    qglPolygonOffset(1.0f, 128.0f);
+    qglEnable(GL_POLYGON_OFFSET_FILL);
 
-    glEnable(GL_STENCIL_TEST);
+    qglEnable(GL_STENCIL_TEST);
     gld_DrawItemsSortByTexture(itemtype);
     for (i = gld_drawinfo.num_items[itemtype] - 1; i >= 0; i--)
     {
@@ -2848,10 +2861,10 @@ void gld_DrawProjectedWalls(GLDrawItemType itemtype)
 
       gld_ProcessWall(wall);
     }
-    glDisable(GL_STENCIL_TEST);
+    qglDisable(GL_STENCIL_TEST);
 
-    glPolygonOffset(0.0f, 0.0f);
-    glDisable(GL_POLYGON_OFFSET_FILL);
+    qglPolygonOffset(0.0f, 0.0f);
+    qglDisable(GL_POLYGON_OFFSET_FILL);
   }
 }
 
@@ -2864,53 +2877,53 @@ void gld_InitDisplayLists(void)
   if (gl_use_display_lists)
   {
     flats_display_list_size = numsectors;
-    flats_display_list = glGenLists(flats_display_list_size);
+    flats_display_list = qglGenLists(flats_display_list_size);
 
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    qglEnableClientState(GL_VERTEX_ARRAY);
+    qglDisableClientState(GL_COLOR_ARRAY);
 
     if (gl_ext_arb_vertex_buffer_object)
     {
       GLEXT_glBindBufferARB(GL_ARRAY_BUFFER, flats_vbo_id);
     }
-    glVertexPointer(3, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_x);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_u);
+    qglVertexPointer(3, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_x);
+    qglTexCoordPointer(2, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_u);
 
     for (i = 0; i < flats_display_list_size; i++)
     {
-      glNewList(flats_display_list + i, GL_COMPILE);
+      qglNewList(flats_display_list + i, GL_COMPILE);
 
       for (loopnum = 0; loopnum < sectorloops[i].loopcount; loopnum++)
       {
         // set the current loop
         currentloop = &sectorloops[i].loops[loopnum];
-        glDrawArrays(currentloop->mode, currentloop->vertexindex, currentloop->vertexcount);
+        qglDrawArrays(currentloop->mode, currentloop->vertexindex, currentloop->vertexcount);
       }
 
-      glEndList();
+      qglEndList();
     }
 
     // duplicated display list for flats with enabled detail ARB
     if (details_count && gl_arb_multitexture)
     {
       flats_detail_display_list_size = numsectors;
-      flats_detail_display_list = glGenLists(flats_detail_display_list_size);
+      flats_detail_display_list = qglGenLists(flats_detail_display_list_size);
 
       gld_EnableClientCoordArray(GL_TEXTURE1_ARB, true);
 
       for (i = 0; i < flats_display_list_size; i++)
       {
-        glNewList(flats_detail_display_list + i, GL_COMPILE);
+        qglNewList(flats_detail_display_list + i, GL_COMPILE);
 
         for (loopnum = 0; loopnum < sectorloops[i].loopcount; loopnum++)
         {
           // set the current loop
           currentloop = &sectorloops[i].loops[loopnum];
-          glDrawArrays(currentloop->mode, currentloop->vertexindex, currentloop->vertexcount);
+          qglDrawArrays(currentloop->mode, currentloop->vertexindex, currentloop->vertexcount);
         }
 
-        glEndList();
+        qglEndList();
       }
 
       gld_EnableClientCoordArray(GL_TEXTURE1_ARB, false);
@@ -2921,9 +2934,9 @@ void gld_InitDisplayLists(void)
       // bind with 0, so, switch back to normal pointer operation
       GLEXT_glBindBufferARB(GL_ARRAY_BUFFER, 0);
     }
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    qglDisableClientState(GL_VERTEX_ARRAY);
+    qglDisableClientState(GL_COLOR_ARRAY);
   }
 }
 
@@ -2933,14 +2946,14 @@ void gld_CleanDisplayLists(void)
   {
     if (flats_display_list_size > 0)
     {
-      glDeleteLists(flats_display_list, flats_display_list_size);
+      qglDeleteLists(flats_display_list, flats_display_list_size);
       flats_display_list = 0;
       flats_display_list_size = 0;
     }
 
     if (flats_detail_display_list_size > 0)
     {
-      glDeleteLists(flats_detail_display_list, flats_detail_display_list_size);
+      qglDeleteLists(flats_detail_display_list, flats_detail_display_list_size);
       flats_detail_display_list = 0;
       flats_detail_display_list_size = 0;
     }
@@ -2949,11 +2962,13 @@ void gld_CleanDisplayLists(void)
 
 void gld_DrawScene(player_t *player)
 {
+
+  //LOGI("gld_DrawScene");
   int i;
   int skybox;
 
   //e6y: must call it twice for correct initialisation
-  glEnable(GL_ALPHA_TEST);
+  qglEnable(GL_ALPHA_TEST);
 
   //e6y: the same with fog
   gl_EnableFog(true);
@@ -2965,9 +2980,9 @@ void gld_DrawScene(player_t *player)
 #if defined(USE_VERTEX_ARRAYS) || defined(USE_VBO)
   if (!gl_use_display_lists)
   {
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    qglEnableClientState(GL_VERTEX_ARRAY);
+    qglDisableClientState(GL_COLOR_ARRAY);
   }
 #endif
 
@@ -2998,8 +3013,8 @@ void gld_DrawScene(player_t *player)
     {
       GLEXT_glBindBufferARB(GL_ARRAY_BUFFER, flats_vbo_id);
     }
-    glVertexPointer(3, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_x);
-    glTexCoordPointer(2, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_u);
+    qglVertexPointer(3, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_x);
+    qglTexCoordPointer(2, GL_FLOAT, sizeof(flats_vbo[0]), flats_vbo_u);
   }
 #endif
 
@@ -3009,16 +3024,16 @@ void gld_DrawScene(player_t *player)
   // opaque stuff
   //
 
-  glBlendFunc(GL_ONE, GL_ZERO);
+  qglBlendFunc(GL_ONE, GL_ZERO);
 
   // solid geometry
-  glDisable(GL_ALPHA_TEST);
+  qglDisable(GL_ALPHA_TEST);
 
   // enable backside removing
-  glEnable(GL_CULL_FACE);
+  qglEnable(GL_CULL_FACE);
 
   // floors
-  glCullFace(GL_FRONT);
+  qglCullFace(GL_FRONT);
   gld_DrawItemsSortByTexture(GLDIT_FLOOR);
   for (i = gld_drawinfo.num_items[GLDIT_FLOOR] - 1; i >= 0; i--)
   {
@@ -3027,7 +3042,7 @@ void gld_DrawScene(player_t *player)
   }
 
   // ceilings
-  glCullFace(GL_BACK);
+  qglCullFace(GL_BACK);
   gld_DrawItemsSortByTexture(GLDIT_CEILING);
   for (i = gld_drawinfo.num_items[GLDIT_CEILING] - 1; i >= 0; i--)
   {
@@ -3036,7 +3051,7 @@ void gld_DrawScene(player_t *player)
   }
 
   // disable backside removing
-  glDisable(GL_CULL_FACE);
+  qglDisable(GL_CULL_FACE);
 
   // detail texture works only with flats and walls
   gld_EnableDetail(false);
@@ -3050,7 +3065,7 @@ void gld_DrawScene(player_t *player)
   }
 
   // masked geometry
-  glEnable(GL_ALPHA_TEST);
+  qglEnable(GL_ALPHA_TEST);
 
   gld_DrawItemsSortByTexture(GLDIT_MWALL);
 
@@ -3070,9 +3085,9 @@ void gld_DrawScene(player_t *player)
 
     // opaque mid walls with holes
 
-    glEnable(GL_STENCIL_TEST);
-    glStencilFunc(GL_ALWAYS, 1, ~0);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    qglEnable(GL_STENCIL_TEST);
+    qglStencilFunc(GL_ALWAYS, 1, ~0);
+    qglStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
     for (i = gld_drawinfo.num_items[GLDIT_MWALL] - 1; i >= 0; i--)
     {
@@ -3084,11 +3099,11 @@ void gld_DrawScene(player_t *player)
       }
     }
 
-    glStencilFunc(GL_EQUAL, 1, ~0);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    qglStencilFunc(GL_EQUAL, 1, ~0);
+    qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-    glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-    glBlendFunc (GL_DST_COLOR, GL_SRC_COLOR);
+    qglTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+    qglBlendFunc (GL_DST_COLOR, GL_SRC_COLOR);
 
     // details for opaque mid walls with holes
     gld_DrawItemsSortByDetail(GLDIT_MWALL);
@@ -3104,9 +3119,9 @@ void gld_DrawScene(player_t *player)
 
     //restoring
     SetFrameTextureMode();
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glClear(GL_STENCIL_BUFFER_BIT);
-    glDisable(GL_STENCIL_TEST);
+    qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    qglClear(GL_STENCIL_BUFFER_BIT);
+    qglDisable(GL_STENCIL_TEST);
   }
   else
   {
@@ -3125,7 +3140,7 @@ void gld_DrawScene(player_t *player)
   gld_DrawProjectedWalls(GLDIT_FWALL);
 
   gl_EnableFog(false);
-  glEnable(GL_ALPHA_TEST);
+  qglEnable(GL_ALPHA_TEST);
 
   // normal sky (not a skybox)
   if (!skybox && (gl_drawskys == skytype_none || gl_drawskys == skytype_standard))
@@ -3138,14 +3153,14 @@ void gld_DrawScene(player_t *player)
   }
 
   // opaque sprites
-  glAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
+  qglAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
   gld_DrawItemsSortSprites(GLDIT_SPRITE);
   for (i = gld_drawinfo.num_items[GLDIT_SPRITE] - 1; i >= 0; i--)
   {
     gld_SetFog(gld_drawinfo.items[GLDIT_SPRITE][i].item.sprite->fogdensity);
     gld_DrawSprite(gld_drawinfo.items[GLDIT_SPRITE][i].item.sprite);
   }
-  glAlphaFunc(GL_GEQUAL, 0.5f);
+  qglAlphaFunc(GL_GEQUAL, 0.5f);
 
   // mode for viewing all the alive monsters
   if (show_alive)
@@ -3160,15 +3175,15 @@ void gld_DrawScene(player_t *player)
     color = 0.1f + 0.9f * (float)step / (float)period;
 
     R_AddAllAliveMonstersSprites();
-    glDisable(GL_DEPTH_TEST);
+    qglDisable(GL_DEPTH_TEST);
     gld_DrawItemsSortByTexture(GLDIT_ASPRITE);
-    glColor4f(1.0f, color, color, 1.0f);
+    qglColor4f(1.0f, color, color, 1.0f);
     for (i = gld_drawinfo.num_items[GLDIT_ASPRITE] - 1; i >= 0; i--)
     {
       gld_DrawSprite(gld_drawinfo.items[GLDIT_ASPRITE][i].item.sprite);
     }
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glEnable(GL_DEPTH_TEST);
+    qglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    qglEnable(GL_DEPTH_TEST);
   }
 
   if (health_bar)
@@ -3182,15 +3197,15 @@ void gld_DrawScene(player_t *player)
   // transparent stuff
   //
 
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   if (gl_blend_animations)
   {
     // enable backside removing
-    glEnable(GL_CULL_FACE);
+    qglEnable(GL_CULL_FACE);
 
     // animated floors
-    glCullFace(GL_FRONT);
+    qglCullFace(GL_FRONT);
     gld_DrawItemsSortByTexture(GLDIT_AFLOOR);
     for (i = gld_drawinfo.num_items[GLDIT_AFLOOR] - 1; i >= 0; i--)
     {
@@ -3198,7 +3213,7 @@ void gld_DrawScene(player_t *player)
       gld_DrawFlat(gld_drawinfo.items[GLDIT_AFLOOR][i].item.flat);
     }
 
-    glCullFace(GL_BACK);
+    qglCullFace(GL_BACK);
     gld_DrawItemsSortByTexture(GLDIT_ACEILING);
     for (i = gld_drawinfo.num_items[GLDIT_ACEILING] - 1; i >= 0; i--)
     {
@@ -3207,7 +3222,7 @@ void gld_DrawScene(player_t *player)
     }
 
     // disable backside removing
-    glDisable(GL_CULL_FACE);
+    qglDisable(GL_CULL_FACE);
   }
 
   if (gl_blend_animations)
@@ -3234,7 +3249,7 @@ void gld_DrawScene(player_t *player)
       // if translucency percentage is less than 50,
       // then all translucent textures and sprites disappear completely
       // without this line
-      glAlphaFunc(GL_GREATER, 0.0f);
+      qglAlphaFunc(GL_GREATER, 0.0f);
 
       // transparent walls
       for (i = gld_drawinfo.num_items[GLDIT_TWALL] - 1; i >= 0; i--)
@@ -3244,26 +3259,26 @@ void gld_DrawScene(player_t *player)
       }
     }
 
-    glEnable(GL_ALPHA_TEST);
+    qglEnable(GL_ALPHA_TEST);
 
     // transparent sprites
     // sorting is necessary only for transparent sprites.
     // from back to front
     if (gld_drawinfo.num_items[GLDIT_TSPRITE] > 0)
     {
-      glAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
-      glDepthMask(GL_FALSE);
+      qglAlphaFunc(GL_GEQUAL, gl_mask_sprite_threshold_f);
+      qglDepthMask(GL_FALSE);
       gld_DrawItemsSortSprites(GLDIT_TSPRITE);
       for (i = gld_drawinfo.num_items[GLDIT_TSPRITE] - 1; i >= 0; i--)
       {
         gld_SetFog(gld_drawinfo.items[GLDIT_TSPRITE][i].item.sprite->fogdensity);
         gld_DrawSprite(gld_drawinfo.items[GLDIT_TSPRITE][i].item.sprite);
       }
-      glDepthMask(GL_TRUE);
+      qglDepthMask(GL_TRUE);
     }
 
     // restoring
-    glAlphaFunc(GL_GEQUAL, 0.5f);
+    qglAlphaFunc(GL_GEQUAL, 0.5f);
   }
 
   // e6y: detail
@@ -3280,9 +3295,9 @@ void gld_DrawScene(player_t *player)
       // bind with 0, so, switch back to normal pointer operation
       GLEXT_glBindBufferARB(GL_ARRAY_BUFFER, 0);
     }
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    qglDisableClientState(GL_VERTEX_ARRAY);
+    qglDisableClientState(GL_COLOR_ARRAY);
   }
 #endif
 

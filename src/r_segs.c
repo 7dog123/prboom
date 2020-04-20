@@ -364,7 +364,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
           if (t + (int_64_t) textureheight[texnum] * spryscale < 0 ||
               t > (int_64_t) SCREENHEIGHT << FRACBITS*2)
             continue;        // skip if the texture is out of screen's range
-          sprtopscreen = (int_64_t)(t >> FRACBITS); // R_WiggleFix
+         sprtopscreen = (int_64_t)(t >> FRACBITS); // R_WiggleFix
         }
 
         dcvars.iscale = 0xffffffffu / (unsigned) spryscale;
@@ -683,7 +683,7 @@ void R_StoreWallRange(const int start, const int stop)
   len = curline->length >> shift_bits;
   
   dist = (((dy * dx1 - dx * dy1) / len) << shift_bits);
-  rw_distance = (fixed_t)BETWEEN(INT_MIN, INT_MAX, dist);
+    rw_distance = (fixed_t)BETWEEN(INT_MIN, INT_MAX, dist);
 
   ds_p->x1 = rw_x = start;
   ds_p->x2 = stop;
@@ -721,7 +721,7 @@ void R_StoreWallRange(const int start, const int stop)
 #undef ADJUST
       }
   }  // killough: end of code to remove limits on openings
-
+  
   worldtop = frontsector->ceilingheight - viewz;
   worldbottom = frontsector->floorheight - viewz;
   

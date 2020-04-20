@@ -84,7 +84,7 @@ result_e T_MovePlane
 #ifdef GL_DOOM
   if (V_GetMode() == VID_MODEGL)
   {
-    gld_UpdateSplitData(sector);
+      gld_UpdateSplitData(sector);
   }
 #endif
 

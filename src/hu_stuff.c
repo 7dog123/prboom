@@ -52,7 +52,6 @@
 #include "r_main.h"
 #include "lprintf.h"
 #include "e6y.h" //e6y
-#include "g_overflow.h"
 
 // global heads up display controls
 
@@ -66,7 +65,7 @@ int hud_num;
 // These four shortcuts modifed to reflect char ** of mapnamesx[]
 // e6y: why sizeof(mapnamest)/sizeof(mapnamest[0]) does not work?
 #define HU_TITLE  (*mapnames[(gameepisode-1)*9+gamemap-1])
-#define HU_TITLE2 (gamemap <= 33 ? *mapnames2[gamemap-1] : "")
+#define HU_TITLE2 (gamemap <= 32 ? *mapnames2[gamemap-1] : "")
 #define HU_TITLEP (gamemap <= 32 ? *mapnamesp[gamemap-1] : "")
 #define HU_TITLET (gamemap <= 32 ? *mapnamest[gamemap-1] : "")
 #define HU_TITLEC (*mapnames[gamemap-1])
@@ -284,15 +283,6 @@ const char english_shiftxform[] =
   '{', '|', '}', '~', 127
 };
 
-static void HU_SetLumpTrans(const char *name)
-{
-  int lump = W_CheckNumForName(name);
-  if (lump > 0)
-  {
-    lumpinfo[lump].flags |= LUMP_CM2RGB;
-  }
-}
-
 //
 // HU_Init()
 //
@@ -370,20 +360,6 @@ void HU_Init(void)
     else
       hu_font[i] = hu_font[0]; //jff 2/16/98 account for gap
   }
-
-  // these patches require cm to rgb translation
-  for (i = 33; i < 96; i++)
-  {
-    sprintf(buffer, "STCFN%.3d", i);
-    HU_SetLumpTrans(buffer);
-  }
-  for (i = 0; i < 10; i++)
-  {
-    sprintf(buffer, "STTNUM%d", i);
-    HU_SetLumpTrans(buffer);
-  }
-  HU_SetLumpTrans("STTPRCNT");
-  HU_SetLumpTrans("STTMINUS");
 
   // CPhipps - load patches for message background
   for (i=0; i<9; i++) {
@@ -1245,26 +1221,20 @@ int HU_GetArmorColor(int armor, int def)
   return result;
 }
 
-int HU_GetAmmoColor(int ammo, int fullammo, int def, int tofire, dboolean backpack)
+int HU_GetAmmoColor(int ammo, int fullammo)
 {
-  int result, ammopct;
+  int result;
 
-  if (ammo < tofire)
+  int ammopct = (100 * ammo) / fullammo;
+
+  /*if (ammo == 0)
     result = CR_BROWN;
-  else if ((ammo==fullammo) || 
-    (ammo_colour_behaviour == ammo_colour_behaviour_no && backpack && ammo*2 >= fullammo))
-    result=def;
-  else {
-    ammopct = (100 * ammo) / fullammo;
-    if (backpack && ammo_colour_behaviour != ammo_colour_behaviour_yes)
-      ammopct *= 2;
-    if (ammopct < ammo_red)
-      result = CR_RED;
-    else if (ammopct < ammo_yellow)
-      result = CR_GOLD;
-    else
-      result = CR_GREEN;
-  }
+  else */if (ammopct < ammo_red)
+    result = CR_RED;
+  else if (ammopct < ammo_yellow)
+    result = CR_GOLD;
+  else
+    result = CR_GREEN;
 
   return result;
 }
@@ -1320,8 +1290,7 @@ void HU_widget_build_ammo(void)
     strcat(hud_ammostr,ammostr);
 
     // set the display color from the percentage of total ammo held
-    w_ammo.cm = HU_GetAmmoColor(ammo, fullammo, CR_BLUE,
-      ammopershot[plr->readyweapon], plr->backpack);
+    w_ammo.cm = HU_GetAmmoColor(ammo, fullammo);
   }
   // transfer the init string to the widget
   s = hud_ammostr;
@@ -1621,29 +1590,20 @@ void HU_widget_build_weapon(void)
     if (!plr->weaponowned[w])
       continue;
 
+    ammopct = fullammo? (100*ammo)/fullammo : 100;
+
     // display each weapon number in a color related to the ammo for it
     hud_weapstr[i++] = '\x1b'; //jff 3/26/98 use ESC not '\' for paths
     if (weaponinfo[w].ammo==am_noammo) //jff 3/14/98 show berserk on HUD
       hud_weapstr[i++] = plr->powers[pw_strength]? '0'+CR_GREEN : '0'+CR_GRAY;
     else if (ammo<ammopershot[w])
       hud_weapstr[i++] = '0'+CR_BROWN;
-    else if (fullammo && ((ammo==fullammo) ||
-      (ammo_colour_behaviour == ammo_colour_behaviour_no &&
-      plr->backpack && ammo*2 >= fullammo)))
-      hud_weapstr[i++] = '0'+CR_BLUE;
+    else if (ammopct<ammo_red)
+      hud_weapstr[i++] = '0'+CR_RED;
+    else if (ammopct<ammo_yellow)
+      hud_weapstr[i++] = '0'+CR_GOLD;
     else
-    {
-      ammopct = fullammo ? (100*ammo)/fullammo : 100;
-      if (plr->backpack && fullammo &&
-        ammo_colour_behaviour != ammo_colour_behaviour_yes)
-        ammopct *= 2;
-      if (ammopct<ammo_red)
-        hud_weapstr[i++] = '0'+CR_RED;
-      else if (ammopct<ammo_yellow)
-        hud_weapstr[i++] = '0'+CR_GOLD;
-      else
-        hud_weapstr[i++] = '0'+CR_GREEN;
-    }
+      hud_weapstr[i++] = '0'+CR_GREEN;
     hud_weapstr[i++] = '0'+w+1;
     hud_weapstr[i++] = ' ';
     hud_weapstr[i] = '\0';
@@ -2074,8 +2034,7 @@ void HU_widget_build_ammo_big(void)
 
     // set the display color from the percentage of total ammo held
     if (!sts_always_red)
-      w_ammo_big.cm = HU_GetAmmoColor(ammo, fullammo, CR_BLUE2,
-        ammopershot[plr->readyweapon], plr->backpack);
+      w_ammo_big.cm = HU_GetAmmoColor(ammo, fullammo);
 
     // transfer the init string to the widget
     s = ammostr;
@@ -2188,6 +2147,8 @@ void SetCrosshairTarget(void)
     float x, y, z;
     float winx, winy, winz;
 
+    R_BuildModelViewMatrix();
+
     x = -(float)crosshair.target_x / MAP_SCALE;
     z =  (float)crosshair.target_y / MAP_SCALE;
     y =  (float)crosshair.target_z / MAP_SCALE;
@@ -2246,21 +2207,7 @@ void HU_draw_crosshair(void)
 
   if (hudadd_crosshair_target || hudadd_crosshair_lock_target)
   {
-    fixed_t slope;
-    angle_t an = plr->mo->angle;
-    
-    // intercepts overflow guard
-    overflows_enabled = false;
-    slope = P_AimLineAttack(plr->mo, an, 16*64*FRACUNIT, 0);
-    if (plr->readyweapon == wp_missile || plr->readyweapon == wp_plasma || plr->readyweapon == wp_bfg)
-    {
-      if (!linetarget)
-        slope = P_AimLineAttack(plr->mo, an += 1<<26, 16*64*FRACUNIT, 0);
-      if (!linetarget)
-        slope = P_AimLineAttack(plr->mo, an -= 2<<26, 16*64*FRACUNIT, 0);
-    }
-    overflows_enabled = true;
-
+    fixed_t slope = P_AimLineAttack(plr->mo, plr->mo->angle, 16*64*FRACUNIT, 0);
     if (linetarget && !(linetarget->flags & MF_SHADOW))
     {
       crosshair.target_x = linetarget->x;

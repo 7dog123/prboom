@@ -169,7 +169,7 @@ typedef struct
   // [kb] For R_FixWiggle
   int cachedheight;
   int scaleindex;
-
+  
   //e6y
   int INTERP_SectorFloor;
   int INTERP_SectorCeiling;

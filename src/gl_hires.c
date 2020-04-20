@@ -102,17 +102,17 @@ int gld_ProgressRestoreScreen(void)
     
     gld_EnableTexture2D(GL_TEXTURE0_ARB, true);
     
-    glBindTexture(GL_TEXTURE_2D, progress_texid);
-    glColor3f(1.0f, 1.0f, 1.0f);
+    qglBindTexture(GL_TEXTURE_2D, progress_texid);
+    qglColor3f(1.0f, 1.0f, 1.0f);
     
-    glBegin(GL_TRIANGLE_STRIP);
+    qglBegin(GL_TRIANGLE_STRIP);
     {
-      glTexCoord2f(fU1, fV1); glVertex2f(0.0f, 0.0f);
-      glTexCoord2f(fU1, fV2); glVertex2f(0.0f, (float)SCREENHEIGHT);
-      glTexCoord2f(fU2, fV1); glVertex2f((float)SCREENWIDTH, 0.0f);
-      glTexCoord2f(fU2, fV2); glVertex2f((float)SCREENWIDTH, (float)SCREENHEIGHT);
+      qglTexCoord2f(fU1, fV1); qglVertex2f(0.0f, 0.0f);
+      qglTexCoord2f(fU1, fV2); qglVertex2f(0.0f, (float)SCREENHEIGHT);
+      qglTexCoord2f(fU2, fV1); qglVertex2f((float)SCREENWIDTH, 0.0f);
+      qglTexCoord2f(fU2, fV2); qglVertex2f((float)SCREENWIDTH, (float)SCREENHEIGHT);
     }
-    glEnd();
+    qglEnd();
 
     return true;
   }
@@ -127,7 +127,7 @@ int gld_ProgressEnd(void)
     gld_ProgressRestoreScreen();
     I_FinishUpdate();
     gld_ProgressRestoreScreen();
-    glDeleteTextures(1, &progress_texid);
+    qglDeleteTextures(1, &progress_texid);
     progress_texid = 0;
     return true;
   }
@@ -796,9 +796,9 @@ static void gld_HiRes_Bind(GLTexture *gltexture, GLuint *glTexID)
   }
 
   if (*glTexID == 0)
-    glGenTextures(1, glTexID);
+    qglGenTextures(1, glTexID);
 
-  glBindTexture(GL_TEXTURE_2D, *glTexID);
+  qglBindTexture(GL_TEXTURE_2D, *glTexID);
 }
 
 void gld_HiRes_ProcessColormap(unsigned char *buffer, int bufSize)
@@ -1351,7 +1351,7 @@ int gld_LoadHiresTex(GLTexture *gltexture, int cm)
         {
           if (texid == gltexture->texid_p)
           {
-            glBindTexture(GL_TEXTURE_2D, *gltexture->texid_p);
+            qglBindTexture(GL_TEXTURE_2D, *gltexture->texid_p);
             result = true;
           }
           else
@@ -1435,7 +1435,7 @@ int gld_PrecacheGUIPatches(void)
     NULL
   };
 
-  const char ** patch_p;
+  const char ** patch_p; 
   int count, total;
 
   if (!gl_texture_external_hires)

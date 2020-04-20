@@ -259,7 +259,7 @@ void HUlib_eraseTextLine(hu_textline_t* l)
     }
 
     for (y=top; y<=bottom; y++)
-    {
+      {
       if (y < viewwindowy || y >= viewwindowy + viewheight)
         R_VideoErase(0, y, SCREENWIDTH); // erase entire line
       else

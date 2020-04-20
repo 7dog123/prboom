@@ -447,6 +447,11 @@ static int G_NextWeapon(int direction)
   return weapon_order_table[i].weapon_num;
 }
 
+
+#ifdef ANDROID
+void IN_Move(ticcmd_t* cmd );
+#endif
+
 void G_BuildTiccmd(ticcmd_t* cmd)
 {
   int strafe;
@@ -532,14 +537,14 @@ void G_BuildTiccmd(ticcmd_t* cmd)
   if (gamekeydown[key_straferight] || joybuttons[joybstraferight])
   {
     side += sidemove[speed];
-    if (strafe) // Two-key strafe50
-      side += sidemove[speed];
+	if (strafe) // Two-key strafe50
+	side += sidemove[speed];
   }
   if (gamekeydown[key_strafeleft] || joybuttons[joybstrafeleft])
   {
     side -= sidemove[speed];
-    if (strafe) // Two-key strafe50
-      side -= sidemove[speed];
+	if (strafe) // Two-key strafe50
+	side -= sidemove[speed];
   }
 
     // buttons
@@ -738,9 +743,18 @@ void G_BuildTiccmd(ticcmd_t* cmd)
 
   }
 
+
+
   cmd->forwardmove += fudgef((signed char)forward);
   cmd->sidemove += side;
-  cmd->angleturn = fudgea(cmd->angleturn);
+
+#ifdef ANDROID
+  IN_Move(cmd);
+#endif
+
+
+   cmd->angleturn = fudgea(cmd->angleturn);
+
 
   upmove = 0;
   if (gamekeydown[key_flyup])
@@ -1024,6 +1038,10 @@ dboolean G_Responder (event_t* ev)
   return false;
 }
 
+//To get and keyboard events on same thread for Android
+#ifdef ANDROID
+void Sys_SendKeyEvents( void );
+#endif
 //
 // G_Ticker
 // Make ticcmd_ts for the players.
@@ -1033,6 +1051,12 @@ void G_Ticker (void)
 {
   int i;
   static gamestate_t prevgamestate;
+
+ // LOGI("G_Ticker");
+
+#ifdef ANDROID
+  Sys_SendKeyEvents(  );
+#endif
 
   // CPhipps - player colour changing
   if (!demoplayback && mapcolor_plyr[consoleplayer] != mapcolor_me) {
@@ -1082,10 +1106,10 @@ void G_Ticker (void)
         case ga_worlddone:
           G_DoWorldDone ();
           break;
-        case ga_screenshot:
-          M_ScreenShot ();
-          gameaction = ga_nothing;
-          break;
+		case ga_screenshot:
+		  M_ScreenShot ();
+		  gameaction = ga_nothing;
+		  break;
         case ga_nothing:
           break;
         }
@@ -1511,7 +1535,7 @@ void G_DoReborn (int playernum)
 
 void G_ScreenShot (void)
 {
-  gameaction = ga_screenshot;
+	gameaction = ga_screenshot;
 }
 
 // DOOM Par Times
@@ -1607,14 +1631,14 @@ void G_DoCompleted (void)
             wminfo.next = 30; break;
           case 31:
             wminfo.next = 31; break;
-          case 2:
-            if (bfgedition && singleplayer)
-              wminfo.next = 32;
-            break;
-          case 4:
-            if (gamemission == pack_nerve && singleplayer)
-              wminfo.next = 8;
-            break;
+		  case 2:
+			if (bfgedition && singleplayer)
+			 wminfo.next = 32;
+			 break;
+		  case 4:
+			if (gamemission == pack_nerve && singleplayer)
+			 wminfo.next = 8;
+			 break;
           }
       else
         switch(gamemap)
@@ -1622,17 +1646,17 @@ void G_DoCompleted (void)
           case 31:
           case 32:
             wminfo.next = 15; break;
-          case 33:
-            if (bfgedition && singleplayer)
-            {
-              wminfo.next = 2;
-              break;
-            }
+		  case 33:
+			if (bfgedition && singleplayer)
+			{
+				wminfo.next = 2;
+				break;
+			}
           default:
             wminfo.next = gamemap;
           }
-        if (gamemission == pack_nerve && singleplayer && gamemap == 9)
-          wminfo.next = 4;
+		  if (gamemission == pack_nerve && singleplayer && gamemap == 9)
+		   wminfo.next = 4;
     }
   else
     {
@@ -1743,7 +1767,7 @@ void G_WorldDone (void)
         }
     }
   else if (gamemission == pack_nerve && singleplayer && gamemap == 8)
-         F_StartFinale ();
+	F_StartFinale ();
   else if (gamemap == 8)
     gameaction = ga_victory; // cph - after ExM8 summary screen, show victory stuff
 }
@@ -2110,16 +2134,16 @@ void G_DoLoadGame(void)
 
   /* Print some information about the save game */
   if (gamemode == commercial)
-    sprintf(maplump, "MAP%02d", gamemap);
-  else
-    sprintf(maplump, "E%dM%d", gameepisode, gamemap);
-  time = leveltime / TICRATE;
-  ttime = (totalleveltimes + leveltime) / TICRATE;
-
+	  sprintf(maplump, "MAP%02d", gamemap);
+	 else
+	  sprintf(maplump, "E%dM%d", gameepisode, gamemap);
+	  time = leveltime / TICRATE;
+	  ttime = (totalleveltimes + leveltime) / TICRATE;
+	  
   lprintf(LO_INFO, "G_DoLoadGame: [%d] %s (%s), Skill %d, Level Time %02d:%02d:%02d, Total Time %02d:%02d:%02d\n",
-    savegameslot + 1, maplump, W_GetLumpInfoByNum(W_GetNumForName(maplump))->wadfile->name, gameskill + 1,
-    time/3600, (time%3600)/60, time%60, ttime/3600, (ttime%3600)/60, ttime%60);
-
+  savegameslot + 1, maplump, W_GetLumpInfoByNum(W_GetNumForName(maplump))->wadfile->name, gameskill + 1
+  time/3600, (time%3600)/60, time%60, ttime/3600, (ttime%3600)/60, ttime%60);
+  
   // done
   Z_Free (savebuffer);
 
@@ -2328,18 +2352,18 @@ static void G_DoSaveGame (dboolean menu)
   doom_printf( "%s", M_WriteFile(name, savebuffer, save_p - savebuffer)
          ? s_GGSAVED /* Ty - externalised */
          : "Game save failed!"); // CPhipps - not externalised
-
-  /* Print some information about the save game */
+		 
+	/* Print some information about the save game */
   if (gamemode == commercial)
-    sprintf(maplump, "MAP%02d", gamemap);
-  else
-    sprintf(maplump, "E%dM%d", gameepisode, gamemap);
-  time = leveltime / TICRATE;
-  ttime = (totalleveltimes + leveltime) / TICRATE;
-
-  lprintf(LO_INFO, "G_DoSaveGame: [%d] %s (%s), Skill %d, Level Time %02d:%02d:%02d, Total Time %02d:%02d:%02d\n",
-    savegameslot + 1, maplump, W_GetLumpInfoByNum(W_GetNumForName(maplump))->wadfile->name, gameskill + 1,
-    time/3600, (time%3600)/60, time%60, ttime/3600, (ttime%3600)/60, ttime%60);
+	  sprintf(maplump, "MAP%02d", gamemap);
+	 else
+	  sprintf(maplump, "E%dM%d", gameepisode, gamemap);
+	  time = leveltime / TICRATE;
+	  ttime = (totalleveltimes + leveltime) / TICRATE;
+	  
+  lprintf(LO_INFO, "G_DoLoadGame: [%d] %s (%s), Skill %d, Level Time %02d:%02d:%02d, Total Time %02d:%02d:%02d\n",
+  savegameslot + 1, maplump, W_GetLumpInfoByNum(W_GetNumForName(maplump))->wadfile->name, gameskill + 1
+  time/3600, (time%3600)/60, time%60, ttime/3600, (ttime%3600)/60, ttime%60);
 
   free(savebuffer);  // killough
   savebuffer = save_p = NULL;
@@ -3783,9 +3807,12 @@ void P_WalkTicker()
   int forward;
   int side;
   int angturn;
+ // LOGI("P_WalkTicker");
 
   if (!walkcamera.type || menuactive)
     return;
+
+  //LOGI("P_WalkTicker 1");
 
   strafe = gamekeydown[key_strafe] || mousebuttons[mousebstrafe]
     || joybuttons[joybstrafe];
